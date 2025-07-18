@@ -1,9 +1,10 @@
-import { getHierarquiaData } from "@/lib/data";
+import { getHierarquiaOpcoes } from "@/lib/data";
 import { AssetRegistrationForm } from "@/components/asset-registration-form";
 import { Building2, MountainIcon } from "lucide-react";
 
 export default async function Home() {
-  const hierarquiaData = await getHierarquiaData();
+  // Fetch initial data only for the first dropdown in the cascade
+  const diretoriasExecutivas = await getHierarquiaOpcoes("diretoria_executiva");
 
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground">
@@ -21,7 +22,7 @@ export default async function Home() {
       </header>
       <main className="flex-1 p-4 md:p-8">
         <div className="max-w-4xl mx-auto">
-          <AssetRegistrationForm hierarquiaData={hierarquiaData} />
+          <AssetRegistrationForm initialDiretoriasExecutivas={diretoriasExecutivas} />
         </div>
       </main>
     </div>

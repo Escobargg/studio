@@ -1,53 +1,47 @@
 import { supabase } from './supabase';
 
-// Helper to get unique values from an array of objects
-const getUniqueValues = (data: any[], key: string): string[] => {
-  if (!data) return [];
-  // Filter out null or undefined values before creating the Set
-  return [...new Set(data.map(item => item[key]).filter(Boolean))].sort();
+type Filtros = {
+  diretoria_executiva?: string;
+  diretoria?: string;
+  unidade?: string;
+  centro_de_localizacao?: string;
+  fase?: string;
 };
 
-export type HierarquiaData = {
-    centros: string[];
-    fases: string[];
-    diretoriasExecutivas: string[];
-    diretorias: string[];
-    unidades: string[];
-    categorias: string[];
-}
+// Fetches available options for a specific hierarchy level, filtered by previous selections.
+export const getHierarquiaOpcoes = async (
+  campo: keyof Filtros | 'categoria',
+  filtros: Filtros = {}
+): Promise<string[]> => {
+  try {
+    let query = supabase.from('hierarquia').select(campo, { count: 'exact', head: false });
 
-// Fetches and processes hierarchy data from Supabase
-export const getHierarquiaData = async (): Promise<HierarquiaData> => {
-  // Using .throwOnError() to get a more descriptive error message if the query fails.
-  const { data: hierarquia_data, error } = await supabase
-    .from('hierarquia')
-    .select('descricao_do_centro, fase')
-    .throwOnError();
+    // Apply filters based on previous selections
+    for (const [key, value] of Object.entries(filtros)) {
+      if (value) {
+        query = query.eq(key, value);
+      }
+    }
 
-  if (error) {
-    console.error('Error fetching hierarquia data:', error);
-    // Return empty arrays on error to prevent app crash
-    return {
-      centros: [],
-      fases: [],
-      diretoriasExecutivas: [],
-      diretorias: [],
-      unidades: [],
-      categorias: [],
-    };
+    const { data, error } = await query.throwOnError();
+
+    if (error) {
+      console.error(`Error fetching options for ${campo}:`, error);
+      return [];
+    }
+
+    // Get unique, non-null values and sort them
+    return [...new Set(data?.map(item => item[campo]).filter(Boolean) as string[])].sort();
+  } catch (error) {
+    console.error(`Exception when fetching options for ${campo}:`, error);
+    // On error, return an empty array to prevent app crash and log the detailed error.
+    // This often happens if a column name is incorrect.
+    // We will log the error to the server console for debugging.
+    console.error(`Detailed error for column '${campo}':`, error instanceof Error ? error.message : 'Unknown error');
+    return [];
   }
-
-  return {
-    centros: getUniqueValues(hierarquia_data, 'descricao_do_centro'),
-    fases: getUniqueValues(hierarquia_data, 'fase'),
-    // Temporarily returning an empty array. We need the correct column name from the user.
-    diretoriasExecutivas: getUniqueValues(hierarquia_data, 'diretoria_executiva'), 
-    // Temporarily returning an empty array. We need the correct column name from the user.
-    diretorias: getUniqueValues(hierarquia_data, 'diretoria'),
-    unidades: getUniqueValues(hierarquia_data, 'unidade'),
-    categorias: getUniqueValues(hierarquia_data, 'categoria'),
-  };
 };
+
 
 // Fetches assets based on a location center from Supabase
 export const getAtivosByCentro = async (centro: string): Promise<string[]> => {
@@ -55,17 +49,21 @@ export const getAtivosByCentro = async (centro: string): Promise<string[]> => {
         return [];
     }
   
-    // Using .throwOnError() to get a more descriptive error message if the query fails.
-    const { data: ativos_data, error } = await supabase
-        .from('ativos')
-        .select('local_de_instalacao')
-        .eq('centro_de_localizacao', centro)
-        .throwOnError();
+    try {
+        const { data: ativos_data, error } = await supabase
+            .from('ativos')
+            .select('local_de_instalacao')
+            .eq('centro_de_localizacao', centro)
+            .throwOnError();
 
-    if (error) {
-        console.error('Error fetching ativos data:', error);
+        if (error) {
+            console.error('Error fetching ativos data:', error);
+            return [];
+        }
+
+        return ativos_data.map(ativo => ativo.local_de_instalacao).sort();
+    } catch(error) {
+        console.error('Exception when fetching ativos:', error);
         return [];
     }
-
-    return ativos_data.map(ativo => ativo.local_de_instalacao).sort();
 };

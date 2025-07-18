@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useTransition } from "react";
 import { ChevronDown, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -32,7 +32,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { HierarquiaData, getAtivosByCentro } from "@/lib/data";
+import { getAtivosByCentro, getHierarquiaOpcoes } from "@/lib/data";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "./ui/checkbox";
@@ -46,13 +46,11 @@ const formSchema = z.object({
   tipoGrupo: z.enum(["Frota", "Rota"], {
     required_error: "Selecione o tipo do grupo.",
   }),
-  centroLocalizacao: z.string({
-    required_error: "Selecione o centro de localização.",
-  }),
-  fase: z.string({ required_error: "Selecione a fase." }),
-  diretoriaExecutiva: z.string({ required_error: "Selecione a diretoria executiva." }),
+  diretoria_executiva: z.string({ required_error: "Selecione a diretoria executiva." }),
   diretoria: z.string({ required_error: "Selecione a diretoria." }),
   unidade: z.string({ required_error: "Selecione a unidade." }),
+  centro_de_localizacao: z.string({ required_error: "Selecione o centro de localização." }),
+  fase: z.string({ required_error: "Selecione a fase." }),
   categoria: z.string({ required_error: "Selecione a categoria." }),
   ativos: z.array(z.string()).min(1, { message: "Selecione pelo menos um ativo." }),
 });
@@ -60,14 +58,40 @@ const formSchema = z.object({
 type AssetFormValues = z.infer<typeof formSchema>;
 
 interface AssetRegistrationFormProps {
-  hierarquiaData: HierarquiaData;
+  initialDiretoriasExecutivas: string[];
 }
 
-export function AssetRegistrationForm({ hierarquiaData }: AssetRegistrationFormProps) {
+type OptionsState = {
+  diretoriasExecutivas: string[];
+  diretorias: string[];
+  unidades: string[];
+  centrosLocalizacao: string[];
+  fases: string[];
+  categorias: string[];
+  ativos: string[];
+};
+
+export function AssetRegistrationForm({ initialDiretoriasExecutivas }: AssetRegistrationFormProps) {
   const { toast } = useToast();
-  const [availableAssets, setAvailableAssets] = useState<string[]>([]);
-  const [isLoadingAssets, setIsLoadingAssets] = useState(false);
+  const [options, setOptions] = useState<OptionsState>({
+    diretoriasExecutivas: initialDiretoriasExecutivas,
+    diretorias: [],
+    unidades: [],
+    centrosLocalizacao: [],
+    fases: [],
+    categorias: [],
+    ativos: [],
+  });
+  const [isLoading, setIsLoading] = useState({
+    diretorias: false,
+    unidades: false,
+    centrosLocalizacao: false,
+    fases: false,
+    categorias: false,
+    ativos: false,
+  });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
   const form = useForm<AssetFormValues>({
     resolver: zodResolver(formSchema),
@@ -77,31 +101,69 @@ export function AssetRegistrationForm({ hierarquiaData }: AssetRegistrationFormP
     },
   });
 
-  const selectedCentro = form.watch("centroLocalizacao");
+  const watch = form.watch;
+
+  const handleFieldChange = useCallback(
+    (fieldName: keyof AssetFormValues, nextFieldName: keyof OptionsState | null, resetFields: (keyof AssetFormValues)[]) => {
+      startTransition(() => {
+        resetFields.forEach(field => form.setValue(field, "" as any));
+        const currentFilters = {
+          diretoria_executiva: watch("diretoria_executiva"),
+          diretoria: watch("diretoria"),
+          unidade: watch("unidade"),
+          centro_de_localizacao: watch("centro_de_localizacao"),
+          fase: watch("fase"),
+        };
+
+        if (nextFieldName) {
+          setIsLoading(prev => ({ ...prev, [nextFieldName]: true }));
+          getHierarquiaOpcoes(nextFieldName as any, currentFilters)
+            .then(newOptions => {
+              setOptions(prev => ({ ...prev, [nextFieldName]: newOptions }));
+            })
+            .finally(() => {
+              setIsLoading(prev => ({ ...prev, [nextFieldName]: false }));
+            });
+        }
+      });
+    },
+    [form, watch]
+  );
+  
+  useEffect(() => {
+    handleFieldChange("diretoria_executiva", "diretorias", ["diretoria", "unidade", "centro_de_localizacao", "fase", "categoria", "ativos"]);
+  }, [watch("diretoria_executiva")]);
 
   useEffect(() => {
-    if (selectedCentro) {
-      setIsLoadingAssets(true);
-      form.setValue("ativos", []); // Reset assets when center changes
-      getAtivosByCentro(selectedCentro)
-        .then((assets) => {
-          setAvailableAssets(assets);
-        })
-        .finally(() => {
-          setIsLoadingAssets(false);
-        });
-    } else {
-      setAvailableAssets([]);
-      form.setValue("ativos", []);
-    }
-  }, [selectedCentro, form]);
+    handleFieldChange("diretoria", "unidades", ["unidade", "centro_de_localizacao", "fase", "categoria", "ativos"]);
+  }, [watch("diretoria")]);
+  
+  useEffect(() => {
+    handleFieldChange("unidade", "centrosLocalizacao", ["centro_de_localizacao", "fase", "categoria", "ativos"]);
+  }, [watch("unidade")]);
 
+  useEffect(() => {
+    handleFieldChange("centro_de_localizacao", "fases", ["fase", "categoria", "ativos"]);
+    // Also load categorias and ativos
+    const centro = watch("centro_de_localizacao");
+    if (centro) {
+      setIsLoading(prev => ({ ...prev, categorias: true, ativos: true }));
+      getHierarquiaOpcoes("categoria", { centro_de_localizacao: centro }).then(newOptions => {
+        setOptions(prev => ({ ...prev, categorias: newOptions }));
+      }).finally(() => setIsLoading(prev => ({ ...prev, categorias: false })));
+
+      getAtivosByCentro(centro).then(newAssets => {
+        setOptions(prev => ({ ...prev, ativos: newAssets }));
+      }).finally(() => setIsLoading(prev => ({...prev, ativos: false})));
+    } else {
+        setOptions(prev => ({...prev, ativos: []}));
+    }
+  }, [watch("centro_de_localizacao")]);
+  
   async function onSubmit(data: AssetFormValues) {
     setIsSubmitting(true);
-    // In a real app, you would send this data to your backend/database
     console.log("Form data submitted:", data);
     
-    // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1500));
     
     toast({
@@ -111,25 +173,44 @@ export function AssetRegistrationForm({ hierarquiaData }: AssetRegistrationFormP
     });
 
     form.reset();
+    setOptions(prev => ({ ...prev, diretorias: [], unidades: [], centrosLocalizacao: [], fases: [], categorias: [], ativos: [] }));
     setIsSubmitting(false);
   }
+
+  const renderSelect = (name: keyof AssetFormValues, label: string, placeholder: string, items: string[], disabled: boolean, loading: boolean) => (
+    <FormField
+      control={form.control}
+      name={name}
+      render={({ field }) => (
+        <FormItem>
+          <FormLabel>{label}</FormLabel>
+          <Select onValueChange={field.onChange} value={field.value || ""} disabled={disabled || loading}>
+            <FormControl>
+              <SelectTrigger>
+                {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <SelectValue placeholder={placeholder} />}
+              </SelectTrigger>
+            </FormControl>
+            <SelectContent>
+              {items.map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <FormMessage />
+        </FormItem>
+      )}
+    />
+  );
   
   return (
     <Card className="w-full shadow-lg border-2 border-border/60">
       <CardHeader>
         <CardTitle className="font-headline text-2xl">Criar Novo Grupo de Ativos</CardTitle>
-        <CardDescription>
-          Preencha os detalhes abaixo para cadastrar um novo grupo.
-        </CardDescription>
+        <CardDescription>Preencha os detalhes abaixo para cadastrar um novo grupo.</CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="nomeGrupo"
-                render={({ field }) => (
+              <FormField control={form.control} name="nomeGrupo" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Nome do Grupo</FormLabel>
                     <FormControl>
@@ -137,238 +218,67 @@ export function AssetRegistrationForm({ hierarquiaData }: AssetRegistrationFormP
                     </FormControl>
                     <FormMessage />
                   </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="tipoGrupo"
-                render={({ field }) => (
+              )}/>
+              <FormField control={form.control} name="tipoGrupo" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Tipo do Grupo</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value || ""}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione um tipo" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="Frota">Frota</SelectItem>
-                        <SelectItem value="Rota">Rota</SelectItem>
-                      </SelectContent>
+                      <FormControl><SelectTrigger><SelectValue placeholder="Selecione um tipo" /></SelectTrigger></FormControl>
+                      <SelectContent><SelectItem value="Frota">Frota</SelectItem><SelectItem value="Rota">Rota</SelectItem></SelectContent>
                     </Select>
                     <FormMessage />
                   </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="centroLocalizacao"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Centro de Localização</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || ""}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione o centro" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {hierarquiaData.centros.map((centro) => (
-                          <SelectItem key={centro} value={centro}>
-                            {centro}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="fase"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Fase</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || ""}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione a fase" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {hierarquiaData.fases.map((fase) => (
-                          <SelectItem key={fase} value={fase}>
-                            {fase}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="diretoriaExecutiva"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Diretoria Executiva</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || ""}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione a diretoria" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {hierarquiaData.diretoriasExecutivas.map((dir) => (
-                          <SelectItem key={dir} value={dir}>
-                            {dir}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="diretoria"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Diretoria</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || ""}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione a diretoria" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {hierarquiaData.diretorias.map((dir) => (
-                          <SelectItem key={dir} value={dir}>
-                            {dir}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="unidade"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Unidade</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || ""}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione a unidade" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {hierarquiaData.unidades.map((unidade) => (
-                          <SelectItem key={unidade} value={unidade}>
-                            {unidade}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="categoria"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Categoria</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || ""}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione a categoria" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {hierarquiaData.categorias.map((cat) => (
-                          <SelectItem key={cat} value={cat}>
-                            {cat}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              )}/>
+              {renderSelect("diretoria_executiva", "Diretoria Executiva", "Selecione a diretoria", options.diretoriasExecutivas, false, false)}
+              {renderSelect("diretoria", "Diretoria", "Selecione a diretoria", options.diretorias, !watch("diretoria_executiva"), isLoading.diretorias)}
+              {renderSelect("unidade", "Unidade", "Selecione a unidade", options.unidades, !watch("diretoria"), isLoading.unidades)}
+              {renderSelect("centro_de_localizacao", "Centro de Localização", "Selecione o centro", options.centrosLocalizacao, !watch("unidade"), isLoading.centrosLocalizacao)}
+              {renderSelect("fase", "Fase", "Selecione a fase", options.fases, !watch("centro_de_localizacao"), isLoading.fases)}
+              {renderSelect("categoria", "Categoria", "Selecione a categoria", options.categorias, !watch("centro_de_localizacao"), isLoading.categorias)}
             </div>
             
             <Separator className="my-8" />
             
-            <FormField
-              control={form.control}
-              name="ativos"
-              render={({ field }) => (
+            <FormField control={form.control} name="ativos" render={({ field }) => (
                 <FormItem className="flex flex-col">
                   <FormLabel>Ativos</FormLabel>
-                  <Popover>
+                   <Popover>
                       <PopoverTrigger asChild>
                          <FormControl>
-                           <Button
-                                variant="outline"
-                                role="combobox"
-                                className="w-full justify-between h-10"
-                                disabled={!selectedCentro || isLoadingAssets}
-                            >
-                                <span className="truncate">
-                                {isLoadingAssets ? 'Carregando...' : field.value?.length > 0 ? `${field.value.length} ativos selecionados` : 'Selecione os ativos'}
-                                </span>
-                                {isLoadingAssets ? <Loader2 className="ml-2 h-4 w-4 animate-spin" /> : <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />}
+                           <Button variant="outline" role="combobox" className="w-full justify-between h-10" disabled={!watch("centro_de_localizacao") || isLoading.ativos}>
+                               <span className="truncate">
+                                {isLoading.ativos ? 'Carregando...' : field.value?.length > 0 ? `${field.value.length} ativos selecionados` : 'Selecione os ativos'}
+                               </span>
+                               {isLoading.ativos ? <Loader2 className="ml-2 h-4 w-4 animate-spin" /> : <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />}
                            </Button>
                          </FormControl>
                       </PopoverTrigger>
                       <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                           <ScrollArea className="h-72">
-                              {availableAssets.length > 0 ? availableAssets.map((asset) => (
+                              {options.ativos.length > 0 ? options.ativos.map((asset) => (
                                   <div key={asset} className="flex items-center px-4 py-2 space-x-3 hover:bg-muted/50 transition-colors rounded-md">
-                                      <Checkbox
-                                          id={asset}
-                                          checked={field.value?.includes(asset)}
+                                      <Checkbox id={asset} checked={field.value?.includes(asset)}
                                           onCheckedChange={(checked) => {
-                                              const updatedValue = checked
-                                              ? [...(field.value || []), asset]
-                                              : (field.value || []).filter(
-                                                  (value) => value !== asset
-                                                );
+                                              const updatedValue = checked ? [...(field.value || []), asset] : (field.value || []).filter((value) => value !== asset);
                                               field.onChange(updatedValue);
                                           }}
                                       />
-                                      <label
-                                          htmlFor={asset}
-                                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex-1 cursor-pointer"
-                                      >
-                                          {asset}
-                                      </label>
+                                      <label htmlFor={asset} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex-1 cursor-pointer">{asset}</label>
                                   </div>
-                              )) : <p className="p-4 text-sm text-center text-muted-foreground">{!selectedCentro ? 'Selecione um centro de localização primeiro.' : 'Nenhum ativo encontrado.'}</p>}
+                              )) : <p className="p-4 text-sm text-center text-muted-foreground">{!watch("centro_de_localizacao") ? 'Selecione um centro de localização primeiro.' : 'Nenhum ativo encontrado.'}</p>}
                           </ScrollArea>
                       </PopoverContent>
                   </Popover>
-                  <FormDescription>
-                    Os ativos são carregados com base no Centro de Localização selecionado.
-                  </FormDescription>
+                  <FormDescription>Os ativos são carregados com base no Centro de Localização selecionado.</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
             />
             
             <CardFooter className="px-0 pt-8 justify-end">
-              <Button type="submit" disabled={isSubmitting} size="lg">
-                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {isSubmitting ? 'Registrando...' : 'Registrar Grupo'}
+              <Button type="submit" disabled={isSubmitting || isPending} size="lg">
+                {(isSubmitting || isPending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {isSubmitting ? 'Registrando...' : (isPending ? 'Atualizando...' : 'Registrar Grupo')}
               </Button>
             </CardFooter>
           </form>
