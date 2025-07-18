@@ -46,11 +46,12 @@ async function getGroupStrategies(groupId: string): Promise<Strategy[]> {
         id: s.id,
         title: s.nome,
         priority: s.prioridade,
-        status: s.status,
+        status: s.status as "ATIVA" | "INATIVA",
         description: s.descricao || 'Sem descrição.',
         frequency: `A cada ${s.frequencia_valor} ${s.frequencia_unidade.toLowerCase()}`,
         duration: `${s.duracao_valor} ${s.duracao_unidade.toLowerCase()}`,
         startDate: format(new Date(s.data_inicio), "dd/MM/yyyy", { locale: ptBR }),
+        toleranceInDays: s.tolerancia_dias,
     }));
 }
 
@@ -61,7 +62,7 @@ export default function EstrategiasPage() {
   const [grupo, setGrupo] = useState<Grupo | null>(null);
   const [strategies, setStrategies] = useState<Strategy[]>([]);
   const [loading, setLoading] = useState(true);
-  
+
   useEffect(() => {
     if (!groupId) return;
 
@@ -78,6 +79,18 @@ export default function EstrategiasPage() {
 
     fetchData();
   }, [groupId]);
+
+  const handleStrategyUpdate = (updatedStrategy: Strategy) => {
+    setStrategies(currentStrategies =>
+      currentStrategies.map(s => (s.id === updatedStrategy.id ? updatedStrategy : s))
+    );
+  };
+
+  const handleStrategyDelete = (deletedStrategyId: string) => {
+    setStrategies(currentStrategies =>
+      currentStrategies.filter(s => s.id !== deletedStrategyId)
+    );
+  };
 
   if (loading) {
     return (
@@ -125,7 +138,13 @@ export default function EstrategiasPage() {
           <div className="space-y-4">
             {strategies.length > 0 ? (
                 strategies.map((strategy) => (
-                    <StrategyCard key={strategy.id} strategy={strategy} />
+                    <StrategyCard 
+                        key={strategy.id}
+                        groupId={groupId}
+                        strategy={strategy} 
+                        onStrategyUpdate={handleStrategyUpdate}
+                        onStrategyDelete={handleStrategyDelete}
+                    />
                 ))
             ) : (
                 <Card className="flex flex-col items-center justify-center py-12">

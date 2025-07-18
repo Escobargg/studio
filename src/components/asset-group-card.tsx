@@ -33,6 +33,7 @@ export type Grupo = {
     categoria: string;
     fase: string;
     ativos: string[];
+    estrategias_count?: number;
     created_at?: string; // Manter os outros campos
 };
 
@@ -50,16 +51,21 @@ export function AssetGroupCard({ grupo, onGroupUpdate, onGroupDelete }: AssetGro
     const handleUpdate = async (updatedAssets: string[]) => {
         setIsUpdating(true);
         try {
-            const { error } = await supabase
+            const { data, error } = await supabase
                 .from('grupos_de_ativos')
                 .update({ ativos: updatedAssets })
                 .eq('id', grupo.id)
-                .throwOnError(); 
+                .select('*, estrategias_count:estrategias(count)') // Re-fetch count after update
+                .eq('estrategias.ativa', true)
+                .single();
 
+            if (error) throw error;
+            
             // Constrói o objeto atualizado localmente para evitar outra chamada ao banco
             const updatedGroup: Grupo = {
                 ...grupo,
                 ativos: updatedAssets,
+                estrategias_count: data.estrategias_count[0]?.count ?? 0,
             };
             
             toast.success("Grupo atualizado com sucesso!");
@@ -146,6 +152,13 @@ export function AssetGroupCard({ grupo, onGroupUpdate, onGroupDelete }: AssetGro
                             <div className="flex flex-col">
                                 <span className="text-xs">Ativos</span>
                                 <span className="font-medium text-foreground">{grupo.ativos.length}</span>
+                            </div>
+                        </div>
+                         <div className="flex items-center gap-2 text-muted-foreground">
+                            <ShieldCheck className="w-4 h-4 flex-shrink-0" />
+                            <div className="flex flex-col">
+                                <span className="text-xs">Estratégias</span>
+                                <span className="font-medium text-foreground">{grupo.estrategias_count ?? 0}</span>
                             </div>
                         </div>
                     </div>

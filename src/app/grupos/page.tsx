@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useTransition } from "react";
@@ -12,7 +13,9 @@ import type { Grupo } from "@/components/asset-group-card";
 async function getGruposDeAtivos(filtros: Filtros) {
   let query = supabase
     .from("grupos_de_ativos")
-    .select("*")
+    // Use a contagem de relacionamento para buscar o número de estratégias ativas
+    .select("*, estrategias_count:estrategias(count)")
+    .eq('estrategias.ativa', true) // Filtra para contar apenas as ativas
     .order("created_at", { ascending: false });
 
   // Aplica filtros exatos (exceto nome_grupo)
@@ -33,7 +36,12 @@ async function getGruposDeAtivos(filtros: Filtros) {
     console.error("Erro ao buscar grupos de ativos:", error);
     return [];
   }
-  return data;
+  
+  // O Supabase retorna um array com um objeto de contagem, precisamos extrair o valor.
+  return data.map(grupo => ({
+    ...grupo,
+    estrategias_count: grupo.estrategias_count[0]?.count ?? 0,
+  }));
 }
 
 export default function GruposPage() {

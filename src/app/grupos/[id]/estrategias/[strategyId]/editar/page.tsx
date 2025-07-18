@@ -39,6 +39,7 @@ import { MainLayout } from "@/components/main-layout";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter, useParams } from "next/navigation";
+import type { Strategy } from "@/components/strategy-card";
 
 
 const strategyFormSchema = z.object({
@@ -51,7 +52,7 @@ const strategyFormSchema = z.object({
   duracaoValor: z.coerce.number().min(1, "O valor deve ser maior que zero."),
   duracaoUnidade: z.enum(["HORAS", "DIAS"], { required_error: "Selecione a unidade." }),
   dataInicio: z.date({ required_error: "A data de início é obrigatória." }),
-  dataFim: z.date().optional(),
+  dataFim: z.date().optional().nullable(),
   ativa: z.boolean().default(true),
 });
 
@@ -60,7 +61,7 @@ type StrategyFormValues = z.infer<typeof strategyFormSchema>;
 async function getGroupDetails(groupId: string): Promise<Grupo | null> {
   const { data, error } = await supabase
     .from("grupos_de_ativos")
-    .select("nome_grupo, unidade, centro_de_localizacao")
+    .select("nome_grupo")
     .eq("id", groupId)
     .single();
 
@@ -71,10 +72,28 @@ async function getGroupDetails(groupId: string): Promise<Grupo | null> {
   return data as Grupo;
 }
 
-export default function NovaEstrategiaPage() {
+async function getStrategyDetails(strategyId: string): Promise<any | null> {
+    const { data, error } = await supabase
+        .from('estrategias')
+        .select('*')
+        .eq('id', strategyId)
+        .single();
+    
+    if(error) {
+        console.error("Error fetching strategy details:", error);
+        return null;
+    }
+    return data;
+}
+
+
+export default function EditarEstrategiaPage() {
   const params = useParams();
   const groupId = Array.isArray(params.id) ? params.id[0] : params.id;
+  const strategyId = Array.isArray(params.strategyId) ? params.strategyId[0] : params.strategyId;
+  
   const [grupo, setGrupo] = useState<Grupo | null>(null);
+  const [strategy, setStrategy] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
@@ -82,36 +101,49 @@ export default function NovaEstrategiaPage() {
 
   const form = useForm<StrategyFormValues>({
     resolver: zodResolver(strategyFormSchema),
-    defaultValues: {
-      nomeEstrategia: "",
-      descricao: "",
-      frequenciaValor: 1,
-      tolerancia: 0,
-      duracaoValor: 1,
-      ativa: true,
-    },
   });
 
   useEffect(() => {
-    if (!groupId) return;
+    if (!groupId || !strategyId) return;
 
-    const fetchGroup = async () => {
+    const fetchData = async () => {
       setLoading(true);
-      const groupDetails = await getGroupDetails(groupId);
+      const [groupDetails, strategyDetails] = await Promise.all([
+          getGroupDetails(groupId),
+          getStrategyDetails(strategyId)
+      ]);
       setGrupo(groupDetails);
+      setStrategy(strategyDetails);
+
+      if (strategyDetails) {
+        form.reset({
+            nomeEstrategia: strategyDetails.nome,
+            prioridade: strategyDetails.prioridade,
+            descricao: strategyDetails.descricao || "",
+            frequenciaValor: strategyDetails.frequencia_valor,
+            frequenciaUnidade: strategyDetails.frequencia_unidade,
+            tolerancia: strategyDetails.tolerancia_dias || 0,
+            duracaoValor: strategyDetails.duracao_valor,
+            duracaoUnidade: strategyDetails.duracao_unidade,
+            dataInicio: new Date(strategyDetails.data_inicio),
+            dataFim: strategyDetails.data_fim ? new Date(strategyDetails.data_fim) : null,
+            ativa: strategyDetails.ativa,
+        });
+      }
+
       setLoading(false);
     };
 
-    fetchGroup();
-  }, [groupId]);
+    fetchData();
+  }, [groupId, strategyId, form]);
 
 
   async function onSubmit(data: StrategyFormValues) {
     setIsSubmitting(true);
-    if (!groupId) {
+    if (!groupId || !strategyId) {
         toast({
             title: "Erro",
-            description: "ID do grupo não encontrado.",
+            description: "ID do grupo ou estratégia não encontrado.",
             variant: "destructive",
         });
         setIsSubmitting(false);
@@ -121,8 +153,7 @@ export default function NovaEstrategiaPage() {
     try {
         const { error } = await supabase
             .from('estrategias')
-            .insert({
-                grupo_id: groupId,
+            .update({
                 nome: data.nomeEstrategia,
                 prioridade: data.prioridade,
                 descricao: data.descricao,
@@ -136,19 +167,20 @@ export default function NovaEstrategiaPage() {
                 ativa: data.ativa,
                 status: data.ativa ? "ATIVA" : "INATIVA",
             })
+            .eq('id', strategyId)
             .throwOnError();
 
         toast({
-            title: "Estratégia Criada!",
-            description: "A nova estratégia foi salva com sucesso.",
+            title: "Estratégia Atualizada!",
+            description: "A estratégia foi atualizada com sucesso.",
         });
         router.push(`/grupos/${groupId}/estrategias`);
 
     } catch (error: any) {
-        console.error("Error creating strategy:", error.message || error);
+        console.error("Error updating strategy:", error.message || error);
         toast({
-            title: "Erro ao criar estratégia",
-            description: "Ocorreu um erro ao salvar a nova estratégia. Verifique as permissões do banco de dados.",
+            title: "Erro ao atualizar estratégia",
+            description: "Ocorreu um erro ao salvar a estratégia. Verifique os dados e tente novamente.",
             variant: "destructive",
         });
     } finally {
@@ -166,11 +198,11 @@ export default function NovaEstrategiaPage() {
     );
   }
 
-  if (!grupo) {
+  if (!grupo || !strategy) {
     return (
       <MainLayout>
         <div className="flex flex-1 items-center justify-center">
-          <p className="text-xl text-muted-foreground">Grupo não encontrado.</p>
+          <p className="text-xl text-muted-foreground">Grupo ou Estratégia não encontrado(a).</p>
         </div>
       </MainLayout>
     );
@@ -190,7 +222,7 @@ export default function NovaEstrategiaPage() {
                                 </Link>
                             </Button>
                             <div>
-                                <h1 className="text-2xl font-bold">Criar Nova Estratégia</h1>
+                                <h1 className="text-2xl font-bold">Editar Estratégia</h1>
                                 <p className="text-muted-foreground">
                                     Para o grupo: {grupo.nome_grupo}
                                 </p>
@@ -222,7 +254,7 @@ export default function NovaEstrategiaPage() {
                                     render={({ field }) => (
                                     <FormItem>
                                         <FormLabel>Prioridade</FormLabel>
-                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                        <Select onValueChange={field.onChange} value={field.value}>
                                         <FormControl>
                                             <SelectTrigger><SelectValue placeholder="Selecione a prioridade" /></SelectTrigger>
                                         </FormControl>
@@ -280,7 +312,7 @@ export default function NovaEstrategiaPage() {
                                         render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>Unidade de Frequência</FormLabel>
-                                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                            <Select onValueChange={field.onChange} value={field.value}>
                                             <FormControl><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger></FormControl>
                                             <SelectContent>
                                                 <SelectItem value="DIAS">Dias</SelectItem>
@@ -323,7 +355,7 @@ export default function NovaEstrategiaPage() {
                                         render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>Unidade de Duração</FormLabel>
-                                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                            <Select onValueChange={field.onChange} value={field.value}>
                                             <FormControl><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger></FormControl>
                                             <SelectContent>
                                                 <SelectItem value="HORAS">Horas</SelectItem>
@@ -361,7 +393,7 @@ export default function NovaEstrategiaPage() {
                                                 </FormControl>
                                                 </PopoverTrigger>
                                                 <PopoverContent className="w-auto p-0" align="start">
-                                                    <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date < new Date(new Date().setDate(new Date().getDate() -1))} initialFocus />
+                                                    <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
                                                 </PopoverContent>
                                             </Popover>
                                             <FormMessage />
@@ -384,7 +416,7 @@ export default function NovaEstrategiaPage() {
                                                 </FormControl>
                                                 </PopoverTrigger>
                                                 <PopoverContent className="w-auto p-0" align="start">
-                                                <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => form.getValues("dataInicio") ? date < form.getValues("dataInicio") : false} initialFocus />
+                                                <Calendar mode="single" selected={field.value || undefined} onSelect={field.onChange} disabled={(date) => form.getValues("dataInicio") ? date < form.getValues("dataInicio") : false} initialFocus />
                                                 </PopoverContent>
                                             </Popover>
                                             <FormMessage />
@@ -415,7 +447,7 @@ export default function NovaEstrategiaPage() {
                             </Button>
                             <Button type="submit" disabled={isSubmitting}>
                                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                {isSubmitting ? "Salvando..." : "Salvar Estratégia"}
+                                {isSubmitting ? "Salvando..." : "Salvar Alterações"}
                             </Button>
                         </div>
                     </form>

@@ -28,6 +28,9 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
     if (pathname.includes("/estrategias/nova")) {
        return "Criar Nova Estratégia";
     }
+     if (pathname.includes("/estrategias") && pathname.includes("/editar")) {
+       return "Editar Estratégia";
+    }
     if (pathname.includes("/estrategias")) {
        return "Estratégias de Manutenção";
     }
