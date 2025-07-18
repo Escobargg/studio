@@ -11,7 +11,7 @@ import {
     CardDescription
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Building, MapPin, Tag, Layers, ListChecks, Edit, Trash2 } from "lucide-react";
+import { Building, MapPin, Tag, Layers, ListChecks, Trash2 } from "lucide-react";
 import { EditAssetsDialog } from "./edit-assets-dialog";
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
@@ -42,25 +42,23 @@ export function AssetGroupCard({ grupo, onGroupUpdate }: AssetGroupCardProps) {
     const handleUpdate = async (updatedAssets: string[]) => {
         setIsUpdating(true);
         try {
-            const { data, error } = await supabase
+            const { error } = await supabase
                 .from('grupos_de_ativos')
                 .update({ ativos: updatedAssets })
-                .eq('id', grupo.id)
-                .select()
-                .single();
+                .eq('id', grupo.id);
 
             if (error) {
-                // Lança o erro para ser pego pelo bloco catch.
                 throw error;
             }
 
-            if (!data) {
-                // Lança um erro se nenhum dado for retornado, o que indica um problema.
-                throw new Error("Nenhum dado retornado após a atualização. O grupo pode não ter sido encontrado.");
-            }
-
+            // Constrói o objeto atualizado localmente para evitar outra chamada ao banco
+            const updatedGroup: Grupo = {
+                ...grupo,
+                ativos: updatedAssets,
+            };
+            
             toast.success("Grupo atualizado com sucesso!");
-            onGroupUpdate(data as Grupo);
+            onGroupUpdate(updatedGroup);
             setIsDialogOpen(false);
 
         } catch (error: any) {
