@@ -43,9 +43,7 @@ import { supabase } from "@/lib/supabase";
 const equipeSchema = z.object({
   id: z.string(),
   especialidade: z.string(),
-  capacidade: z.number().min(1, "Capacidade deve ser maior que 0."),
-  hh: z.number(),
-  total_hh: z.number(),
+  capacidade: z.number(),
 });
 
 const stopFormSchema = z.object({
