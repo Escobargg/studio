@@ -10,7 +10,7 @@ import {
   SidebarMenuItem,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { Building2, LayoutGrid, MountainIcon, PlusCircle, Wrench } from "lucide-react";
+import { Building2, LayoutGrid, MountainIcon, PlusCircle } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -26,9 +26,6 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
     }
     if (pathname.startsWith("/grupos/") && pathname.endsWith("/estrategias")) {
        return "Estratégias de Manutenção";
-    }
-    if (pathname === "/estrategias") {
-      return "Estratégias de Manutenção";
     }
     return "SmartPCM";
   };
@@ -65,18 +62,6 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
                 <Link href="/grupos">
                   <LayoutGrid />
                   <span>Exibir Grupos</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                asChild
-                isActive={pathname === "/estrategias"}
-                tooltip="Estratégias de Manutenção"
-              >
-                <Link href="/estrategias">
-                  <Wrench />
-                  <span>Estratégias de Manutenção</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
