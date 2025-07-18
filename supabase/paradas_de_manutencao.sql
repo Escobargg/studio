@@ -1,59 +1,64 @@
--- Tabela para armazenar as paradas de manutenção
-CREATE TABLE IF NOT EXISTS public.paradas_de_manutencao (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
-    
-    -- Informações Gerais
-    nome_parada TEXT NOT NULL,
-    centro_de_localizacao TEXT NOT NULL,
-    fase TEXT NOT NULL,
-    
-    -- Seleção de Ativo/Grupo
-    tipo_selecao TEXT NOT NULL, -- "grupo" ou "ativo"
-    grupo_de_ativos TEXT,
-    ativo TEXT,
-    
-    -- Planejamento
-    data_inicio_planejada TIMESTAMP WITH TIME ZONE NOT NULL,
-    data_fim_planejada TIMESTAMP WITH TIME ZONE NOT NULL,
-    duracao_planejada_horas INT, -- Calculado e armazenado
-    
-    -- Realizado (Opcional)
-    data_inicio_realizado TIMESTAMP WITH TIME ZONE,
-    data_fim_realizado TIMESTAMP WITH TIME ZONE,
-    duracao_realizada_horas INT, -- Calculado e armazenado
-    
-    -- Recursos
-    equipes_selecionadas JSONB, -- Armazena um array de objetos: [{"id": "uuid", "especialidade": "Mecânica", "capacidade": 2, "hh": 8, "total_hh": 16}]
-    
-    -- Descrição
-    descricao TEXT,
+-- Drop a tabela existente (se houver) para garantir uma recriação limpa.
+-- CUIDADO: Isso apagará todos os dados existentes na tabela.
+-- Comente a linha abaixo se quiser preservar os dados e apenas adicionar as novas colunas manualmente.
+DROP TABLE IF EXISTS public.paradas_de_manutencao;
 
-    -- Status e Conclusão
-    status TEXT DEFAULT 'PLANEJADA' NOT NULL, -- Ex: PLANEJADA, EM_ANDAMENTO, CONCLUIDA, CANCELADA
-    percentual_conclusao INT DEFAULT 0
+-- Cria a tabela para armazenar os dados das paradas de manutenção.
+CREATE TABLE IF NOT EXISTS public.paradas_de_manutencao (
+    id uuid NOT NULL DEFAULT gen_random_uuid(),
+    created_at timestamp with time zone NOT NULL DEFAULT now(),
+    nome_parada text,
+    centro_de_localizacao text,
+    fase text,
+    tipo_selecao text,
+    grupo_de_ativos text,
+    ativo_unico text,
+    data_inicio_planejada timestamp with time zone,
+    data_fim_planejada timestamp with time zone,
+    duracao_planejada_horas numeric,
+    data_inicio_realizado timestamp with time zone,
+    data_fim_realizado timestamp with time zone,
+    duracao_realizada_horas numeric,
+    equipes_selecionadas jsonb, -- Armazena as equipes e suas capacidades. Ex: [{"id": "uuid", "especialidade": "Mecânica", "capacidade": 2, "hh": 8, "total_hh": 16}]
+    descricao text,
+    status text DEFAULT 'PENDENTE', -- Ex: PENDENTE, EM_ANDAMENTO, CONCLUIDA, CANCELADA
+    user_id uuid DEFAULT auth.uid(),
+
+    CONSTRAINT paradas_de_manutencao_pkey PRIMARY KEY (id)
 );
 
--- Habilitar RLS (Row Level Security)
-ALTER TABLE public.paradas_de_manutencao ENABLE ROW LEVEL SECURITY;
+-- Ativa a Segurança de Nível de Linha (RLS) para a tabela.
+ALTER TABLE IF EXISTS public.paradas_de_manutencao
+    ENABLE ROW LEVEL SECURITY;
 
--- Políticas de acesso
--- Permite que usuários autenticados leiam todas as paradas
-CREATE POLICY "Allow authenticated read access" ON public.paradas_de_manutencao
-FOR SELECT USING (auth.role() = 'authenticated');
+-- Remove políticas antigas (se existirem) para evitar conflitos.
+DROP POLICY IF EXISTS "Enable read access for all users" ON public.paradas_de_manutencao;
+DROP POLICY IF EXISTS "Enable insert for authenticated users only" ON public.paradas_de_manutencao;
+DROP POLICY IF EXISTS "Enable update for users based on user_id" ON public.paradas_de_manutencao;
+DROP POLICY IF EXISTS "Enable delete for users based on user_id" ON public.paradas_de_manutencao;
 
--- Permite que usuários autenticados criem novas paradas
-CREATE POLICY "Allow authenticated insert access" ON public.paradas_de_manutencao
-FOR INSERT WITH CHECK (auth.role() = 'authenticated');
 
--- Permite que usuários autenticados atualizem paradas
-CREATE POLICY "Allow authenticated update access" ON public.paradas_de_manutencao
-FOR UPDATE USING (auth.role() = 'authenticated');
+-- Concede permissão de SELECT (leitura) a todos os usuários (anônimos e autenticados).
+CREATE POLICY "Enable read access for all users"
+    ON public.paradas_de_manutencao
+    FOR SELECT
+    USING (true);
 
--- Permite que usuários autenticados excluam paradas
-CREATE POLICY "Allow authenticated delete access" ON public.paradas_de_manutencao
-FOR DELETE USING (auth.role() = 'authenticated');
+-- Concede permissão de INSERT (criação) apenas para usuários autenticados.
+CREATE POLICY "Enable insert for authenticated users only"
+    ON public.paradas_de_manutencao
+    FOR INSERT
+    WITH CHECK (auth.role() = 'authenticated');
 
--- Comentários para clareza
-COMMENT ON TABLE public.paradas_de_manutencao IS 'Armazena informações sobre as paradas de manutenção planejadas e realizadas.';
-COMMENT ON COLUMN public.paradas_de_manutencao.equipes_selecionadas IS 'Array JSON com as equipes selecionadas, suas capacidades e HH.';
+-- Concede permissão de UPDATE (atualização) para os usuários que criaram o registro.
+CREATE POLICY "Enable update for users based on user_id"
+    ON public.paradas_de_manutencao
+    FOR UPDATE
+    USING (auth.uid() = user_id)
+    WITH CHECK (auth.uid() = user_id);
+
+-- Concede permissão de DELETE (exclusão) para os usuários que criaram o registro.
+CREATE POLICY "Enable delete for users based on user_id"
+    ON public.paradas_de_manutencao
+    FOR DELETE
+    USING (auth.uid() = user_id);
