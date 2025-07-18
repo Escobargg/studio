@@ -43,7 +43,7 @@ import { supabase } from "@/lib/supabase";
 const equipeSchema = z.object({
   id: z.string(),
   especialidade: z.string(),
-  capacidade: z.coerce.number().min(1, "Capacidade deve ser maior que 0."),
+  capacidade: z.string().transform(Number).refine(val => val > 0, { message: "Capacidade deve ser maior que 0." }),
   hh: z.coerce.number(),
   total_hh: z.coerce.number(),
 });
@@ -140,6 +140,8 @@ export default function CriarParadaPage() {
       ativo: "",
       horaInicioPlanejada: "",
       horaFimPlanejada: "",
+      dataInicioPlanejada: undefined,
+      dataFimPlanejada: undefined,
       dataInicioRealizado: null,
       horaInicioRealizado: "",
       dataFimRealizado: null,
@@ -730,6 +732,5 @@ export default function CriarParadaPage() {
       </div>
     </MainLayout>
   );
-}
 
     
