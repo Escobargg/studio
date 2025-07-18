@@ -83,6 +83,7 @@ export function AssetRegistrationForm({ initialDiretoriasExecutivas }: AssetRegi
     ativos: [],
   });
   const [isLoading, setIsLoading] = useState({
+    diretoriasExecutivas: false,
     diretorias: false,
     unidades: false,
     centrosLocalizacao: false,
@@ -102,6 +103,17 @@ export function AssetRegistrationForm({ initialDiretoriasExecutivas }: AssetRegi
   });
 
   const watch = form.watch;
+  
+  useEffect(() => {
+    setIsLoading(prev => ({...prev, diretoriasExecutivas: true}));
+    getHierarquiaOpcoes("diretoria_executiva")
+      .then(newOptions => {
+        setOptions(prev => ({...prev, diretoriasExecutivas: newOptions}));
+      })
+      .finally(() => {
+        setIsLoading(prev => ({...prev, diretoriasExecutivas: false}));
+      });
+  }, []);
 
   const handleFieldChange = useCallback(
     (fieldName: keyof AssetFormValues, nextFieldName: keyof OptionsState | null, resetFields: (keyof AssetFormValues)[]) => {
@@ -131,32 +143,33 @@ export function AssetRegistrationForm({ initialDiretoriasExecutivas }: AssetRegi
   );
   
   useEffect(() => {
-    handleFieldChange("diretoria_executiva", "diretorias", ["diretoria", "unidade", "centro_de_localizacao", "fase", "categoria", "ativos"]);
+    if(watch("diretoria_executiva")) handleFieldChange("diretoria_executiva", "diretorias", ["diretoria", "unidade", "centro_de_localizacao", "fase", "categoria", "ativos"]);
   }, [watch("diretoria_executiva")]);
 
   useEffect(() => {
-    handleFieldChange("diretoria", "unidades", ["unidade", "centro_de_localizacao", "fase", "categoria", "ativos"]);
+    if(watch("diretoria")) handleFieldChange("diretoria", "unidades", ["unidade", "centro_de_localizacao", "fase", "categoria", "ativos"]);
   }, [watch("diretoria")]);
   
   useEffect(() => {
-    handleFieldChange("unidade", "centrosLocalizacao", ["centro_de_localizacao", "fase", "categoria", "ativos"]);
+    if(watch("unidade")) handleFieldChange("unidade", "centrosLocalizacao", ["centro_de_localizacao", "fase", "categoria", "ativos"]);
   }, [watch("unidade")]);
 
   useEffect(() => {
-    handleFieldChange("centro_de_localizacao", "fases", ["fase", "categoria", "ativos"]);
-    // Also load categorias and ativos
-    const centro = watch("centro_de_localizacao");
-    if (centro) {
-      setIsLoading(prev => ({ ...prev, categorias: true, ativos: true }));
-      getHierarquiaOpcoes("categoria", { centro_de_localizacao: centro }).then(newOptions => {
-        setOptions(prev => ({ ...prev, categorias: newOptions }));
-      }).finally(() => setIsLoading(prev => ({ ...prev, categorias: false })));
+    if(watch("centro_de_localizacao")) {
+        handleFieldChange("centro_de_localizacao", "fases", ["fase", "categoria", "ativos"]);
+        const centro = watch("centro_de_localizacao");
+        if (centro) {
+          setIsLoading(prev => ({ ...prev, categorias: true, ativos: true }));
+          getHierarquiaOpcoes("categoria", { centro_de_localizacao: centro }).then(newOptions => {
+            setOptions(prev => ({ ...prev, categorias: newOptions }));
+          }).finally(() => setIsLoading(prev => ({ ...prev, categorias: false })));
 
-      getAtivosByCentro(centro).then(newAssets => {
-        setOptions(prev => ({ ...prev, ativos: newAssets }));
-      }).finally(() => setIsLoading(prev => ({...prev, ativos: false})));
+          getAtivosByCentro(centro).then(newAssets => {
+            setOptions(prev => ({ ...prev, ativos: newAssets }));
+          }).finally(() => setIsLoading(prev => ({...prev, ativos: false})));
+        }
     } else {
-        setOptions(prev => ({...prev, ativos: []}));
+        setOptions(prev => ({...prev, ativos: [], categorias: [], fases: []}));
     }
   }, [watch("centro_de_localizacao")]);
   
@@ -229,7 +242,7 @@ export function AssetRegistrationForm({ initialDiretoriasExecutivas }: AssetRegi
                     <FormMessage />
                   </FormItem>
               )}/>
-              {renderSelect("diretoria_executiva", "Diretoria Executiva", "Selecione a diretoria", options.diretoriasExecutivas, false, false)}
+              {renderSelect("diretoria_executiva", "Diretoria Executiva", "Selecione a diretoria", options.diretoriasExecutivas, isLoading.diretoriasExecutivas, isLoading.diretoriasExecutivas)}
               {renderSelect("diretoria", "Diretoria", "Selecione a diretoria", options.diretorias, !watch("diretoria_executiva"), isLoading.diretorias)}
               {renderSelect("unidade", "Unidade", "Selecione a unidade", options.unidades, !watch("diretoria"), isLoading.unidades)}
               {renderSelect("centro_de_localizacao", "Centro de Localização", "Selecione o centro", options.centrosLocalizacao, !watch("unidade"), isLoading.centrosLocalizacao)}

@@ -1,10 +1,10 @@
-import { getHierarquiaOpcoes } from "@/lib/data";
 import { AssetRegistrationForm } from "@/components/asset-registration-form";
 import { Building2, MountainIcon } from "lucide-react";
 
 export default async function Home() {
-  // Fetch initial data only for the first dropdown in the cascade
-  const diretoriasExecutivas = await getHierarquiaOpcoes("diretoria_executiva");
+  // A busca inicial foi removida para evitar o erro de coluna não encontrada.
+  // O componente do formulário agora lidará com o carregamento inicial.
+  const diretoriasExecutivas: string[] = [];
 
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground">
