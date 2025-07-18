@@ -154,14 +154,18 @@ export function AssetGroupCard({ grupo, onGroupUpdate, onGroupDelete }: AssetGro
                                 <span className="font-medium text-foreground">{grupo.ativos.length}</span>
                             </div>
                         </div>
+                        <div className="flex items-center gap-2 text-muted-foreground" title={`${grupo.estrategias_count ?? 0} estratégias ativas`}>
+                            <ShieldCheck className="w-4 h-4 flex-shrink-0" />
+                             <div className="flex flex-col">
+                                <span className="text-xs">Estratégias</span>
+                                <span className="font-medium text-foreground">{grupo.estrategias_count ?? 0}</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 
                  {/* Actions Section */}
                 <div className="flex items-center gap-2 flex-shrink-0 w-full md:w-auto justify-end">
-                    <Badge variant="outline" className="h-10 text-sm">
-                        {grupo.estrategias_count ?? 0} {grupo.estrategias_count === 1 ? 'Estratégia Ativa' : 'Estratégias Ativas'}
-                    </Badge>
                     <Button variant="outline" asChild>
                         <Link href={`/grupos/${grupo.id}/estrategias`}>
                            <ShieldCheck className="w-4 h-4 mr-2" />
