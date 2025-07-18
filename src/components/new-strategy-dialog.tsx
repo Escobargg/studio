@@ -34,7 +34,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -42,7 +41,6 @@ import { Calendar } from "@/components/ui/calendar";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import type { Grupo } from "./asset-group-card";
-import { PlusCircle } from "lucide-react";
 import { ScrollArea } from "./ui/scroll-area";
 
 // TODO: Definir schema no supabase e implementar a lógica de submit
@@ -105,271 +103,272 @@ export function NewStrategyDialog({ grupo, children, open, onOpenChange }: NewSt
             Grupo: {grupo.nome_grupo} | {grupo.unidade} | {grupo.centro_de_localizacao}
           </DialogDescription>
         </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} id="strategy-form" className="flex-1 min-h-0">
-             <ScrollArea className="h-full pr-6">
-                <div className="space-y-4 py-4">
-                    <div className="space-y-2 p-1">
-                      <h3 className="text-lg font-medium">Informações Básicas</h3>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                        <FormField
-                          control={form.control}
-                          name="nomeEstrategia"
-                          render={({ field }) => (
-                            <FormItem className="md:col-span-2">
-                              <FormLabel>Nome da Estratégia *</FormLabel>
-                              <FormControl>
-                                <Input placeholder="Ex: Manutenção Preventiva Quinzenal" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="prioridade"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Prioridade *</FormLabel>
-                              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Selecione" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  <SelectItem value="BAIXA">Baixa</SelectItem>
-                                  <SelectItem value="MEDIA">Média</SelectItem>
-                                  <SelectItem value="ALTA">Alta</SelectItem>
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
+        <div className="flex-1 min-h-0">
+          <ScrollArea className="h-full pr-6">
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} id="strategy-form" className="space-y-3 py-4">
+                  <div className="space-y-2">
+                    <h3 className="text-base font-medium">Informações Básicas</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                       <FormField
                         control={form.control}
-                        name="descricao"
+                        name="nomeEstrategia"
+                        render={({ field }) => (
+                          <FormItem className="md:col-span-2">
+                            <FormLabel className="text-xs">Nome da Estratégia *</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Ex: Manutenção Preventiva Quinzenal" {...field} className="h-9 text-sm"/>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="prioridade"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Descrição</FormLabel>
+                            <FormLabel className="text-xs">Prioridade *</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <FormControl>
+                                <SelectTrigger className="h-9 text-sm">
+                                  <SelectValue placeholder="Selecione" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="BAIXA">Baixa</SelectItem>
+                                <SelectItem value="MEDIA">Média</SelectItem>
+                                <SelectItem value="ALTA">Alta</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    <FormField
+                      control={form.control}
+                      name="descricao"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs">Descrição</FormLabel>
+                          <FormControl>
+                            <Textarea
+                              placeholder="Descreva os detalhes da estratégia..."
+                              className="resize-none text-sm"
+                              rows={2}
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <h3 className="text-base font-medium">Frequência da Parada</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                        <FormField
+                        control={form.control}
+                        name="frequenciaValor"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs">A cada quantos *</FormLabel>
                             <FormControl>
-                              <Textarea
-                                placeholder="Descreva os detalhes da estratégia de manutenção..."
-                                className="resize-none"
-                                {...field}
-                              />
+                              <Input type="number" {...field} className="h-9 text-sm"/>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                        <FormField
+                        control={form.control}
+                        name="frequenciaUnidade"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs">Unidade *</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <FormControl>
+                                <SelectTrigger className="h-9 text-sm">
+                                  <SelectValue placeholder="Selecione" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="DIAS">Dias</SelectItem>
+                                <SelectItem value="SEMANAS">Semanas</SelectItem>
+                                <SelectItem value="MESES">Meses</SelectItem>
+                                <SelectItem value="ANOS">Anos</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="tolerancia"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs">Tolerância (dias)</FormLabel>
+                            <FormControl>
+                              <Input type="number" {...field} placeholder="Ex: 2" className="h-9 text-sm"/>
                             </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
                     </div>
+                  </div>
 
-                    <div className="space-y-2 p-1">
-                      <h3 className="text-lg font-medium">Frequência da Parada</h3>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                         <FormField
-                          control={form.control}
-                          name="frequenciaValor"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>A cada quantos *</FormLabel>
+                    <div className="space-y-2">
+                    <h3 className="text-base font-medium">Duração da Parada</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        <FormField
+                        control={form.control}
+                        name="duracaoValor"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs">Duração *</FormLabel>
+                            <FormControl>
+                              <Input type="number" {...field} className="h-9 text-sm"/>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                        <FormField
+                        control={form.control}
+                        name="duracaoUnidade"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs">Unidade *</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
                               <FormControl>
-                                <Input type="number" {...field} />
+                                <SelectTrigger className="h-9 text-sm">
+                                  <SelectValue placeholder="Selecione" />
+                                </SelectTrigger>
                               </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                         <FormField
-                          control={form.control}
-                          name="frequenciaUnidade"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Unidade *</FormLabel>
-                              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Selecione" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
+                              <SelectContent>
+                                  <SelectItem value="HORAS">Horas</SelectItem>
                                   <SelectItem value="DIAS">Dias</SelectItem>
-                                  <SelectItem value="SEMANAS">Semanas</SelectItem>
-                                  <SelectItem value="MESES">Meses</SelectItem>
-                                   <SelectItem value="ANOS">Anos</SelectItem>
-                                </SelectContent>
-                              </Select>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                      <h3 className="text-base font-medium">Período de Vigência</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 items-start">
+                          <FormField
+                          control={form.control}
+                          name="dataInicio"
+                          render={({ field }) => (
+                              <FormItem className="flex flex-col">
+                              <FormLabel className="text-xs">Data de Início *</FormLabel>
+                              <Popover>
+                                  <PopoverTrigger asChild>
+                                  <FormControl>
+                                      <Button
+                                      variant={"outline"}
+                                      className={cn(
+                                          "w-full pl-3 text-left font-normal h-9 text-sm",
+                                          !field.value && "text-muted-foreground"
+                                      )}
+                                      >
+                                      {field.value ? (
+                                          format(field.value, "PPP", { locale: ptBR })
+                                      ) : (
+                                          <span>Escolha uma data</span>
+                                      )}
+                                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                      </Button>
+                                  </FormControl>
+                                  </PopoverTrigger>
+                                  <PopoverContent className="w-auto p-0" align="start">
+                                  <Calendar
+                                      mode="single"
+                                      selected={field.value}
+                                      onSelect={field.onChange}
+                                      disabled={(date) =>
+                                      date < new Date(new Date().setDate(new Date().getDate() -1))
+                                      }
+                                      initialFocus
+                                  />
+                                  </PopoverContent>
+                              </Popover>
                               <FormMessage />
-                            </FormItem>
+                              </FormItem>
                           )}
-                        />
+                          />
+                          <FormField
+                          control={form.control}
+                          name="dataFim"
+                          render={({ field }) => (
+                              <FormItem className="flex flex-col">
+                              <FormLabel className="text-xs">Data de Fim (Opcional)</FormLabel>
+                              <Popover>
+                                  <PopoverTrigger asChild>
+                                  <FormControl>
+                                      <Button
+                                      variant={"outline"}
+                                      className={cn(
+                                          "w-full pl-3 text-left font-normal h-9 text-sm",
+                                          !field.value && "text-muted-foreground"
+                                      )}
+                                      >
+                                      {field.value ? (
+                                          format(field.value, "PPP", { locale: ptBR })
+                                      ) : (
+                                          <span>Indefinida</span>
+                                      )}
+                                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                      </Button>
+                                  </FormControl>
+                                  </PopoverTrigger>
+                                  <PopoverContent className="w-auto p-0" align="start">
+                                  <Calendar
+                                      mode="single"
+                                      selected={field.value}
+                                      onSelect={field.onChange}
+                                      disabled={(date) =>
+                                        form.getValues("dataInicio") ? date < form.getValues("dataInicio") : false
+                                      }
+                                      initialFocus
+                                  />
+                                  </PopoverContent>
+                              </Popover>
+                              <FormMessage />
+                              </FormItem>
+                          )}
+                          />
+                      </div>
                         <FormField
                           control={form.control}
-                          name="tolerancia"
+                          name="ativa"
                           render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Tolerância (dias)</FormLabel>
-                              <FormControl>
-                                <Input type="number" {...field} placeholder="Ex: 2" />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
+                              <FormItem className="flex flex-row items-center justify-start space-x-3 space-y-0 rounded-md pt-2">
+                                  <FormControl>
+                                      <Switch
+                                      checked={field.value}
+                                      onCheckedChange={field.onChange}
+                                      />
+                                  </FormControl>
+                                    <FormLabel className="font-normal mb-0 text-sm">
+                                      Estratégia ativa
+                                  </FormLabel>
+                              </FormItem>
                           )}
-                        />
-                      </div>
-                    </div>
-
-                     <div className="space-y-2 p-1">
-                      <h3 className="text-lg font-medium">Duração da Parada</h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                         <FormField
-                          control={form.control}
-                          name="duracaoValor"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Duração *</FormLabel>
-                              <FormControl>
-                                <Input type="number" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                         <FormField
-                          control={form.control}
-                          name="duracaoUnidade"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Unidade *</FormLabel>
-                              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Selecione" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                   <SelectItem value="HORAS">Horas</SelectItem>
-                                   <SelectItem value="DIAS">Dias</SelectItem>
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2 p-1">
-                        <h3 className="text-lg font-medium">Período de Vigência</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 items-start">
-                            <FormField
-                            control={form.control}
-                            name="dataInicio"
-                            render={({ field }) => (
-                                <FormItem className="flex flex-col">
-                                <FormLabel>Data de Início *</FormLabel>
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                    <FormControl>
-                                        <Button
-                                        variant={"outline"}
-                                        className={cn(
-                                            "w-full pl-3 text-left font-normal",
-                                            !field.value && "text-muted-foreground"
-                                        )}
-                                        >
-                                        {field.value ? (
-                                            format(field.value, "PPP", { locale: ptBR })
-                                        ) : (
-                                            <span>Escolha uma data</span>
-                                        )}
-                                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                        </Button>
-                                    </FormControl>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0" align="start">
-                                    <Calendar
-                                        mode="single"
-                                        selected={field.value}
-                                        onSelect={field.onChange}
-                                        disabled={(date) =>
-                                        date < new Date(new Date().setDate(new Date().getDate() -1))
-                                        }
-                                        initialFocus
-                                    />
-                                    </PopoverContent>
-                                </Popover>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                            />
-                            <FormField
-                            control={form.control}
-                            name="dataFim"
-                            render={({ field }) => (
-                                <FormItem className="flex flex-col">
-                                <FormLabel>Data de Fim (Opcional)</FormLabel>
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                    <FormControl>
-                                        <Button
-                                        variant={"outline"}
-                                        className={cn(
-                                            "w-full pl-3 text-left font-normal",
-                                            !field.value && "text-muted-foreground"
-                                        )}
-                                        >
-                                        {field.value ? (
-                                            format(field.value, "PPP", { locale: ptBR })
-                                        ) : (
-                                            <span>Indefinida</span>
-                                        )}
-                                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                        </Button>
-                                    </FormControl>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0" align="start">
-                                    <Calendar
-                                        mode="single"
-                                        selected={field.value}
-                                        onSelect={field.onChange}
-                                        disabled={(date) =>
-                                         form.getValues("dataInicio") ? date < form.getValues("dataInicio") : false
-                                        }
-                                        initialFocus
-                                    />
-                                    </PopoverContent>
-                                </Popover>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                            />
-                        </div>
-                         <FormField
-                            control={form.control}
-                            name="ativa"
-                            render={({ field }) => (
-                                <FormItem className="flex flex-row items-center justify-start space-x-3 space-y-0 rounded-md pt-4">
-                                    <FormControl>
-                                        <Switch
-                                        checked={field.value}
-                                        onCheckedChange={field.onChange}
-                                        />
-                                    </FormControl>
-                                     <FormLabel className="font-normal mb-0">
-                                        Estratégia ativa
-                                    </FormLabel>
-                                </FormItem>
-                            )}
-                            />
-                    </div>
-                </div>
-            </ScrollArea>
-          </form>
-        </Form>
+                          />
+                  </div>
+              </form>
+            </Form>
+          </ScrollArea>
+        </div>
         <DialogFooter className="pt-4 border-t">
             <Button variant="ghost" type="button" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
             Cancelar
@@ -383,3 +382,5 @@ export function NewStrategyDialog({ grupo, children, open, onOpenChange }: NewSt
     </Dialog>
   );
 }
+
+    
