@@ -36,7 +36,7 @@ import { MainLayout } from "@/components/main-layout";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { getHierarquiaOpcoes, getAtivosByCentro, getGruposByCentroEFase } from "@/lib/data";
+import { getHierarquiaOpcoes, getAtivosByCentro, getGruposByCentroEFase, getEquipes, Equipe } from "@/lib/data";
 import { TeamSelector } from "@/components/team-selector";
 
 const equipeSchema = z.object({
@@ -112,11 +112,13 @@ export default function CriarParadaPage() {
   const [fases, setFases] = useState<string[]>([]);
   const [ativos, setAtivos] = useState<string[]>([]);
   const [gruposDeAtivos, setGruposDeAtivos] = useState<string[]>([]);
+  const [availableTeams, setAvailableTeams] = useState<Equipe[]>([]);
 
   const [loadingCentros, setLoadingCentros] = useState(true);
   const [loadingFases, setLoadingFases] = useState(false);
   const [loadingAtivos, setLoadingAtivos] = useState(false);
   const [loadingGrupos, setLoadingGrupos] = useState(false);
+  const [loadingEquipes, setLoadingEquipes] = useState(false);
   
   const form = useForm<StopFormValues>({
     resolver: zodResolver(stopFormSchema),
@@ -160,6 +162,7 @@ export default function CriarParadaPage() {
         setValue("grupoAtivos", "");
         setValue("ativo", "");
         setValue("equipes", []);
+        setAvailableTeams([]);
 
         const [fasesData, ativosData] = await Promise.all([
           getHierarquiaOpcoes("fase", { centro_de_localizacao: watchedCentro }),
@@ -174,6 +177,7 @@ export default function CriarParadaPage() {
         setFases([]);
         setAtivos([]);
         setGruposDeAtivos([]);
+        setAvailableTeams([]);
         setValue("equipes", []);
       }
     };
@@ -181,24 +185,30 @@ export default function CriarParadaPage() {
   }, [watchedCentro, setValue]);
 
   useEffect(() => {
-    const fetchGrupos = async () => {
+    const fetchDependentData = async () => {
         if (watchedCentro && watchedFase) {
             setLoadingGrupos(true);
+            setLoadingEquipes(true);
             setValue("grupoAtivos", "");
-            const gruposData = await getGruposByCentroEFase(watchedCentro, watchedFase);
+            setValue("equipes", []);
+
+            const [gruposData, equipesData] = await Promise.all([
+                getGruposByCentroEFase(watchedCentro, watchedFase),
+                getEquipes(watchedCentro, watchedFase)
+            ]);
+            
             setGruposDeAtivos(gruposData);
+            setAvailableTeams(equipesData);
             setLoadingGrupos(false);
+            setLoadingEquipes(false);
         } else {
             setGruposDeAtivos([]);
+            setAvailableTeams([]);
+            setValue("equipes", []);
         }
     };
-    fetchGrupos();
+    fetchDependentData();
   }, [watchedCentro, watchedFase, setValue]);
-
-  useEffect(() => {
-    setValue("equipes", []);
-  }, [watchedFase, setValue]);
-  
 
   useEffect(() => {
     const [
@@ -612,11 +622,10 @@ export default function CriarParadaPage() {
                              <FormLabel>Equipes e Capacidade</FormLabel>
                              <FormControl>
                                 <TeamSelector
-                                    centroDeLocalizacao={watchedCentro}
-                                    fase={watchedFase}
+                                    availableTeams={availableTeams}
+                                    isLoading={loadingEquipes}
                                     selectedTeams={field.value}
                                     onChange={field.onChange}
-                                    duracaoParada={duracaoPlanejada ?? 0}
                                 />
                              </FormControl>
                              <FormMessage />

@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getEquipes, Equipe as ApiEquipe } from "@/lib/data";
+import { Equipe as ApiEquipe } from "@/lib/data";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -24,36 +24,18 @@ export type SelectedTeam = {
 };
 
 interface TeamSelectorProps {
-  centroDeLocalizacao: string;
-  fase: string;
+  availableTeams: ApiEquipe[];
+  isLoading: boolean;
   selectedTeams: SelectedTeam[];
   onChange: (teams: SelectedTeam[]) => void;
-  duracaoParada: number;
 }
 
 export function TeamSelector({
-  centroDeLocalizacao,
-  fase,
+  availableTeams,
+  isLoading,
   selectedTeams,
   onChange,
-  duracaoParada,
 }: TeamSelectorProps) {
-  const [availableTeams, setAvailableTeams] = useState<ApiEquipe[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-
-  useEffect(() => {
-    async function fetchTeams() {
-      if (centroDeLocalizacao && fase) {
-        setIsLoading(true);
-        const teams = await getEquipes(centroDeLocalizacao, fase);
-        setAvailableTeams(teams);
-        setIsLoading(false);
-      } else {
-        setAvailableTeams([]);
-      }
-    }
-    fetchTeams();
-  }, [centroDeLocalizacao, fase]);
 
   const handleTeamSelectionChange = (team: ApiEquipe, checked: boolean) => {
     if (checked) {
@@ -79,21 +61,12 @@ export function TeamSelector({
     );
   }
 
-  if (!centroDeLocalizacao || !fase) {
-    return (
-        <Card className="bg-muted/50">
-            <CardContent className="p-4 text-center text-muted-foreground">
-                <p>Selecione um Centro de Localização e uma Fase para ver as equipes disponíveis.</p>
-            </CardContent>
-        </Card>
-    )
-  }
-  
   if (availableTeams.length === 0) {
      return (
         <Card className="bg-muted/50">
             <CardContent className="p-4 text-center text-muted-foreground">
                 <p>Nenhuma equipe encontrada para a combinação de Centro e Fase selecionada.</p>
+                <p className="text-xs">Selecione um Centro e uma Fase para ver as equipes.</p>
             </CardContent>
         </Card>
     )
@@ -182,3 +155,5 @@ export function TeamSelector({
     </div>
   );
 }
+
+    
