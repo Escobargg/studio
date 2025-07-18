@@ -122,7 +122,7 @@ export default function EstrategiasPage() {
                 <div>
                     <h1 className="text-2xl font-bold">Estratégias - {grupo.nome_grupo}</h1>
                     <p className="text-muted-foreground mt-1">
-                        {grupo.unidade} | {grupo.centro_de_localizacao} | {grupo.ativos.length} ativos
+                        {grupo.unidade} | {grupo.centro_de_localizacao} | {grupo.fase} | {grupo.ativos.length} ativos
                     </p>
                 </div>
                 <Button asChild className="mt-4 md:mt-0">
