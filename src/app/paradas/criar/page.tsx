@@ -8,7 +8,7 @@ import { PlusCircle, Settings, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { StopCard, StopCardProps } from "@/components/stop-card";
 import { StopsFilters } from "@/components/stops-filters";
-import { useState, useTransition } from "react";
+import { useState, useTransition, useCallback } from "react";
 
 // Mock data based on the image provided
 const mockStops: StopCardProps[] = [
@@ -61,7 +61,7 @@ export default function CriarParadasPage() {
   const [stops, setStops] = useState<StopCardProps[]>(mockStops);
   const [isPending, startTransition] = useTransition();
 
-  const handleFilterChange = (filters: any) => {
+  const handleFilterChange = useCallback((filters: any) => {
     // Placeholder for filter logic
     startTransition(() => {
         console.log("Applying filters:", filters);
@@ -71,7 +71,7 @@ export default function CriarParadasPage() {
             setStops(mockStops);
         }, 500);
     });
-  };
+  }, []);
 
   return (
     <MainLayout>
@@ -114,4 +114,3 @@ export default function CriarParadasPage() {
     </MainLayout>
   );
 }
-
