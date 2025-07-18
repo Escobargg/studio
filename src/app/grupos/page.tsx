@@ -69,7 +69,7 @@ export default function GruposPage() {
                     <p className="mt-2 text-muted-foreground">Aguarde um momento.</p>
                 </div>
             ) : grupos.length > 0 ? (
-              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              <div className="flex flex-col gap-4">
                 {grupos.map((grupo) => (
                   <AssetGroupCard 
                     key={grupo.id} 
