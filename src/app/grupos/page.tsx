@@ -1,4 +1,4 @@
-import { Building, List, MountainIcon, PlusCircle } from 'lucide-react';
+import { Building2, List, MountainIcon, PlusCircle } from 'lucide-react';
 import Link from 'next/link';
 
 import { supabase } from '@/lib/supabase';
@@ -37,7 +37,7 @@ export default async function GruposPage() {
                 Criar Novo Grupo
             </Link>
             <div className="flex items-center gap-2">
-                <Building className="w-5 h-5 text-muted-foreground"/>
+                <Building2 className="w-5 h-5 text-muted-foreground"/>
                 <p className="text-sm font-medium text-muted-foreground">Vale S.A.</p>
             </div>
         </div>
