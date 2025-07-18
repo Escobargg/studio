@@ -54,7 +54,10 @@ export function TeamSelector({
     }
   };
 
-  const handleCapacityChange = (teamId: string, capacidade: number) => {
+  const handleCapacityChange = (teamId: string, value: string) => {
+    const capacidade = parseInt(value, 10);
+    if (isNaN(capacidade)) return;
+
     onChange(
       selectedTeams.map((t) =>
         t.id === teamId 
@@ -117,14 +120,14 @@ export function TeamSelector({
              
               return (
               <div key={team.id} className="grid grid-cols-12 items-end gap-x-4 gap-y-2">
-                <div className="col-span-12 sm:col-span-12 md:col-span-4 self-center">
+                <div className="col-span-12 md:col-span-4 self-center">
                     <Label htmlFor={`capacity-${team.id}`}>{team.especialidade}</Label>
                 </div>
-                <div className="col-span-4 sm:col-span-4 md:col-span-2">
+                <div className="col-span-4 md:col-span-2">
                   <Label htmlFor={`capacity-${team.id}`} className="text-xs text-muted-foreground">Capacidade</Label>
                   <Select
                     value={String(team.capacidade)}
-                    onValueChange={(value) => handleCapacityChange(team.id, parseInt(value, 10))}
+                    onValueChange={(value) => handleCapacityChange(team.id, value)}
                   >
                     <SelectTrigger id={`capacity-${team.id}`}>
                       <SelectValue placeholder="Nº" />
@@ -136,7 +139,7 @@ export function TeamSelector({
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="col-span-4 sm:col-span-4 md:col-span-3">
+                <div className="col-span-4 md:col-span-3">
                   <Label htmlFor={`hh-${team.id}`} className="text-xs text-muted-foreground">HH</Label>
                   <Input
                     id={`hh-${team.id}`}
@@ -144,9 +147,10 @@ export function TeamSelector({
                     value={team.hh}
                     disabled
                     placeholder="Auto"
+                    className="w-full"
                   />
                 </div>
-                 <div className="col-span-4 sm:col-span-4 md:col-span-3">
+                 <div className="col-span-4 md:col-span-3">
                   <Label htmlFor={`total-hh-${team.id}`} className="text-xs text-muted-foreground">HH/Dia</Label>
                   <Input
                     id={`total-hh-${team.id}`}
@@ -154,6 +158,7 @@ export function TeamSelector({
                     value={team.total_hh}
                     disabled
                     placeholder="Auto"
+                    className="w-full"
                   />
                 </div>
               </div>
@@ -164,5 +169,3 @@ export function TeamSelector({
     </div>
   );
 }
-
-    
