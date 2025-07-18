@@ -36,7 +36,7 @@ import { MainLayout } from "@/components/main-layout";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { getHierarquiaOpcoes, getAtivosByCentro, getGruposByCentroEFase } from "@/lib/data";
+import { getHierarquiaOpcoes, getAtivosByCentro, getGruposByCentroEFase, getEquipes } from "@/lib/data";
 import { TeamSelector } from "@/components/team-selector";
 
 const equipeSchema = z.object({
@@ -693,5 +693,3 @@ export default function CriarParadaPage() {
     </MainLayout>
   );
 }
-
-    

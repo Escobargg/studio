@@ -118,9 +118,11 @@ export function TeamSelector({
           <h4 className="text-md font-medium mb-2">Detalhes por Equipe</h4>
            <div className="space-y-3">
             {selectedTeams.map((team) => (
-              <div key={team.id} className="grid grid-cols-12 items-center gap-4">
-                <Label htmlFor={`capacity-${team.id}`} className="col-span-12 sm:col-span-4">{team.especialidade}</Label>
-                <div className="col-span-6 sm:col-span-4">
+              <div key={team.id} className="grid grid-cols-12 items-end gap-x-4 gap-y-2">
+                <div className="col-span-12 sm:col-span-6 md:col-span-5">
+                    <Label htmlFor={`capacity-${team.id}`}>{team.especialidade}</Label>
+                </div>
+                <div className="col-span-6 sm:col-span-3 md:col-span-3">
                   <Label htmlFor={`capacity-${team.id}`} className="text-xs text-muted-foreground">Capacidade</Label>
                   <Input
                     id={`capacity-${team.id}`}
@@ -131,8 +133,8 @@ export function TeamSelector({
                     placeholder="Nº"
                   />
                 </div>
-                <div className="col-span-6 sm:col-span-4">
-                  <Label htmlFor={`hh-${team.id}`} className="text-xs text-muted-foreground">HH</Label>
+                <div className="col-span-6 sm:col-span-3 md:col-span-4">
+                  <Label htmlFor={`hh-${team.id}`} className="text-xs text-muted-foreground">HH por Equipe</Label>
                   <Input
                     id={`hh-${team.id}`}
                     type="number"
@@ -149,5 +151,3 @@ export function TeamSelector({
     </div>
   );
 }
-
-    
