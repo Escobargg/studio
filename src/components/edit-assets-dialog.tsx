@@ -29,12 +29,21 @@ interface EditAssetsDialogProps {
   onUpdate: (updatedAssets: string[]) => void;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  isUpdating: boolean;
 }
 
-export function EditAssetsDialog({ grupo, onUpdate, open, onOpenChange }: EditAssetsDialogProps) {
+export function EditAssetsDialog({ grupo, onUpdate, open, onOpenChange, isUpdating }: EditAssetsDialogProps) {
   const [allAssets, setAllAssets] = useState<string[]>([]);
-  const [selectedAssets, setSelectedAssets] = useState<string[]>(grupo.ativos);
+  const [selectedAssets, setSelectedAssets] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Sincroniza o estado de ativos selecionados com as props quando o dialog abre
+  useEffect(() => {
+    if (open) {
+      setSelectedAssets(grupo.ativos);
+    }
+  }, [open, grupo.ativos]);
+
 
   useEffect(() => {
     if (open) {
@@ -60,7 +69,6 @@ export function EditAssetsDialog({ grupo, onUpdate, open, onOpenChange }: EditAs
 
   const handleSaveChanges = () => {
     onUpdate(selectedAssets);
-    toast.success("Ativos atualizados com sucesso!");
   };
 
   return (
@@ -106,10 +114,10 @@ export function EditAssetsDialog({ grupo, onUpdate, open, onOpenChange }: EditAs
           </ScrollArea>
         )}
         <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button onClick={handleSaveChanges} disabled={isLoading}>
-            <Save className="w-4 h-4 mr-2" />
-            Salvar Alterações
+          <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={isUpdating}>Cancelar</Button>
+          <Button onClick={handleSaveChanges} disabled={isLoading || isUpdating}>
+            {isUpdating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+            {isUpdating ? "Salvando..." : "Salvar Alterações"}
           </Button>
         </DialogFooter>
       </DialogContent>

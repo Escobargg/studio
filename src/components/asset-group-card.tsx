@@ -14,8 +14,11 @@ import { Separator } from "@/components/ui/separator";
 import { Building, MapPin, Tag, Layers, ListChecks, Edit, Trash2 } from "lucide-react";
 import { EditAssetsDialog } from "./edit-assets-dialog";
 import { useState } from "react";
+import { supabase } from "@/lib/supabase";
+import toast from "react-hot-toast";
 
-type Grupo = {
+
+export type Grupo = {
     id: string;
     nome_grupo: string;
     tipo_grupo: string;
@@ -24,20 +27,37 @@ type Grupo = {
     categoria: string;
     fase: string;
     ativos: string[];
+    created_at?: string; // Manter os outros campos
 };
 
 interface AssetGroupCardProps {
   grupo: Grupo;
+  onGroupUpdate: (updatedGroup: Grupo) => void;
 }
 
-export function AssetGroupCard({ grupo }: AssetGroupCardProps) {
+export function AssetGroupCard({ grupo, onGroupUpdate }: AssetGroupCardProps) {
     const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [isUpdating, setIsUpdating] = useState(false);
 
-    const handleUpdate = (updatedAssets: string[]) => {
-        // Lógica para atualizar no Supabase viria aqui.
-        console.log("Ativos atualizados:", updatedAssets);
-        // Por enquanto, apenas fechamos o dialog.
-        setIsDialogOpen(false);
+    const handleUpdate = async (updatedAssets: string[]) => {
+        setIsUpdating(true);
+        const { data, error } = await supabase
+            .from('grupos_de_ativos')
+            .update({ ativos: updatedAssets })
+            .eq('id', grupo.id)
+            .select()
+            .single();
+
+        setIsUpdating(false);
+        
+        if (error) {
+            toast.error("Falha ao atualizar os ativos.");
+            console.error("Erro ao atualizar grupo:", error);
+        } else {
+            toast.success("Grupo atualizado com sucesso!");
+            onGroupUpdate(data as Grupo); // Notifica o componente pai
+            setIsDialogOpen(false); // Fecha o dialog
+        }
     };
 
 
@@ -82,6 +102,7 @@ export function AssetGroupCard({ grupo }: AssetGroupCardProps) {
                     onUpdate={handleUpdate}
                     open={isDialogOpen}
                     onOpenChange={setIsDialogOpen}
+                    isUpdating={isUpdating}
                  />
                  <Button variant="destructive" size="icon">
                     <Trash2 className="w-4 h-4" />

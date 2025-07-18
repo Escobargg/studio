@@ -7,6 +7,7 @@ import { supabase } from "@/lib/supabase";
 import { Building, Loader2 } from "lucide-react";
 import type { Filtros } from "@/lib/data";
 import { GroupFilters } from "@/components/group-filters";
+import type { Grupo } from "@/components/asset-group-card";
 
 async function getGruposDeAtivos(filtros: Filtros) {
   let query = supabase
@@ -36,16 +37,22 @@ async function getGruposDeAtivos(filtros: Filtros) {
 }
 
 export default function GruposPage() {
-  const [grupos, setGrupos] = useState<any[]>([]);
+  const [grupos, setGrupos] = useState<Grupo[]>([]);
   const [filtros, setFiltros] = useState<Filtros>({});
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
     startTransition(async () => {
       const data = await getGruposDeAtivos(filtros);
-      setGrupos(data);
+      setGrupos(data as Grupo[]);
     });
   }, [filtros]);
+  
+  const handleGroupUpdate = (updatedGroup: Grupo) => {
+    setGrupos(currentGrupos =>
+      currentGrupos.map(g => (g.id === updatedGroup.id ? updatedGroup : g))
+    );
+  };
 
   return (
     <MainLayout>
@@ -64,7 +71,11 @@ export default function GruposPage() {
             ) : grupos.length > 0 ? (
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {grupos.map((grupo) => (
-                  <AssetGroupCard key={grupo.id} grupo={grupo} />
+                  <AssetGroupCard 
+                    key={grupo.id} 
+                    grupo={grupo} 
+                    onGroupUpdate={handleGroupUpdate}
+                  />
                 ))}
               </div>
             ) : (
