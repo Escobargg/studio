@@ -50,7 +50,6 @@ export function TeamSelector({
   };
 
   const handleCapacityChange = (teamId: string, value: string) => {
-    // Convert the string value from the select component to a number
     const capacidade = parseInt(value, 10);
     if (isNaN(capacidade)) return;
 
@@ -192,5 +191,3 @@ export function TeamSelector({
     </div>
   );
 }
-
-    

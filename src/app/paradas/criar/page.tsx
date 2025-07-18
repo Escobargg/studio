@@ -43,7 +43,7 @@ import { supabase } from "@/lib/supabase";
 const equipeSchema = z.object({
   id: z.string(),
   especialidade: z.string(),
-  capacidade: z.number().min(1, "A capacidade deve ser pelo menos 1."),
+  capacidade: z.number(),
 });
 
 const stopFormSchema = z.object({
@@ -141,9 +141,9 @@ export default function CriarParadaPage() {
       dataInicioPlanejada: undefined,
       dataFimPlanejada: undefined,
       dataInicioRealizado: null,
-      horaInicioRealizado: null,
+      horaInicioRealizado: "",
       dataFimRealizado: null,
-      horaFimRealizado: null,
+      horaFimRealizado: "",
       equipes: [],
       descricao: "",
     },
@@ -266,7 +266,6 @@ export default function CriarParadaPage() {
     const dataInicioPlanejadaCompleta = combineDateTime(data.dataInicioPlanejada, data.horaInicioPlanejada);
     const dataFimPlanejadaCompleta = combineDateTime(data.dataFimPlanejada, data.horaFimPlanejada);
 
-    // Prepare a slimmed-down version of teams data for insertion
     const equipesParaInserir = data.equipes?.map(e => {
         const teamData = availableTeams.find(t => t.id === e.id);
         const hh = teamData?.hh ?? 0;
@@ -296,9 +295,9 @@ export default function CriarParadaPage() {
           ? combineDateTime(data.dataFimRealizado, data.horaFimRealizado).toISOString() 
           : null,
       duracao_realizada_horas: duracaoRealizada,
-      equipes_selecionadas: equipesParaInserir, // Use the slimmed-down version
+      equipes_selecionadas: equipesParaInserir, 
       descricao: data.descricao,
-      status: 'PLANEJADA', // Default status
+      status: 'PLANEJADA',
     };
 
     try {
@@ -745,5 +744,3 @@ export default function CriarParadaPage() {
     </MainLayout>
   );
 }
-
-    
