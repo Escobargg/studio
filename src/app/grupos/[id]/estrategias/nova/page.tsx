@@ -118,40 +118,42 @@ export default function NovaEstrategiaPage() {
         return;
     }
     
-    const { error } = await supabase
-        .from('estrategias')
-        .insert({
-            grupo_id: groupId,
-            nome: data.nomeEstrategia,
-            prioridade: data.prioridade,
-            descricao: data.descricao,
-            frequencia_valor: data.frequenciaValor,
-            frequencia_unidade: data.frequenciaUnidade,
-            tolerancia_dias: data.tolerancia,
-            duracao_valor: data.duracaoValor,
-            duracao_unidade: data.duracaoUnidade,
-            data_inicio: data.dataInicio.toISOString(),
-            data_fim: data.dataFim?.toISOString() || null,
-            ativa: data.ativa,
-            status: data.ativa ? "ATIVA" : "INATIVA",
-        });
+    try {
+        const { error } = await supabase
+            .from('estrategias')
+            .insert({
+                grupo_id: groupId,
+                nome: data.nomeEstrategia,
+                prioridade: data.prioridade,
+                descricao: data.descricao,
+                frequencia_valor: data.frequenciaValor,
+                frequencia_unidade: data.frequenciaUnidade,
+                tolerancia_dias: data.tolerancia,
+                duracao_valor: data.duracaoValor,
+                duracao_unidade: data.duracaoUnidade,
+                data_inicio: data.dataInicio.toISOString(),
+                data_fim: data.dataFim?.toISOString() || null,
+                ativa: data.ativa,
+                status: data.ativa ? "ATIVA" : "INATIVA",
+            })
+            .throwOnError();
 
-    if (error) {
-        console.error("Error creating strategy:", error);
-        toast({
-            title: "Erro ao criar estratégia",
-            description: "Ocorreu um erro ao salvar a nova estratégia.",
-            variant: "destructive",
-        });
-    } else {
         toast({
             title: "Estratégia Criada!",
             description: "A nova estratégia foi salva com sucesso.",
         });
         router.push(`/grupos/${groupId}/estrategias`);
-    }
 
-    setIsSubmitting(false);
+    } catch (error: any) {
+        console.error("Error creating strategy:", error.message || error);
+        toast({
+            title: "Erro ao criar estratégia",
+            description: "Ocorreu um erro ao salvar a nova estratégia. Verifique as permissões do banco de dados.",
+            variant: "destructive",
+        });
+    } finally {
+        setIsSubmitting(false);
+    }
   }
   
   if (loading) {
@@ -423,5 +425,3 @@ export default function NovaEstrategiaPage() {
     </MainLayout>
   );
 }
-
-    
