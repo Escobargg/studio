@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useTransition } from "react";
+import { useState, useEffect, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -19,9 +19,6 @@ interface GroupFiltersProps {
 }
 
 type OptionsState = {
-  diretoriasExecutivas: string[];
-  diretorias: string[];
-  unidades: string[];
   centrosLocalizacao: string[];
   fases: string[];
   categorias: string[];
@@ -30,9 +27,6 @@ type OptionsState = {
 export function GroupFilters({ onFilterChange }: GroupFiltersProps) {
   const [filters, setFilters] = useState<Filtros>({});
   const [options, setOptions] = useState<OptionsState>({
-    diretoriasExecutivas: [],
-    diretorias: [],
-    unidades: [],
     centrosLocalizacao: [],
     fases: [],
     categorias: [],
@@ -43,10 +37,11 @@ export function GroupFilters({ onFilterChange }: GroupFiltersProps) {
   // Fetch initial options
   useEffect(() => {
     const fetchInitial = async () => {
-      setLoading(prev => ({ ...prev, diretoriasExecutivas: true }));
-      const dirExec = await getHierarquiaOpcoes("diretoria_executiva");
-      setOptions(prev => ({ ...prev, diretoriasExecutivas: dirExec }));
-      setLoading(prev => ({ ...prev, diretoriasExecutivas: false }));
+      setLoading(prev => ({ ...prev, centrosLocalizacao: true }));
+      // Fetch all possible "centro_de_localizacao" initially without filters
+      const centros = await getHierarquiaOpcoes("centro_de_localizacao");
+      setOptions(prev => ({ ...prev, centrosLocalizacao: centros }));
+      setLoading(prev => ({ ...prev, centrosLocalizacao: false }));
     };
     fetchInitial();
   }, []);
@@ -65,13 +60,7 @@ export function GroupFilters({ onFilterChange }: GroupFiltersProps) {
     let fieldsToReset: (keyof Filtros)[] = [];
 
     // Reset subsequent fields
-    if (field === 'diretoria_executiva') {
-        fieldsToReset = ['diretoria', 'unidade', 'centro_de_localizacao', 'fase', 'categoria'];
-    } else if (field === 'diretoria') {
-        fieldsToReset = ['unidade', 'centro_de_localizacao', 'fase', 'categoria'];
-    } else if (field === 'unidade') {
-        fieldsToReset = ['centro_de_localizacao', 'fase', 'categoria'];
-    } else if (field === 'centro_de_localizacao') {
+    if (field === 'centro_de_localizacao') {
         fieldsToReset = ['fase', 'categoria'];
     }
     
@@ -80,9 +69,6 @@ export function GroupFilters({ onFilterChange }: GroupFiltersProps) {
     
     // Clear options for reset fields
     const newOptions = {...options};
-    if (fieldsToReset.includes('diretoria')) newOptions.diretorias = [];
-    if (fieldsToReset.includes('unidade')) newOptions.unidades = [];
-    if (fieldsToReset.includes('centro_de_localizacao')) newOptions.centrosLocalizacao = [];
     if (fieldsToReset.includes('fase')) newOptions.fases = [];
     if (fieldsToReset.includes('categoria')) newOptions.categorias = [];
     setOptions(newOptions);
@@ -91,29 +77,7 @@ export function GroupFilters({ onFilterChange }: GroupFiltersProps) {
     // Fetch new options for the next field
     startTransition(() => {
         const fetchNextOptions = async () => {
-             const currentFilters = {
-                diretoria_executiva: newFilters.diretoria_executiva,
-                diretoria: newFilters.diretoria,
-                unidade: newFilters.unidade,
-                centro_de_localizacao: newFilters.centro_de_localizacao,
-            };
-
-            if (field === 'diretoria_executiva' && value) {
-                setLoading(prev => ({ ...prev, diretorias: true }));
-                const data = await getHierarquiaOpcoes('diretoria', currentFilters);
-                setOptions(prev => ({ ...prev, diretorias: data }));
-                setLoading(prev => ({ ...prev, diretorias: false }));
-            } else if (field === 'diretoria' && value) {
-                setLoading(prev => ({ ...prev, unidades: true }));
-                const data = await getHierarquiaOpcoes('unidade', currentFilters);
-                setOptions(prev => ({ ...prev, unidades: data }));
-                setLoading(prev => ({ ...prev, unidades: false }));
-            } else if (field === 'unidade' && value) {
-                setLoading(prev => ({ ...prev, centrosLocalizacao: true }));
-                const data = await getHierarquiaOpcoes('centro_de_localizacao', currentFilters);
-                setOptions(prev => ({ ...prev, centrosLocalizacao: data }));
-                setLoading(prev => ({ ...prev, centrosLocalizacao: false }));
-            } else if (field === 'centro_de_localizacao' && value) {
+            if (field === 'centro_de_localizacao' && value) {
                  setLoading(prev => ({ ...prev, fases: true, categorias: true }));
                  const [fasesData, categoriasData] = await Promise.all([
                     getHierarquiaOpcoes('fase', {centro_de_localizacao: value} as any),
@@ -131,9 +95,6 @@ export function GroupFilters({ onFilterChange }: GroupFiltersProps) {
     setFilters({});
     setOptions(prev => ({
         ...prev,
-        diretorias: [],
-        unidades: [],
-        centrosLocalizacao: [],
         fases: [],
         categorias: [],
     }));
@@ -167,46 +128,17 @@ export function GroupFilters({ onFilterChange }: GroupFiltersProps) {
 
   return (
     <div className="space-y-4">
-        <div className="flex flex-wrap items-center gap-4">
-             <Input
-                placeholder="Buscar por nome do grupo..."
-                value={filters.nome_grupo || ""}
-                onChange={(e) => setFilters(prev => ({ ...prev, nome_grupo: e.target.value }))}
-                className="flex-1 min-w-[200px] bg-background"
-            />
-            {renderSelect(
-                "tipoGrupo" as any,
-                "Tipo de Grupo",
-                ["Frota", "Rota"]
-            )}
-             <Button onClick={clearFilters} variant="ghost" className="h-10">
-                <X className="mr-2 h-4 w-4" />
-                Limpar Filtros
-            </Button>
-        </div>
       <div className="flex flex-wrap items-center gap-4">
-        {renderSelect(
-          "diretoria_executiva",
-          "Diretoria Executiva",
-          options.diretoriasExecutivas
-        )}
-        {renderSelect(
-          "diretoria",
-          "Diretoria",
-          options.diretorias,
-          !filters.diretoria_executiva
-        )}
-        {renderSelect(
-          "unidade",
-          "Unidade",
-          options.unidades,
-          !filters.diretoria
-        )}
+        <Input
+            placeholder="Buscar por nome do grupo..."
+            value={filters.nome_grupo || ""}
+            onChange={(e) => setFilters(prev => ({ ...prev, nome_grupo: e.target.value }))}
+            className="flex-1 min-w-[200px] bg-background"
+        />
         {renderSelect(
           "centro_de_localizacao",
           "Centro de Localização",
-          options.centrosLocalizacao,
-          !filters.unidade
+          options.centrosLocalizacao
         )}
         {renderSelect(
             "fase",
@@ -220,6 +152,10 @@ export function GroupFilters({ onFilterChange }: GroupFiltersProps) {
             options.categorias,
             !filters.centro_de_localizacao
         )}
+        <Button onClick={clearFilters} variant="ghost" className="h-10">
+            <X className="mr-2 h-4 w-4" />
+            Limpar Filtros
+        </Button>
       </div>
     </div>
   );

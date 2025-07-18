@@ -2,10 +2,6 @@ import { supabase } from './supabase';
 
 export type Filtros = {
   nome_grupo?: string;
-  tipo_grupo?: string;
-  diretoria_executiva?: string;
-  diretoria?: string;
-  unidade?: string;
   centro_de_localizacao?: string;
   fase?: string;
   categoria?: string;
@@ -13,11 +9,11 @@ export type Filtros = {
 
 // Fetches available options for a specific hierarchy level, filtered by previous selections.
 export const getHierarquiaOpcoes = async (
-  campo: keyof Omit<Filtros, 'nome_grupo' | 'tipo_grupo'>,
-  filtros: Omit<Filtros, 'nome_grupo' | 'tipo_grupo' | 'fase' | 'categoria'> = {}
+  campo: keyof Omit<Filtros, 'nome_grupo'> | 'diretoria_executiva' | 'diretoria' | 'unidade',
+  filtros: Partial<Record<'diretoria_executiva' | 'diretoria' | 'unidade' | 'centro_de_localizacao', string>> = {}
 ): Promise<string[]> => {
   try {
-    let query = supabase.from('hierarquia').select(campo, { count: 'exact', head: false });
+    let query = supabase.from('hierarquia').select(campo as string, { count: 'exact', head: false });
 
     // Apply filters based on previous selections
     for (const [key, value] of Object.entries(filtros)) {
