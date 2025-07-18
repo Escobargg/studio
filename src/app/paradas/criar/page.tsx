@@ -84,9 +84,30 @@ export default function CriarParadaPage() {
 
   const [duracaoPlanejada, setDuracaoPlanejada] = useState<number | null>(null);
   const [duracaoRealizada, setDuracaoRealizada] = useState<number | null>(null);
-  const [centrosLocalizacao, setCentrosLocalizacao] = useState<string[]>([]);
-  const [loadingCentros, setLoadingCentros] = useState(true);
 
+  // State for select options and loading
+  const [centrosLocalizacao, setCentrosLocalizacao] = useState<string[]>([]);
+  const [fases, setFases] = useState<string[]>([]);
+  const [loadingCentros, setLoadingCentros] = useState(true);
+  const [loadingFases, setLoadingFases] = useState(false);
+  
+  const form = useForm<StopFormValues>({
+    resolver: zodResolver(stopFormSchema),
+    defaultValues: {
+      nomeParada: "",
+      descricao: "",
+    },
+  });
+
+  const { watch, control, setValue } = form;
+
+  const watchedFields = watch([
+      "dataInicioPlanejada", "horaInicioPlanejada", "dataFimPlanejada", "horaFimPlanejada",
+      "dataInicioRealizado", "horaInicioRealizado", "dataFimRealizado", "horaFimRealizado"
+  ]);
+  const watchedCentro = watch("centroLocalizacao");
+
+  // Fetch Centro de Localizacao on mount
   useEffect(() => {
     async function fetchCentros() {
       setLoadingCentros(true);
@@ -97,20 +118,22 @@ export default function CriarParadaPage() {
     fetchCentros();
   }, []);
 
-  const form = useForm<StopFormValues>({
-    resolver: zodResolver(stopFormSchema),
-    defaultValues: {
-      nomeParada: "",
-      descricao: "",
-    },
-  });
-
-  const { watch } = form;
-
-  const watchedFields = watch([
-      "dataInicioPlanejada", "horaInicioPlanejada", "dataFimPlanejada", "horaFimPlanejada",
-      "dataInicioRealizado", "horaInicioRealizado", "dataFimRealizado", "horaFimRealizado"
-  ]);
+  // Fetch Fases when Centro de Localizacao changes
+  useEffect(() => {
+    const fetchFases = async () => {
+      if (watchedCentro) {
+        setLoadingFases(true);
+        setValue("fase", ""); // Reset fase on centro change
+        const data = await getHierarquiaOpcoes("fase", { centro_de_localizacao: watchedCentro });
+        setFases(data);
+        setLoadingFases(false);
+      } else {
+        setFases([]);
+      }
+    };
+    fetchFases();
+  }, [watchedCentro, setValue]);
+  
 
   useEffect(() => {
     const [
@@ -184,7 +207,7 @@ export default function CriarParadaPage() {
                 <CardContent className="pt-6 space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <FormField
-                      control={form.control}
+                      control={control}
                       name="nomeParada"
                       render={({ field }) => (
                         <FormItem>
@@ -209,7 +232,7 @@ export default function CriarParadaPage() {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                      <FormField
-                      control={form.control}
+                      control={control}
                       name="centroLocalizacao"
                       render={({ field }) => (
                         <FormItem>
@@ -231,16 +254,21 @@ export default function CriarParadaPage() {
                       )}
                     />
                      <FormField
-                      control={form.control}
+                      control={control}
                       name="fase"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Fase</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl><SelectTrigger><SelectValue placeholder="Selecionar Fase" /></SelectTrigger></FormControl>
+                          <Select onValueChange={field.onChange} value={field.value} disabled={!watchedCentro || loadingFases}>
+                            <FormControl>
+                              <SelectTrigger>
+                                {loadingFases ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <SelectValue placeholder="Selecionar Fase" />}
+                              </SelectTrigger>
+                            </FormControl>
                             <SelectContent>
-                              <SelectItem value="mina">MINA</SelectItem>
-                              <SelectItem value="usina">USINA</SelectItem>
+                              {fases.map(fase => (
+                                <SelectItem key={fase} value={fase}>{fase}</SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
                           <FormMessage />
@@ -250,7 +278,7 @@ export default function CriarParadaPage() {
                   </div>
                   
                   <FormField
-                    control={form.control}
+                    control={control}
                     name="grupoAtivos"
                     render={({ field }) => (
                       <FormItem>
@@ -269,7 +297,7 @@ export default function CriarParadaPage() {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
                     <FormField
-                      control={form.control}
+                      control={control}
                       name="dataInicioPlanejada"
                       render={({ field }) => (
                         <FormItem className="flex flex-col">
@@ -289,7 +317,7 @@ export default function CriarParadaPage() {
                                 </PopoverContent>
                              </Popover>
                              <FormField
-                                control={form.control}
+                                control={control}
                                 name="horaInicioPlanejada"
                                 render={({ field }) => (
                                     <FormControl>
@@ -303,7 +331,7 @@ export default function CriarParadaPage() {
                       )}
                     />
                      <FormField
-                      control={form.control}
+                      control={control}
                       name="dataFimPlanejada"
                       render={({ field }) => (
                         <FormItem className="flex flex-col">
@@ -323,7 +351,7 @@ export default function CriarParadaPage() {
                                 </PopoverContent>
                               </Popover>
                               <FormField
-                                control={form.control}
+                                control={control}
                                 name="horaFimPlanejada"
                                 render={({ field }) => (
                                     <FormControl>
@@ -340,7 +368,7 @@ export default function CriarParadaPage() {
                   
                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
                      <FormField
-                      control={form.control}
+                      control={control}
                       name="dataInicioRealizado"
                       render={({ field }) => (
                         <FormItem className="flex flex-col">
@@ -360,7 +388,7 @@ export default function CriarParadaPage() {
                                 </PopoverContent>
                               </Popover>
                                <FormField
-                                control={form.control}
+                                control={control}
                                 name="horaInicioRealizado"
                                 render={({ field }) => (
                                     <FormControl>
@@ -374,7 +402,7 @@ export default function CriarParadaPage() {
                       )}
                     />
                      <FormField
-                      control={form.control}
+                      control={control}
                       name="dataFimRealizado"
                       render={({ field }) => (
                         <FormItem className="flex flex-col">
@@ -394,7 +422,7 @@ export default function CriarParadaPage() {
                             </PopoverContent>
                            </Popover>
                             <FormField
-                                control={form.control}
+                                control={control}
                                 name="horaFimRealizado"
                                 render={({ field }) => (
                                     <FormControl>
@@ -426,7 +454,7 @@ export default function CriarParadaPage() {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <FormField
-                      control={form.control}
+                      control={control}
                       name="equipes"
                       render={({ field }) => (
                         <FormItem>
@@ -447,7 +475,7 @@ export default function CriarParadaPage() {
                   </div>
                   
                   <FormField
-                    control={form.control}
+                    control={control}
                     name="descricao"
                     render={({ field }) => (
                       <FormItem>
