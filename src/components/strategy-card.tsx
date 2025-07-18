@@ -5,30 +5,92 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
-import { Calendar, CheckCircle, Clock, Edit, PauseCircle, Play, Trash2 } from "lucide-react";
+import { Calendar, CheckCircle, Clock, Edit, PauseCircle, Play, ShieldAlert, Trash2, Loader2 } from "lucide-react";
+import { useState } from "react";
+import toast from "react-hot-toast";
+import { supabase } from "@/lib/supabase";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+
 
 export type Strategy = {
   id: string;
   title: string;
-  priority: "LOW" | "MEDIUM" | "HIGH";
+  priority: "BAIXA" | "MEDIA" | "ALTA";
   status: "ATIVA" | "INATIVA";
   description: string;
   frequency: string;
   duration: string;
   startDate: string;
+  toleranceInDays?: number;
 };
 
 interface StrategyCardProps {
   strategy: Strategy;
+  onStrategyUpdate: (strategy: Strategy) => void;
+  onStrategyDelete: (strategyId: string) => void;
 }
 
-export function StrategyCard({ strategy }: StrategyCardProps) {
+export function StrategyCard({ strategy, onStrategyUpdate, onStrategyDelete }: StrategyCardProps) {
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleStatusChange = async (checked: boolean) => {
+    setIsUpdatingStatus(true);
+    const newStatus = checked ? "ATIVA" : "INATIVA";
+    
+    try {
+        const { error } = await supabase
+            .from('estrategias')
+            .update({ status: newStatus, ativa: checked })
+            .eq('id', strategy.id)
+            .throwOnError();
+
+        const updatedStrategy = { ...strategy, status: newStatus };
+        onStrategyUpdate(updatedStrategy);
+        toast.success(`Estratégia ${newStatus.toLowerCase()}.`);
+    } catch (error: any) {
+        toast.error("Falha ao atualizar o status.");
+        console.error("Error updating status:", error);
+    } finally {
+        setIsUpdatingStatus(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    try {
+        const { error } = await supabase
+            .from('estrategias')
+            .delete()
+            .eq('id', strategy.id)
+            .throwOnError();
+        
+        onStrategyDelete(strategy.id);
+        toast.success("Estratégia excluída com sucesso.");
+    } catch (error: any) {
+        toast.error("Falha ao excluir a estratégia.");
+        console.error("Error deleting strategy:", error);
+    } finally {
+        setIsDeleting(false);
+    }
+  };
+
   const isAtiva = strategy.status === "ATIVA";
 
   const priorityClasses = {
-    LOW: "bg-blue-100 text-blue-800 border-blue-300",
-    MEDIUM: "bg-yellow-100 text-yellow-800 border-yellow-300",
-    HIGH: "bg-red-100 text-red-800 border-red-300",
+    BAIXA: "bg-blue-100 text-blue-800 border-blue-300",
+    MEDIA: "bg-yellow-100 text-yellow-800 border-yellow-300",
+    ALTA: "bg-red-100 text-red-800 border-red-300",
   };
   
   const statusClasses = isAtiva
@@ -49,17 +111,44 @@ export function StrategyCard({ strategy }: StrategyCardProps) {
                     )}
                     <div>
                         <h2 className="text-lg font-semibold">{strategy.title}</h2>
-                        <div className="flex items-center gap-2 mt-1">
+                        <div className="flex items-center gap-2 mt-1 flex-wrap">
                            <Badge variant="outline" className={priorityClasses[strategy.priority]}>{strategy.priority}</Badge>
                            <Badge variant="outline" className={statusClasses}>{strategy.status}</Badge>
                         </div>
                     </div>
                 </div>
                 <div className="flex items-center gap-2 self-start sm:self-center">
-                    <Switch id={`status-switch-${strategy.id}`} checked={isAtiva} />
-                    <label htmlFor={`status-switch-${strategy.id}`} className="text-sm font-medium mr-4">{strategy.status}</label>
-                    <Button variant="ghost" size="icon"><Edit className="w-4 h-4" /></Button>
-                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive"><Trash2 className="w-4 h-4" /></Button>
+                    {isUpdatingStatus && <Loader2 className="h-4 w-4 animate-spin" />}
+                    <Switch id={`status-switch-${strategy.id}`} checked={isAtiva} onCheckedChange={handleStatusChange} disabled={isUpdatingStatus} />
+                    <label htmlFor={`status-switch-${strategy.id}`} className="text-sm font-medium mr-2">{isAtiva ? 'Ativa' : 'Inativa'}</label>
+                    <Button variant="ghost" size="icon" disabled><Edit className="w-4 h-4" /></Button>
+                     <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" disabled={isDeleting}>
+                                {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                            </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                            <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                Esta ação não pode ser desfeita. Isso excluirá permanentemente a estratégia
+                                <strong className="px-1">{strategy.title}</strong>.
+                            </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction
+                                onClick={handleDelete}
+                                disabled={isDeleting}
+                                className="bg-destructive hover:bg-destructive/90"
+                            >
+                                {isDeleting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                                {isDeleting ? "Excluindo..." : "Sim, excluir"}
+                            </AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
                 </div>
             </div>
 
@@ -80,6 +169,13 @@ export function StrategyCard({ strategy }: StrategyCardProps) {
                     <div>
                         <span className="text-muted-foreground">Duração:</span>
                         <p className="font-medium">{strategy.duration}</p>
+                    </div>
+                </div>
+                <div className="flex items-center gap-2">
+                    <ShieldAlert className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                        <span className="text-muted-foreground">Tolerância:</span>
+                        <p className="font-medium">{strategy.toleranceInDays ?? 0} dias</p>
                     </div>
                 </div>
                  <div className="flex items-center gap-2">
