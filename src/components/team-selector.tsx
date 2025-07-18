@@ -138,7 +138,7 @@ export function TeamSelector({
                   />
                 </div>
                  <div className="col-span-4 sm:col-span-4 md:col-span-3">
-                  <Label htmlFor={`total-hh-${team.id}`} className="text-xs text-muted-foreground">Total de HH</Label>
+                  <Label htmlFor={`total-hh-${team.id}`} className="text-xs text-muted-foreground">HH/Dia</Label>
                   <Input
                     id={`total-hh-${team.id}`}
                     type="number"
@@ -155,5 +155,3 @@ export function TeamSelector({
     </div>
   );
 }
-
-    
