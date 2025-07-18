@@ -108,10 +108,10 @@ export function NewStrategyDialog({ grupo, children, open, onOpenChange }: NewSt
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 min-h-0">
              <ScrollArea className="h-full pr-6">
-                <div className="space-y-6 py-4">
-                    <div className="space-y-4 p-1">
+                <div className="space-y-4 py-4">
+                    <div className="space-y-2 p-1">
                       <h3 className="text-lg font-medium">Informações Básicas</h3>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                         <FormField
                           control={form.control}
                           name="nomeEstrategia"
@@ -167,9 +167,9 @@ export function NewStrategyDialog({ grupo, children, open, onOpenChange }: NewSt
                       />
                     </div>
 
-                    <div className="space-y-4 p-1">
+                    <div className="space-y-2 p-1">
                       <h3 className="text-lg font-medium">Frequência da Parada</h3>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                          <FormField
                           control={form.control}
                           name="frequenciaValor"
@@ -222,9 +222,9 @@ export function NewStrategyDialog({ grupo, children, open, onOpenChange }: NewSt
                       </div>
                     </div>
 
-                     <div className="space-y-4 p-1">
+                     <div className="space-y-2 p-1">
                       <h3 className="text-lg font-medium">Duração da Parada</h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                          <FormField
                           control={form.control}
                           name="duracaoValor"
@@ -262,9 +262,9 @@ export function NewStrategyDialog({ grupo, children, open, onOpenChange }: NewSt
                       </div>
                     </div>
 
-                    <div className="space-y-4 p-1">
+                    <div className="space-y-2 p-1">
                         <h3 className="text-lg font-medium">Período de Vigência</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 items-start">
                             <FormField
                             control={form.control}
                             name="dataInicio"
