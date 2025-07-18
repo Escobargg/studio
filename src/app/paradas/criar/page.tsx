@@ -35,6 +35,7 @@ import { MainLayout } from "@/components/main-layout";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
+import { getHierarquiaOpcoes } from "@/lib/data";
 
 
 const stopFormSchema = z.object({
@@ -83,6 +84,18 @@ export default function CriarParadaPage() {
 
   const [duracaoPlanejada, setDuracaoPlanejada] = useState<number | null>(null);
   const [duracaoRealizada, setDuracaoRealizada] = useState<number | null>(null);
+  const [centrosLocalizacao, setCentrosLocalizacao] = useState<string[]>([]);
+  const [loadingCentros, setLoadingCentros] = useState(true);
+
+  useEffect(() => {
+    async function fetchCentros() {
+      setLoadingCentros(true);
+      const data = await getHierarquiaOpcoes("centro_de_localizacao");
+      setCentrosLocalizacao(data);
+      setLoadingCentros(false);
+    }
+    fetchCentros();
+  }, []);
 
   const form = useForm<StopFormValues>({
     resolver: zodResolver(stopFormSchema),
@@ -201,11 +214,16 @@ export default function CriarParadaPage() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Centro de Localização</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl><SelectTrigger><SelectValue placeholder="Selecionar Centro" /></SelectTrigger></FormControl>
+                          <Select onValueChange={field.onChange} value={field.value} disabled={loadingCentros}>
+                            <FormControl>
+                                <SelectTrigger>
+                                    {loadingCentros ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <SelectValue placeholder="Selecionar Centro" />}
+                                </SelectTrigger>
+                            </FormControl>
                             <SelectContent>
-                              <SelectItem value="centro1">2001 - Mina Carajás</SelectItem>
-                              <SelectItem value="centro2">3050 - Usina Vitória</SelectItem>
+                              {centrosLocalizacao.map(centro => (
+                                <SelectItem key={centro} value={centro}>{centro}</SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
                           <FormMessage />
@@ -464,5 +482,3 @@ export default function CriarParadaPage() {
     </MainLayout>
   );
 }
-
-    
