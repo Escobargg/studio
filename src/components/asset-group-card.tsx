@@ -1,3 +1,5 @@
+"use client";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -9,7 +11,9 @@ import {
     CardDescription
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Building, MapPin, Tag, Layers, ListChecks } from "lucide-react";
+import { Building, MapPin, Tag, Layers, ListChecks, Edit, Trash2 } from "lucide-react";
+import { EditAssetsDialog } from "./edit-assets-dialog";
+import { useState } from "react";
 
 type Grupo = {
     id: string;
@@ -27,6 +31,16 @@ interface AssetGroupCardProps {
 }
 
 export function AssetGroupCard({ grupo }: AssetGroupCardProps) {
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+    const handleUpdate = (updatedAssets: string[]) => {
+        // Lógica para atualizar no Supabase viria aqui.
+        console.log("Ativos atualizados:", updatedAssets);
+        // Por enquanto, apenas fechamos o dialog.
+        setIsDialogOpen(false);
+    };
+
+
     return (
         <Card className="flex flex-col h-full shadow-md hover:shadow-lg transition-shadow duration-300 border-border/60">
             <CardHeader>
@@ -60,18 +74,19 @@ export function AssetGroupCard({ grupo }: AssetGroupCardProps) {
                     <h4 className="flex items-center gap-2 text-sm font-semibold">
                        <ListChecks className="w-4 h-4"/> Ativos ({grupo.ativos.length})
                     </h4>
-                    <div className="flex flex-wrap gap-2">
-                        {grupo.ativos.slice(0, 3).map((ativo) => (
-                            <Badge key={ativo} variant="secondary">{ativo}</Badge>
-                        ))}
-                        {grupo.ativos.length > 3 && (
-                            <Badge variant="outline">+{grupo.ativos.length - 3} mais</Badge>
-                        )}
-                    </div>
                 </div>
             </CardContent>
-            <CardFooter>
-                <Button className="w-full" variant="outline">Ver Estratégias</Button>
+            <CardFooter className="flex justify-end gap-2">
+                 <EditAssetsDialog 
+                    grupo={grupo}
+                    onUpdate={handleUpdate}
+                    open={isDialogOpen}
+                    onOpenChange={setIsDialogOpen}
+                 />
+                 <Button variant="destructive" size="icon">
+                    <Trash2 className="w-4 h-4" />
+                    <span className="sr-only">Excluir</span>
+                </Button>
             </CardFooter>
         </Card>
     );

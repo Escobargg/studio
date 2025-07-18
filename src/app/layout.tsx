@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { Toaster } from "@/components/ui/toaster";
+import { Toaster as ShadToaster } from "@/components/ui/toaster";
+import { Toaster as HotToaster } from "react-hot-toast";
 import { Inter } from "next/font/google";
 import { SidebarProvider } from "@/components/ui/sidebar";
 
@@ -34,7 +35,8 @@ export default function RootLayout({
         <SidebarProvider>
           {children}
         </SidebarProvider>
-        <Toaster />
+        <ShadToaster />
+        <HotToaster />
       </body>
     </html>
   );
