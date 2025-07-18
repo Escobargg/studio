@@ -119,10 +119,10 @@ export function TeamSelector({
            <div className="space-y-3">
             {selectedTeams.map((team) => (
               <div key={team.id} className="grid grid-cols-12 items-end gap-x-4 gap-y-2">
-                <div className="col-span-12 sm:col-span-6 md:col-span-5">
+                <div className="col-span-12 sm:col-span-12 md:col-span-4 self-center">
                     <Label htmlFor={`capacity-${team.id}`}>{team.especialidade}</Label>
                 </div>
-                <div className="col-span-6 sm:col-span-3 md:col-span-3">
+                <div className="col-span-4 sm:col-span-4 md:col-span-2">
                   <Label htmlFor={`capacity-${team.id}`} className="text-xs text-muted-foreground">Capacidade</Label>
                   <Input
                     id={`capacity-${team.id}`}
@@ -133,10 +133,20 @@ export function TeamSelector({
                     placeholder="Nº"
                   />
                 </div>
-                <div className="col-span-6 sm:col-span-3 md:col-span-4">
+                <div className="col-span-4 sm:col-span-4 md:col-span-3">
                   <Label htmlFor={`hh-${team.id}`} className="text-xs text-muted-foreground">HH por Equipe</Label>
                   <Input
                     id={`hh-${team.id}`}
+                    type="number"
+                    value={team.capacidade * duracaoParada}
+                    disabled
+                    placeholder="Auto"
+                  />
+                </div>
+                 <div className="col-span-4 sm:col-span-4 md:col-span-3">
+                  <Label htmlFor={`total-hh-${team.id}`} className="text-xs text-muted-foreground">Total de HH</Label>
+                  <Input
+                    id={`total-hh-${team.id}`}
                     type="number"
                     value={team.capacidade * duracaoParada}
                     disabled
