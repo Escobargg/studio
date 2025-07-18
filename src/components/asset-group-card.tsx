@@ -41,22 +41,33 @@ export function AssetGroupCard({ grupo, onGroupUpdate }: AssetGroupCardProps) {
 
     const handleUpdate = async (updatedAssets: string[]) => {
         setIsUpdating(true);
-        const { data, error } = await supabase
-            .from('grupos_de_ativos')
-            .update({ ativos: updatedAssets })
-            .eq('id', grupo.id)
-            .select()
-            .single();
+        try {
+            const { data, error } = await supabase
+                .from('grupos_de_ativos')
+                .update({ ativos: updatedAssets })
+                .eq('id', grupo.id)
+                .select()
+                .single();
 
-        setIsUpdating(false);
-        
-        if (error) {
-            toast.error("Falha ao atualizar os ativos.");
-            console.error("Erro ao atualizar grupo:", error);
-        } else {
+            if (error) {
+                // Lança o erro para ser pego pelo bloco catch.
+                throw error;
+            }
+
+            if (!data) {
+                // Lança um erro se nenhum dado for retornado, o que indica um problema.
+                throw new Error("Nenhum dado retornado após a atualização. O grupo pode não ter sido encontrado.");
+            }
+
             toast.success("Grupo atualizado com sucesso!");
-            onGroupUpdate(data as Grupo); // Notifica o componente pai
-            setIsDialogOpen(false); // Fecha o dialog
+            onGroupUpdate(data as Grupo);
+            setIsDialogOpen(false);
+
+        } catch (error: any) {
+            toast.error("Falha ao atualizar os ativos.");
+            console.error("Erro ao atualizar grupo:", error.message || error);
+        } finally {
+            setIsUpdating(false);
         }
     };
 
