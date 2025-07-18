@@ -50,15 +50,15 @@ const equipeSchema = z.object({
 
 const stopFormSchema = z.object({
   nomeParada: z.string().min(1, "O nome da parada é obrigatório."),
-  centroLocalizacao: z.string({ required_error: "Selecione o centro de localização." }),
-  fase: z.string({ required_error: "Selecione a fase." }),
+  centroLocalizacao: z.string({ required_error: "Selecione o centro de localização." }).min(1, "Selecione o centro de localização."),
+  fase: z.string({ required_error: "Selecione a fase." }).min(1, "Selecione a fase."),
   tipoSelecao: z.enum(["grupo", "ativo"], { required_error: "Selecione o tipo."}),
   grupoAtivos: z.string().optional(),
   ativo: z.string().optional(),
   dataInicioPlanejada: z.date({ required_error: "A data de início planejada é obrigatória." }),
-  horaInicioPlanejada: z.string({ required_error: "A hora de início é obrigatória." }),
+  horaInicioPlanejada: z.string({ required_error: "A hora de início é obrigatória." }).regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Formato de hora inválido."),
   dataFimPlanejada: z.date({ required_error: "A data de fim planejada é obrigatória." }),
-  horaFimPlanejada: z.string({ required_error: "A hora de fim é obrigatória." }),
+  horaFimPlanejada: z.string({ required_error: "A hora de fim é obrigatória." }).regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Formato de hora inválido."),
   dataInicioRealizado: z.date().optional().nullable(),
   horaInicioRealizado: z.string().optional().nullable(),
   dataFimRealizado: z.date().optional().nullable(),
@@ -133,9 +133,19 @@ export default function CriarParadaPage() {
     resolver: zodResolver(stopFormSchema),
     defaultValues: {
       nomeParada: "",
-      descricao: "",
+      centroLocalizacao: "",
+      fase: "",
       tipoSelecao: "grupo",
+      grupoAtivos: "",
+      ativo: "",
+      horaInicioPlanejada: "",
+      horaFimPlanejada: "",
+      dataInicioRealizado: null,
+      horaInicioRealizado: "",
+      dataFimRealizado: null,
+      horaFimRealizado: "",
       equipes: [],
+      descricao: "",
     },
   });
 
@@ -599,7 +609,7 @@ export default function CriarParadaPage() {
                                 name="horaInicioRealizado"
                                 render={({ field }) => (
                                     <FormControl>
-                                      <Input type="time" {...field} className="w-[120px]"/>
+                                      <Input type="time" {...field} value={field.value ?? ''} className="w-[120px]"/>
                                     </FormControl>
                                 )}
                               />
@@ -633,7 +643,7 @@ export default function CriarParadaPage() {
                                 name="horaFimRealizado"
                                 render={({ field }) => (
                                     <FormControl>
-                                      <Input type="time" {...field} className="w-[120px]"/>
+                                      <Input type="time" {...field} value={field.value ?? ''} className="w-[120px]"/>
                                     </FormControl>
                                 )}
                               />
