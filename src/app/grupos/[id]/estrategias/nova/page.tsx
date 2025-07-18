@@ -38,7 +38,7 @@ import type { Grupo } from "@/components/asset-group-card";
 import { MainLayout } from "@/components/main-layout";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 
 
 const strategyFormSchema = z.object({
@@ -71,7 +71,9 @@ async function getGroupDetails(groupId: string): Promise<Grupo | null> {
   return data as Grupo;
 }
 
-export default function NovaEstrategiaPage({ params }: { params: { id: string } }) {
+export default function NovaEstrategiaPage() {
+  const params = useParams();
+  const groupId = Array.isArray(params.id) ? params.id[0] : params.id;
   const [grupo, setGrupo] = useState<Grupo | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -91,7 +93,6 @@ export default function NovaEstrategiaPage({ params }: { params: { id: string } 
   });
 
   useEffect(() => {
-    const groupId = params.id;
     if (!groupId) return;
 
     const fetchGroup = async () => {
@@ -102,12 +103,20 @@ export default function NovaEstrategiaPage({ params }: { params: { id: string } 
     };
 
     fetchGroup();
-  }, [params.id]);
+  }, [groupId]);
 
 
   async function onSubmit(data: StrategyFormValues) {
     setIsSubmitting(true);
-    const groupId = params.id;
+    if (!groupId) {
+        toast({
+            title: "Erro",
+            description: "ID do grupo não encontrado.",
+            variant: "destructive",
+        });
+        setIsSubmitting(false);
+        return;
+    }
     
     const { error } = await supabase
         .from('estrategias')
@@ -124,7 +133,7 @@ export default function NovaEstrategiaPage({ params }: { params: { id: string } 
             data_inicio: data.dataInicio.toISOString(),
             data_fim: data.dataFim?.toISOString() || null,
             ativa: data.ativa,
-            status: data.ativa ? "ATIVA" : "INATIVA", // Set status based on 'ativa' field
+            status: data.ativa ? "ATIVA" : "INATIVA",
         });
 
     if (error) {
@@ -173,7 +182,7 @@ export default function NovaEstrategiaPage({ params }: { params: { id: string } 
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                         <div className="flex items-center gap-4 mb-6">
                             <Button variant="outline" size="icon" asChild>
-                                <Link href={`/grupos/${params.id}/estrategias`}>
+                                <Link href={`/grupos/${groupId}/estrategias`}>
                                     <ArrowLeft className="h-4 w-4" />
                                     <span className="sr-only">Voltar</span>
                                 </Link>
@@ -400,7 +409,7 @@ export default function NovaEstrategiaPage({ params }: { params: { id: string } 
                         
                         <div className="flex justify-end gap-2">
                             <Button variant="ghost" type="button" asChild>
-                                <Link href={`/grupos/${params.id}/estrategias`}>Cancelar</Link>
+                                <Link href={`/grupos/${groupId}/estrategias`}>Cancelar</Link>
                             </Button>
                             <Button type="submit" disabled={isSubmitting}>
                                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

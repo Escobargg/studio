@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useParams } from "next/navigation";
 
 async function getGroupDetails(groupId: string): Promise<Grupo | null> {
   const { data, error } = await supabase
@@ -54,13 +55,14 @@ async function getGroupStrategies(groupId: string): Promise<Strategy[]> {
 }
 
 
-export default function EstrategiasPage({ params }: { params: { id: string } }) {
+export default function EstrategiasPage() {
+  const params = useParams();
+  const groupId = Array.isArray(params.id) ? params.id[0] : params.id;
   const [grupo, setGrupo] = useState<Grupo | null>(null);
   const [strategies, setStrategies] = useState<Strategy[]>([]);
   const [loading, setLoading] = useState(true);
   
   useEffect(() => {
-    const groupId = params.id;
     if (!groupId) return;
 
     const fetchData = async () => {
@@ -75,7 +77,7 @@ export default function EstrategiasPage({ params }: { params: { id: string } }) 
     };
 
     fetchData();
-  }, [params.id]);
+  }, [groupId]);
 
   if (loading) {
     return (
@@ -111,7 +113,7 @@ export default function EstrategiasPage({ params }: { params: { id: string } }) 
                     </p>
                 </div>
                 <Button asChild className="mt-4 md:mt-0">
-                  <Link href={`/grupos/${params.id}/estrategias/nova`}>
+                  <Link href={`/grupos/${groupId}/estrategias/nova`}>
                     <PlusCircle className="mr-2 h-4 w-4" />
                     Nova Estratégia
                   </Link>
