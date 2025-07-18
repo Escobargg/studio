@@ -68,3 +68,28 @@ export const getAtivosByCentro = async (centro: string): Promise<string[]> => {
         return [];
     }
 };
+
+// Fetches asset groups based on a location center and phase
+export const getGruposByCentroEFase = async (centro: string, fase: string): Promise<string[]> => {
+    if (!centro || !fase) {
+        return [];
+    }
+    try {
+        const { data, error } = await supabase
+            .from('grupos_de_ativos')
+            .select('nome_grupo')
+            .eq('centro_de_localizacao', centro)
+            .eq('fase', fase)
+            .throwOnError();
+
+        if (error) {
+            console.error('Error fetching asset groups:', error);
+            return [];
+        }
+
+        return data.map(g => g.nome_grupo).sort();
+    } catch(error) {
+        console.error('Exception when fetching asset groups:', error);
+        return [];
+    }
+}

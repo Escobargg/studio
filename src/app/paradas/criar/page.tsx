@@ -36,7 +36,7 @@ import { MainLayout } from "@/components/main-layout";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { getHierarquiaOpcoes, getAtivosByCentro } from "@/lib/data";
+import { getHierarquiaOpcoes, getAtivosByCentro, getGruposByCentroEFase } from "@/lib/data";
 
 
 const stopFormSchema = z.object({
@@ -109,9 +109,12 @@ export default function CriarParadaPage() {
   const [centrosLocalizacao, setCentrosLocalizacao] = useState<string[]>([]);
   const [fases, setFases] = useState<string[]>([]);
   const [ativos, setAtivos] = useState<string[]>([]);
+  const [gruposDeAtivos, setGruposDeAtivos] = useState<string[]>([]);
+
   const [loadingCentros, setLoadingCentros] = useState(true);
   const [loadingFases, setLoadingFases] = useState(false);
   const [loadingAtivos, setLoadingAtivos] = useState(false);
+  const [loadingGrupos, setLoadingGrupos] = useState(false);
   
   const form = useForm<StopFormValues>({
     resolver: zodResolver(stopFormSchema),
@@ -129,6 +132,7 @@ export default function CriarParadaPage() {
       "dataInicioRealizado", "horaInicioRealizado", "dataFimRealizado", "horaFimRealizado"
   ]);
   const watchedCentro = watch("centroLocalizacao");
+  const watchedFase = watch("fase");
   const watchedTipoSelecao = watch("tipoSelecao");
 
   // Fetch Centro de Localizacao on mount
@@ -164,10 +168,27 @@ export default function CriarParadaPage() {
       } else {
         setFases([]);
         setAtivos([]);
+        setGruposDeAtivos([]);
       }
     };
     fetchDataForCentro();
   }, [watchedCentro, setValue]);
+
+  // Fetch Grupos de Ativos when Centro and Fase change
+  useEffect(() => {
+    const fetchGrupos = async () => {
+        if (watchedCentro && watchedFase) {
+            setLoadingGrupos(true);
+            setValue("grupoAtivos", "");
+            const gruposData = await getGruposByCentroEFase(watchedCentro, watchedFase);
+            setGruposDeAtivos(gruposData);
+            setLoadingGrupos(false);
+        } else {
+            setGruposDeAtivos([]);
+        }
+    };
+    fetchGrupos();
+  }, [watchedCentro, watchedFase, setValue]);
   
 
   useEffect(() => {
@@ -350,12 +371,17 @@ export default function CriarParadaPage() {
                             render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Grupo de Ativos</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value} disabled={!watchedCentro}>
-                                <FormControl><SelectTrigger><SelectValue placeholder="Selecionar Grupo de Ativos" /></SelectTrigger></FormControl>
-                                <SelectContent>
-                                    <SelectItem value="grupo1">Britadores Carajás</SelectItem>
-                                    <SelectItem value="grupo2">Fornos Alto Forno Vitória</SelectItem>
-                                </SelectContent>
+                                <Select onValueChange={field.onChange} value={field.value} disabled={!watchedCentro || !watchedFase || loadingGrupos}>
+                                    <FormControl>
+                                        <SelectTrigger>
+                                            {loadingGrupos ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <SelectValue placeholder="Selecionar Grupo de Ativos" />}
+                                        </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        {gruposDeAtivos.map(grupo => (
+                                            <SelectItem key={grupo} value={grupo}>{grupo}</SelectItem>
+                                        ))}
+                                    </SelectContent>
                                 </Select>
                                 <FormMessage />
                             </FormItem>
