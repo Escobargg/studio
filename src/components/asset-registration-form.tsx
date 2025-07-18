@@ -83,7 +83,7 @@ export function AssetRegistrationForm({ initialDiretoriasExecutivas }: AssetRegi
     ativos: [],
   });
   const [isLoading, setIsLoading] = useState({
-    diretoriasExecutivas: false,
+    diretoriasExecutivas: !initialDiretoriasExecutivas || initialDiretoriasExecutivas.length === 0,
     diretorias: false,
     unidades: false,
     centrosLocalizacao: false,
@@ -103,19 +103,20 @@ export function AssetRegistrationForm({ initialDiretoriasExecutivas }: AssetRegi
   });
 
   const watch = form.watch;
-  
-  // A busca inicial foi removida para evitar o erro de coluna não encontrada.
-  // O usuário precisará informar os nomes corretos das colunas.
+
   useEffect(() => {
-    // setIsLoading(prev => ({...prev, diretoriasExecutivas: true}));
-    // getHierarquiaOpcoes("diretoria_executiva")
-    //   .then(newOptions => {
-    //     setOptions(prev => ({...prev, diretoriasExecutivas: newOptions}));
-    //   })
-    //   .finally(() => {
-    //     setIsLoading(prev => ({...prev, diretoriasExecutivas: false}));
-    //   });
-  }, []);
+    // Reativado: Busca as diretorias executivas se não forem passadas inicialmente.
+    if (!initialDiretoriasExecutivas || initialDiretoriasExecutivas.length === 0) {
+      setIsLoading(prev => ({...prev, diretoriasExecutivas: true}));
+      getHierarquiaOpcoes("diretoria_executiva")
+        .then(newOptions => {
+          setOptions(prev => ({...prev, diretoriasExecutivas: newOptions}));
+        })
+        .finally(() => {
+          setIsLoading(prev => ({...prev, diretoriasExecutivas: false}));
+        });
+    }
+  }, [initialDiretoriasExecutivas]);
 
   const handleFieldChange = useCallback(
     (fieldName: keyof AssetFormValues, nextFieldName: keyof OptionsState | null, resetFields: (keyof AssetFormValues)[]) => {

@@ -1,10 +1,10 @@
 import { AssetRegistrationForm } from "@/components/asset-registration-form";
+import { getHierarquiaOpcoes } from "@/lib/data";
 import { Building2, MountainIcon } from "lucide-react";
 
 export default async function Home() {
-  // A busca inicial foi removida para evitar o erro de coluna não encontrada.
-  // O componente do formulário agora lidará com o carregamento inicial.
-  const diretoriasExecutivas: string[] = [];
+  // A busca inicial foi reativada para carregar as opções da Diretoria Executiva.
+  const diretoriasExecutivas = await getHierarquiaOpcoes("diretoria_executiva");
 
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground">
