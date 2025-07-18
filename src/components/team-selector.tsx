@@ -134,7 +134,7 @@ export function TeamSelector({
                   />
                 </div>
                 <div className="col-span-4 sm:col-span-4 md:col-span-3">
-                  <Label htmlFor={`hh-${team.id}`} className="text-xs text-muted-foreground">HH por Equipe</Label>
+                  <Label htmlFor={`hh-${team.id}`} className="text-xs text-muted-foreground">HH</Label>
                   <Input
                     id={`hh-${team.id}`}
                     type="number"
