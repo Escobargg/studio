@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "./ui/button";
-import { Building, MapPin } from "lucide-react";
+import { Building, MapPin, Building2 } from "lucide-react";
 
 export interface AssetGroup {
   id: string;
