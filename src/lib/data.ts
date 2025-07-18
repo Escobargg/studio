@@ -1,17 +1,20 @@
 import { supabase } from './supabase';
 
-type Filtros = {
+export type Filtros = {
+  nome_grupo?: string;
+  tipo_grupo?: string;
   diretoria_executiva?: string;
   diretoria?: string;
   unidade?: string;
   centro_de_localizacao?: string;
   fase?: string;
+  categoria?: string;
 };
 
 // Fetches available options for a specific hierarchy level, filtered by previous selections.
 export const getHierarquiaOpcoes = async (
-  campo: keyof Filtros | 'categoria',
-  filtros: Filtros = {}
+  campo: keyof Omit<Filtros, 'nome_grupo' | 'tipo_grupo'>,
+  filtros: Omit<Filtros, 'nome_grupo' | 'tipo_grupo' | 'fase' | 'categoria'> = {}
 ): Promise<string[]> => {
   try {
     let query = supabase.from('hierarquia').select(campo, { count: 'exact', head: false });
@@ -31,7 +34,9 @@ export const getHierarquiaOpcoes = async (
     }
 
     // Get unique, non-null values and sort them
-    return [...new Set(data?.map(item => item[campo]).filter(Boolean) as string[])].sort();
+    const result = [...new Set(data?.map(item => item[campo]).filter(Boolean) as string[])].sort();
+    return result;
+    
   } catch (error) {
     console.error(`Exception when fetching options for ${campo}:`, error);
     // On error, return an empty array to prevent app crash and log the detailed error.
