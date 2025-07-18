@@ -3,7 +3,6 @@
 
 import { MainLayout } from "@/components/main-layout";
 import { Button } from "@/components/ui/button";
-import { DialogTrigger } from "@/components/ui/dialog";
 import { PlusCircle, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
@@ -11,7 +10,7 @@ import type { Grupo } from "@/components/asset-group-card";
 import { StrategyCard, Strategy } from "@/components/strategy-card";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { NewStrategyDialog } from "@/components/new-strategy-dialog";
+import Link from "next/link";
 
 // Mock data for strategies - replace with actual data fetching
 const mockStrategies: Strategy[] = [
@@ -56,8 +55,6 @@ export default function EstrategiasPage({ params }: { params: { id: string } }) 
   const [grupo, setGrupo] = useState<Grupo | null>(null);
   const [strategies, setStrategies] = useState<Strategy[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isNewStrategyDialogOpen, setIsNewStrategyDialogOpen] = useState(false);
-
 
   useEffect(() => {
     const fetchData = async () => {
@@ -107,18 +104,12 @@ export default function EstrategiasPage({ params }: { params: { id: string } }) 
                         {grupo.unidade} | {grupo.centro_de_localizacao} | {grupo.ativos.length} ativos
                     </p>
                 </div>
-                <NewStrategyDialog 
-                    grupo={grupo} 
-                    open={isNewStrategyDialogOpen} 
-                    onOpenChange={setIsNewStrategyDialogOpen}
-                >
-                    <DialogTrigger asChild>
-                        <Button className="mt-4 md:mt-0">
-                            <PlusCircle className="mr-2 h-4 w-4" />
-                            Nova Estratégia
-                        </Button>
-                    </DialogTrigger>
-                </NewStrategyDialog>
+                <Button asChild className="mt-4 md:mt-0">
+                  <Link href={`/grupos/${params.id}/estrategias/nova`}>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Nova Estratégia
+                  </Link>
+                </Button>
             </div>
           </Card>
 

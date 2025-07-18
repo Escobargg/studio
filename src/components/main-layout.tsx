@@ -1,3 +1,4 @@
+
 "use client";
 
 import {
@@ -24,7 +25,10 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
     if (pathname === "/grupos") {
       return "Grupos de Ativos";
     }
-    if (pathname.startsWith("/grupos/") && pathname.endsWith("/estrategias")) {
+    if (pathname.includes("/estrategias/nova")) {
+       return "Criar Nova Estratégia";
+    }
+    if (pathname.includes("/estrategias")) {
        return "Estratégias de Manutenção";
     }
     return "SmartPCM";
