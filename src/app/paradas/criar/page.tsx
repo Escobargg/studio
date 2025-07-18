@@ -44,8 +44,8 @@ const equipeSchema = z.object({
   id: z.string(),
   especialidade: z.string(),
   capacidade: z.string().transform(Number).refine(val => val > 0, { message: "Capacidade deve ser maior que 0." }),
-  hh: z.coerce.number(),
-  total_hh: z.coerce.number(),
+  hh: z.number(),
+  total_hh: z.number(),
 });
 
 const stopFormSchema = z.object({
@@ -732,5 +732,4 @@ export default function CriarParadaPage() {
       </div>
     </MainLayout>
   );
-
-    
+}
