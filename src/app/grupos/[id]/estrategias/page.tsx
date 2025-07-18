@@ -11,31 +11,8 @@ import { StrategyCard, Strategy } from "@/components/strategy-card";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
-
-// Mock data for strategies - replace with actual data fetching
-const mockStrategies: Strategy[] = [
-  {
-    id: "1",
-    title: "Manutenção Preventiva Quinzenal",
-    priority: "MEDIUM",
-    status: "ATIVA",
-    description: "Manutenção preventiva dos transportadores de correia",
-    frequency: "A cada 2 semana(s)",
-    duration: "8 hora(s)",
-    startDate: "14/01/2024",
-  },
-  {
-    id: "2",
-    title: "Parada Mensal Programada",
-    priority: "HIGH",
-    status: "INATIVA",
-    description: "Parada completa para manutenção corretiva",
-    frequency: "A cada 1 mês(es)",
-    duration: "2 dia(s)",
-    startDate: "31/01/2024",
-  },
-];
-
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 async function getGroupDetails(groupId: string): Promise<Grupo | null> {
   const { data, error } = await supabase
@@ -51,25 +28,54 @@ async function getGroupDetails(groupId: string): Promise<Grupo | null> {
   return data;
 }
 
+async function getGroupStrategies(groupId: string): Promise<Strategy[]> {
+    const { data, error } = await supabase
+        .from("estrategias")
+        .select("*")
+        .eq("grupo_id", groupId)
+        .order("created_at", { ascending: false });
+
+    if (error) {
+        console.error("Error fetching strategies:", error);
+        return [];
+    }
+
+    // Map Supabase data to Strategy type
+    return data.map(s => ({
+        id: s.id,
+        title: s.nome,
+        priority: s.prioridade,
+        status: s.status,
+        description: s.descricao || 'Sem descrição.',
+        frequency: `A cada ${s.frequencia_valor} ${s.frequencia_unidade.toLowerCase()}`,
+        duration: `${s.duracao_valor} ${s.duracao_unidade.toLowerCase()}`,
+        startDate: format(new Date(s.data_inicio), "dd/MM/yyyy", { locale: ptBR }),
+    }));
+}
+
+
 export default function EstrategiasPage({ params }: { params: { id: string } }) {
   const [grupo, setGrupo] = useState<Grupo | null>(null);
   const [strategies, setStrategies] = useState<Strategy[]>([]);
   const [loading, setLoading] = useState(true);
+  const groupId = params.id;
 
   useEffect(() => {
     const fetchData = async () => {
+      if (!groupId) return;
+
       setLoading(true);
-      const groupDetails = await getGroupDetails(params.id);
+      const [groupDetails, groupStrategies] = await Promise.all([
+        getGroupDetails(groupId),
+        getGroupStrategies(groupId)
+      ]);
       setGrupo(groupDetails);
-      // TODO: Fetch real strategies for the group
-      setStrategies(mockStrategies);
+      setStrategies(groupStrategies);
       setLoading(false);
     };
 
-    if (params.id) {
-      fetchData();
-    }
-  }, [params.id]);
+    fetchData();
+  }, [groupId]);
 
   if (loading) {
     return (
@@ -105,7 +111,7 @@ export default function EstrategiasPage({ params }: { params: { id: string } }) 
                     </p>
                 </div>
                 <Button asChild className="mt-4 md:mt-0">
-                  <Link href={`/grupos/${params.id}/estrategias/nova`}>
+                  <Link href={`/grupos/${groupId}/estrategias/nova`}>
                     <PlusCircle className="mr-2 h-4 w-4" />
                     Nova Estratégia
                   </Link>
@@ -115,9 +121,20 @@ export default function EstrategiasPage({ params }: { params: { id: string } }) 
 
           {/* Strategies List */}
           <div className="space-y-4">
-            {strategies.map((strategy) => (
-              <StrategyCard key={strategy.id} strategy={strategy} />
-            ))}
+            {strategies.length > 0 ? (
+                strategies.map((strategy) => (
+                    <StrategyCard key={strategy.id} strategy={strategy} />
+                ))
+            ) : (
+                <Card className="flex flex-col items-center justify-center py-12">
+                     <CardContent className="text-center">
+                        <h3 className="text-xl font-semibold">Nenhuma Estratégia Encontrada</h3>
+                        <p className="text-muted-foreground mt-2">
+                            Crie a primeira estratégia de manutenção para este grupo de ativos.
+                        </p>
+                    </CardContent>
+                </Card>
+            )}
           </div>
 
           {/* Assets List */}

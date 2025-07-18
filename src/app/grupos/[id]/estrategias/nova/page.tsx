@@ -41,7 +41,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 
 
-// TODO: Definir schema no supabase e implementar a lógica de submit
 const strategyFormSchema = z.object({
   nomeEstrategia: z.string().min(1, "O nome da estratégia é obrigatório."),
   prioridade: z.enum(["BAIXA", "MEDIA", "ALTA"], { required_error: "Selecione a prioridade." }),
@@ -78,6 +77,7 @@ export default function NovaEstrategiaPage({ params }: { params: { id: string } 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
+  const groupId = params.id;
 
   const form = useForm<StrategyFormValues>({
     resolver: zodResolver(strategyFormSchema),
@@ -93,31 +93,54 @@ export default function NovaEstrategiaPage({ params }: { params: { id: string } 
 
   useEffect(() => {
     const fetchGroup = async () => {
+      if (!groupId) return;
       setLoading(true);
-      const groupDetails = await getGroupDetails(params.id);
+      const groupDetails = await getGroupDetails(groupId);
       setGrupo(groupDetails);
       setLoading(false);
     };
 
-    if (params.id) {
-      fetchGroup();
-    }
-  }, [params.id]);
+    fetchGroup();
+  }, [groupId]);
 
 
   async function onSubmit(data: StrategyFormValues) {
     setIsSubmitting(true);
-    console.log("Submitting new strategy:", { ...data, grupo_id: params.id });
-    // TODO: Implementar a lógica de submit para o Supabase
-    await new Promise(resolve => setTimeout(resolve, 1000));
     
-    toast({
-        title: "Estratégia Criada!",
-        description: "A nova estratégia foi salva com sucesso.",
-    });
+    const { error } = await supabase
+        .from('estrategias')
+        .insert({
+            grupo_id: groupId,
+            nome: data.nomeEstrategia,
+            prioridade: data.prioridade,
+            descricao: data.descricao,
+            frequencia_valor: data.frequenciaValor,
+            frequencia_unidade: data.frequenciaUnidade,
+            tolerancia_dias: data.tolerancia,
+            duracao_valor: data.duracaoValor,
+            duracao_unidade: data.duracaoUnidade,
+            data_inicio: data.dataInicio.toISOString(),
+            data_fim: data.dataFim?.toISOString() || null,
+            ativa: data.ativa,
+            status: data.ativa ? "ATIVA" : "INATIVA", // Set status based on 'ativa' field
+        });
+
+    if (error) {
+        console.error("Error creating strategy:", error);
+        toast({
+            title: "Erro ao criar estratégia",
+            description: "Ocorreu um erro ao salvar a nova estratégia.",
+            variant: "destructive",
+        });
+    } else {
+        toast({
+            title: "Estratégia Criada!",
+            description: "A nova estratégia foi salva com sucesso.",
+        });
+        router.push(`/grupos/${groupId}/estrategias`);
+    }
 
     setIsSubmitting(false);
-    router.push(`/grupos/${params.id}/estrategias`);
   }
   
   if (loading) {
@@ -148,7 +171,7 @@ export default function NovaEstrategiaPage({ params }: { params: { id: string } 
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                         <div className="flex items-center gap-4 mb-6">
                             <Button variant="outline" size="icon" asChild>
-                                <Link href={`/grupos/${params.id}/estrategias`}>
+                                <Link href={`/grupos/${groupId}/estrategias`}>
                                     <ArrowLeft className="h-4 w-4" />
                                     <span className="sr-only">Voltar</span>
                                 </Link>
@@ -375,7 +398,7 @@ export default function NovaEstrategiaPage({ params }: { params: { id: string } 
                         
                         <div className="flex justify-end gap-2">
                             <Button variant="ghost" type="button" asChild>
-                                <Link href={`/grupos/${params.id}/estrategias`}>Cancelar</Link>
+                                <Link href={`/grupos/${groupId}/estrategias`}>Cancelar</Link>
                             </Button>
                             <Button type="submit" disabled={isSubmitting}>
                                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
