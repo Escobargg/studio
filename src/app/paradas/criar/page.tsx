@@ -1,114 +1,346 @@
 
 "use client";
 
-import { MainLayout } from "@/components/main-layout";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import * as z from "zod";
+import { useState, useEffect } from "react";
+import { ArrowLeft, CalendarIcon, Loader2 } from "lucide-react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { PlusCircle, Settings, Loader2 } from "lucide-react";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
+import { MainLayout } from "@/components/main-layout";
 import Link from "next/link";
-import { StopCard, StopCardProps } from "@/components/stop-card";
-import { StopsFilters } from "@/components/stops-filters";
-import { useState, useTransition, useCallback } from "react";
-
-// Mock data based on the image provided
-const mockStops: StopCardProps[] = [
-  {
-    id: "1",
-    title: "Parada Britadores Carajás 1",
-    center: "2001 - Mina Carajás",
-    phase: "MINA",
-    group: "Britadores Carajás",
-    plannedDate: "09/01/2025 - 17/01/2025",
-    actualDate: "09/01/2025 - 17/01/2025",
-    durationHours: 192,
-    teamsCount: 1,
-    totalManHours: 192,
-    description: "Manutenção programada do grupo Britadores Carajás - Equipes: Equipe Mecânica A",
-    completion: 0,
-  },
-  {
-    id: "2",
-    title: "Parada Fornos Alto Forno Vitória 3",
-    center: "3050 - Usina Vitória",
-    phase: "USINA",
-    group: "Fornos Alto Forno Vitória",
-    plannedDate: "04/01/2025 - 12/01/2025",
-    actualDate: "04/01/2025 - 12/01/2025",
-    durationHours: 192,
-    teamsCount: 3,
-    totalManHours: 576,
-    description: "Manutenção programada do grupo Fornos Alto Forno Vitória - Equipes: Equipe Mecânica A, Equipe Elétrica B, Equipe Instrumentação C",
-    completion: 0,
-  },
-  {
-    id: "3",
-    title: "Parada Equipamentos Mariana Usina 4",
-    center: "6002 - Mariana",
-    phase: "USINA",
-    group: "Equipamentos Mariana Usina",
-    plannedDate: "27/01/2025 - 29/01/2025",
-    actualDate: "27/01/2025 - 29/01/2025",
-    durationHours: 48,
-    teamsCount: 3,
-    totalManHours: 144,
-    description: "Manutenção programada do grupo Equipamentos Mariana Usina - Equipes: Equipe Mecânica A, Equipe Elétrica B, Equipe Instrumentação C",
-    completion: 0,
-  },
-];
+import { useToast } from "@/hooks/use-toast";
+import { useRouter } from "next/navigation";
 
 
-export default function CriarParadasPage() {
-  const [stops, setStops] = useState<StopCardProps[]>(mockStops);
-  const [isPending, startTransition] = useTransition();
+const stopFormSchema = z.object({
+  nomeParada: z.string().min(1, "O nome da parada é obrigatório."),
+  centroLocalizacao: z.string({ required_error: "Selecione o centro de localização." }),
+  fase: z.string({ required_error: "Selecione a fase." }),
+  grupoAtivos: z.string({ required_error: "Selecione o grupo de ativos." }),
+  dataInicioPlanejada: z.date({ required_error: "A data de início planejada é obrigatória." }),
+  dataFimPlanejada: z.date({ required_error: "A data de fim planejada é obrigatória." }),
+  dataInicioRealizado: z.date().optional().nullable(),
+  dataFimRealizado: z.date().optional().nullable(),
+  equipes: z.coerce.number().optional(),
+  descricao: z.string().optional(),
+});
 
-  const handleFilterChange = useCallback((filters: any) => {
-    // Placeholder for filter logic
-    startTransition(() => {
-        console.log("Applying filters:", filters);
-        // In a real app, you would fetch data from the server here based on filters
-        // For now, we'll just simulate a loading state
-        setTimeout(() => {
-            setStops(mockStops);
-        }, 500);
+type StopFormValues = z.infer<typeof stopFormSchema>;
+
+export default function CriarParadaPage() {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
+  const router = useRouter();
+
+  const form = useForm<StopFormValues>({
+    resolver: zodResolver(stopFormSchema),
+    defaultValues: {
+      nomeParada: "",
+      descricao: "",
+    },
+  });
+
+  async function onSubmit(data: StopFormValues) {
+    setIsSubmitting(true);
+    console.log("Form data:", data);
+    
+    // Placeholder for submission logic
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    toast({
+        title: "Parada Criada!",
+        description: "A nova parada de manutenção foi salva com sucesso (simulação).",
     });
-  }, []);
+    router.push(`/paradas`);
+
+    setIsSubmitting(false);
+  }
 
   return (
     <MainLayout>
-      <div className="flex-1 p-4 md:p-8 overflow-y-auto bg-muted/20 space-y-6">
-        <Card>
-           <CardHeader className="flex flex-row items-start justify-between">
-                <div className="flex items-center gap-3">
-                    <div className="p-2 bg-primary/10 rounded-md">
-                         <Settings className="w-6 h-6 text-primary" />
-                    </div>
-                    <div>
-                        <CardTitle className="text-2xl">Cadastro de Paradas de Manutenção</CardTitle>
-                        <CardDescription>
-                            Gerencie as paradas de manutenção por centro de localização e fase
-                        </CardDescription>
-                    </div>
-                </div>
-                <Button>
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Nova Parada
+      <div className="flex-1 p-4 md:p-8 overflow-y-auto">
+        <div className="max-w-4xl mx-auto">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <div className="flex items-center gap-4 mb-6">
+                <Button variant="outline" size="icon" asChild>
+                  <Link href="/paradas">
+                    <ArrowLeft className="h-4 w-4" />
+                    <span className="sr-only">Voltar</span>
+                  </Link>
                 </Button>
-            </CardHeader>
-            <CardContent>
-                <StopsFilters onFilterChange={handleFilterChange} />
-            </CardContent>
-        </Card>
-        
-        <div className="space-y-4">
-             {isPending ? (
-                 <div className="flex flex-col items-center justify-center h-full text-center py-20">
-                    <Loader2 className="w-16 h-16 text-primary animate-spin" />
-                    <h2 className="mt-6 text-2xl font-semibold">Buscando Paradas...</h2>
-                    <p className="mt-2 text-muted-foreground">Aguarde um momento.</p>
+                <div>
+                  <h1 className="text-2xl font-bold">Criar Nova Parada de Manutenção</h1>
+                  <p className="text-muted-foreground">
+                    Preencha as informações da parada de manutenção
+                  </p>
                 </div>
-             ) : stops.map((stop) => (
-                <StopCard key={stop.id} {...stop} />
-             ))}
+              </div>
+
+              <Card>
+                <CardContent className="pt-6 space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <FormField
+                      control={form.control}
+                      name="nomeParada"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Nome da Parada</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Ex: Parada Geral Transportadores" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormItem>
+                      <FormLabel>Conclusão (%)</FormLabel>
+                      <FormControl>
+                        <Input disabled value="Calculado automaticamente" />
+                      </FormControl>
+                       <p className="text-[0.8rem] text-muted-foreground">
+                          Automático para paradas antes de jul/25
+                        </p>
+                    </FormItem>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                     <FormField
+                      control={form.control}
+                      name="centroLocalizacao"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Centro de Localização</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl><SelectTrigger><SelectValue placeholder="Selecionar Centro" /></SelectTrigger></FormControl>
+                            <SelectContent>
+                              <SelectItem value="centro1">2001 - Mina Carajás</SelectItem>
+                              <SelectItem value="centro2">3050 - Usina Vitória</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                     <FormField
+                      control={form.control}
+                      name="fase"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Fase</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl><SelectTrigger><SelectValue placeholder="Selecionar Fase" /></SelectTrigger></FormControl>
+                            <SelectContent>
+                              <SelectItem value="mina">MINA</SelectItem>
+                              <SelectItem value="usina">USINA</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  
+                  <FormField
+                    control={form.control}
+                    name="grupoAtivos"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Grupo de Ativos</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl><SelectTrigger><SelectValue placeholder="Selecionar Grupo de Ativos" /></SelectTrigger></FormControl>
+                          <SelectContent>
+                            <SelectItem value="grupo1">Britadores Carajás</SelectItem>
+                            <SelectItem value="grupo2">Fornos Alto Forno Vitória</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <FormField
+                      control={form.control}
+                      name="dataInicioPlanejada"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                          <FormLabel>Data início planejada</FormLabel>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <FormControl>
+                                <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                  {field.value ? (format(field.value, "PPP", { locale: ptBR })) : (<span>dd/mm/aaaa</span>)}
+                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                              </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar mode="single" selected={field.value ?? undefined} onSelect={field.onChange} initialFocus />
+                            </PopoverContent>
+                          </Popover>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="dataFimPlanejada"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                          <FormLabel>Fim planejada</FormLabel>
+                           <Popover>
+                            <PopoverTrigger asChild>
+                              <FormControl>
+                                <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                  {field.value ? (format(field.value, "PPP", { locale: ptBR })) : (<span>dd/mm/aaaa</span>)}
+                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                              </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar mode="single" selected={field.value ?? undefined} onSelect={field.onChange} disabled={(date) => form.getValues("dataInicioPlanejada") ? date < form.getValues("dataInicioPlanejada") : false} initialFocus />
+                            </PopoverContent>
+                          </Popover>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <FormField
+                      control={form.control}
+                      name="dataInicioRealizado"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                          <FormLabel>Data início realizado</FormLabel>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <FormControl>
+                                <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                  {field.value ? (format(field.value, "PPP", { locale: ptBR })) : (<span>dd/mm/aaaa</span>)}
+                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                              </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar mode="single" selected={field.value ?? undefined} onSelect={field.onChange} initialFocus />
+                            </PopoverContent>
+                          </Popover>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="dataFimRealizado"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                          <FormLabel>Fim realizado</FormLabel>
+                           <Popover>
+                            <PopoverTrigger asChild>
+                              <FormControl>
+                                <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                  {field.value ? (format(field.value, "PPP", { locale: ptBR })) : (<span>dd/mm/aaaa</span>)}
+                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                              </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar mode="single" selected={field.value ?? undefined} onSelect={field.onChange} disabled={(date) => form.getValues("dataInicioRealizado") ? date < form.getValues("dataInicioRealizado") : false} initialFocus />
+                            </PopoverContent>
+                          </Popover>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <FormItem>
+                        <FormLabel>Duração (horas)</FormLabel>
+                        <FormControl>
+                            <Input type="number" disabled value="72" />
+                        </FormControl>
+                    </FormItem>
+                    <FormField
+                      control={form.control}
+                      name="equipes"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Equipes</FormLabel>
+                          <FormControl>
+                            <Input type="number" placeholder="Ex: 15" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                     <FormItem>
+                        <FormLabel>Total de HH</FormLabel>
+                        <FormControl>
+                            <Input disabled value="Calculado automaticamente" />
+                        </FormControl>
+                    </FormItem>
+                  </div>
+                  
+                  <FormField
+                    control={form.control}
+                    name="descricao"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Descrição</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Descreva a parada de manutenção..."
+                            className="resize-none"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </CardContent>
+              </Card>
+
+              <div className="flex justify-end gap-2">
+                <Button variant="ghost" type="button" asChild>
+                  <Link href="/paradas">Cancelar</Link>
+                </Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {isSubmitting ? "Criando..." : "Criar Parada"}
+                </Button>
+              </div>
+            </form>
+          </Form>
         </div>
       </div>
     </MainLayout>

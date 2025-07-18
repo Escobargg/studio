@@ -35,8 +35,11 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
     if (pathname.includes("/estrategias")) {
        return "Estratégias de Manutenção";
     }
+    if (pathname === "/paradas") {
+       return "Paradas de Manutenção";
+    }
     if (pathname === "/paradas/criar") {
-       return "Criar Paradas";
+       return "Criar Nova Parada";
     }
     return "SmartPCM";
   };
@@ -80,11 +83,11 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
               <SidebarMenuButton
                 asChild
                 isActive={pathname.startsWith("/paradas")}
-                tooltip="Criar Paradas"
+                tooltip="Paradas de Manutenção"
               >
-                <Link href="/paradas/criar">
+                <Link href="/paradas">
                   <Hand />
-                  <span>Criar Paradas</span>
+                  <span>Paradas</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
