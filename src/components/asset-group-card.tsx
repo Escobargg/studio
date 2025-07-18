@@ -33,6 +33,7 @@ export type Grupo = {
     categoria: string;
     fase: string;
     ativos: string[];
+    estrategias_count?: number;
     created_at?: string; // Manter os outros campos
 };
 
@@ -50,16 +51,21 @@ export function AssetGroupCard({ grupo, onGroupUpdate, onGroupDelete }: AssetGro
     const handleUpdate = async (updatedAssets: string[]) => {
         setIsUpdating(true);
         try {
-            const { error } = await supabase
+            const { data, error } = await supabase
                 .from('grupos_de_ativos')
                 .update({ ativos: updatedAssets })
                 .eq('id', grupo.id)
-                .throwOnError(); 
+                .select('*, estrategias_count:estrategias(count)') // Re-fetch count after update
+                .eq('estrategias.ativa', true)
+                .single();
 
+            if (error) throw error;
+            
             // Constrói o objeto atualizado localmente para evitar outra chamada ao banco
             const updatedGroup: Grupo = {
                 ...grupo,
                 ativos: updatedAssets,
+                estrategias_count: data.estrategias_count[0]?.count ?? 0,
             };
             
             toast.success("Grupo atualizado com sucesso!");
@@ -153,6 +159,9 @@ export function AssetGroupCard({ grupo, onGroupUpdate, onGroupDelete }: AssetGro
                 
                  {/* Actions Section */}
                 <div className="flex items-center gap-2 flex-shrink-0 w-full md:w-auto justify-end">
+                    <Badge variant="outline" className="h-10 text-sm">
+                        {grupo.estrategias_count ?? 0} {grupo.estrategias_count === 1 ? 'Estratégia Ativa' : 'Estratégias Ativas'}
+                    </Badge>
                     <Button variant="outline" asChild>
                         <Link href={`/grupos/${grupo.id}/estrategias`}>
                            <ShieldCheck className="w-4 h-4 mr-2" />
