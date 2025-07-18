@@ -56,15 +56,14 @@ export function TeamSelector({
 
   const handleCapacityChange = (teamId: string, value: string) => {
     const capacidade = parseInt(value, 10);
-    if (isNaN(capacidade)) return;
+    if (isNaN(capacidade) || capacidade < 1) return;
 
-    onChange(
-      selectedTeams.map((t) =>
-        t.id === teamId 
-        ? { ...t, capacidade: capacidade, total_hh: capacidade * t.hh } // Recalculate total_hh on capacity change
-        : t
-      )
+    const newSelectedTeams = selectedTeams.map((t) =>
+        t.id === teamId
+            ? { ...t, capacidade: capacidade, total_hh: capacidade * t.hh }
+            : t
     );
+    onChange(newSelectedTeams);
   };
   
   if (isLoading) {
@@ -123,7 +122,7 @@ export function TeamSelector({
                 <div className="col-span-12 md:col-span-4 self-center">
                     <Label htmlFor={`capacity-${team.id}`}>{team.especialidade}</Label>
                 </div>
-                <div className="col-span-4 md:col-span-2">
+                <div className="col-span-4">
                   <Label htmlFor={`capacity-${team.id}`} className="text-xs text-muted-foreground">Capacidade</Label>
                   <Select
                     value={String(team.capacidade)}
@@ -139,7 +138,7 @@ export function TeamSelector({
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="col-span-4 md:col-span-3">
+                <div className="col-span-4">
                   <Label htmlFor={`hh-${team.id}`} className="text-xs text-muted-foreground">HH</Label>
                   <Input
                     id={`hh-${team.id}`}
@@ -150,7 +149,7 @@ export function TeamSelector({
                     className="w-full"
                   />
                 </div>
-                 <div className="col-span-4 md:col-span-3">
+                 <div className="col-span-4">
                   <Label htmlFor={`total-hh-${team.id}`} className="text-xs text-muted-foreground">HH/Dia</Label>
                   <Input
                     id={`total-hh-${team.id}`}
