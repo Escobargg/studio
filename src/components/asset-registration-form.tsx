@@ -251,10 +251,10 @@ export function AssetRegistrationForm({ initialDiretoriasExecutivas }: AssetRegi
       render={({ field }) => (
         <FormItem>
           <FormLabel>{label}</FormLabel>
-          <Select onValueChange={field.onChange} value={field.value || ""} disabled={disabled || loading}>
+          <Select onValueChange={field.onChange} value={field.value || ""} disabled={disabled || loading || isPending}>
             <FormControl>
               <SelectTrigger>
-                {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <SelectValue placeholder={placeholder} />}
+                {(loading || (isPending && form.getFieldState(name).isDirty)) ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <SelectValue placeholder={placeholder} />}
               </SelectTrigger>
             </FormControl>
             <SelectContent>
@@ -312,11 +312,11 @@ export function AssetRegistrationForm({ initialDiretoriasExecutivas }: AssetRegi
                    <Popover>
                       <PopoverTrigger asChild>
                          <FormControl>
-                           <Button variant="outline" role="combobox" className="w-full justify-between h-10" disabled={!watch("centro_de_localizacao") || isLoading.ativos}>
+                           <Button variant="outline" role="combobox" className="w-full justify-between h-10" disabled={!watch("centro_de_localizacao") || isLoading.ativos || isPending}>
                                <span className="truncate">
                                 {isLoading.ativos ? 'Carregando...' : field.value?.length > 0 ? `${field.value.length} ativos selecionados` : 'Selecione os ativos'}
                                </span>
-                               {isLoading.ativos ? <Loader2 className="ml-2 h-4 w-4 animate-spin" /> : <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />}
+                               {(isLoading.ativos || isPending) ? <Loader2 className="ml-2 h-4 w-4 animate-spin" /> : <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />}
                            </Button>
                          </FormControl>
                       </PopoverTrigger>
