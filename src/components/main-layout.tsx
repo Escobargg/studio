@@ -18,23 +18,26 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   const getPageTitle = () => {
-    switch (pathname) {
-      case "/":
-        return "Criar Novo Grupo de Ativos";
-      case "/grupos":
-        return "Grupos de Ativos";
-      case "/estrategias":
-        return "Estratégias de Manutenção";
-      default:
-        return "SmartPCM";
+    if (pathname === "/") {
+      return "Criar Novo Grupo de Ativos";
     }
+    if (pathname === "/grupos") {
+      return "Grupos de Ativos";
+    }
+    if (pathname.startsWith("/grupos/") && pathname.endsWith("/estrategias")) {
+       return "Estratégias de Manutenção";
+    }
+    if (pathname === "/estrategias") {
+      return "Estratégias de Manutenção";
+    }
+    return "SmartPCM";
   };
 
   return (
     <div className="flex min-h-screen w-full">
       <Sidebar>
         <SidebarHeader className="p-2">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 p-2">
             <MountainIcon className="w-6 h-6 text-primary" />
             <span className="text-lg font-semibold">SmartPCM</span>
           </div>
@@ -56,7 +59,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
             <SidebarMenuItem>
               <SidebarMenuButton
                 asChild
-                isActive={pathname === "/grupos"}
+                isActive={pathname.startsWith("/grupos")}
                 tooltip="Exibir Grupos"
               >
                 <Link href="/grupos">

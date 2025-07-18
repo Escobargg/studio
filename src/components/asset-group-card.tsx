@@ -22,6 +22,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import Link from "next/link";
 
 
 export type Grupo = {
@@ -153,9 +154,11 @@ export function AssetGroupCard({ grupo, onGroupUpdate, onGroupDelete }: AssetGro
                 
                  {/* Actions Section */}
                 <div className="flex items-center gap-2 flex-shrink-0 w-full md:w-auto justify-end">
-                    <Button variant="outline">
-                        <ShieldCheck className="w-4 h-4 mr-2" />
-                        Ver Estratégia
+                    <Button variant="outline" asChild>
+                        <Link href={`/grupos/${grupo.id}/estrategias`}>
+                           <ShieldCheck className="w-4 h-4 mr-2" />
+                           Ver Estratégia
+                        </Link>
                     </Button>
                     <EditAssetsDialog 
                         grupo={grupo}
@@ -178,7 +181,7 @@ export function AssetGroupCard({ grupo, onGroupUpdate, onGroupDelete }: AssetGro
                             Esta ação não pode ser desfeita. Isso excluirá permanentemente o grupo
                             <strong className="px-1">{grupo.nome_grupo}</strong>
                             e removerá seus dados de nossos servidores.
-                          </AlertDialogDescription>
+                          </Description>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                           <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
