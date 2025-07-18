@@ -46,9 +46,10 @@ export function AssetGroupCard({ grupo, onGroupUpdate }: AssetGroupCardProps) {
                 .from('grupos_de_ativos')
                 .update({ ativos: updatedAssets })
                 .eq('id', grupo.id)
-                .throwOnError();
+                .throwOnError(); // Força um erro se a atualização falhar (ex: por causa de RLS)
 
             if (error) {
+                // Esta verificação é redundante com throwOnError, mas é uma boa prática mantê-la.
                 throw error;
             }
 
