@@ -1,6 +1,7 @@
 import { AssetRegistrationForm } from "@/components/asset-registration-form";
 import { getHierarquiaOpcoes } from "@/lib/data";
-import { Building2, MountainIcon } from "lucide-react";
+import { Building2, List, MountainIcon } from "lucide-react";
+import Link from "next/link";
 
 export default async function Home() {
   // A busca inicial foi reativada para carregar as opções da Diretoria Executiva.
@@ -15,9 +16,15 @@ export default async function Home() {
             Registro de Grupos de Ativos
           </h1>
         </div>
-        <div className="flex items-center gap-2">
-            <Building2 className="w-5 h-5 text-muted-foreground"/>
-            <p className="text-sm font-medium text-muted-foreground">Vale S.A.</p>
+        <div className="flex items-center gap-4">
+            <Link href="/grupos" className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
+                <List className="w-4 h-4" />
+                Ver Grupos
+            </Link>
+            <div className="flex items-center gap-2">
+                <Building2 className="w-5 h-5 text-muted-foreground"/>
+                <p className="text-sm font-medium text-muted-foreground">Vale S.A.</p>
+            </div>
         </div>
       </header>
       <main className="flex-1 p-4 md:p-8">
