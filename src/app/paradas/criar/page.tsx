@@ -2,7 +2,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm, useWatch } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { useState, useEffect, useMemo } from "react";
 import { ArrowLeft, CalendarIcon, Loader2 } from "lucide-react";
@@ -36,7 +36,7 @@ import { MainLayout } from "@/components/main-layout";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { getHierarquiaOpcoes, getAtivosByCentro, getGruposByCentroEFase, getEquipes } from "@/lib/data";
+import { getHierarquiaOpcoes, getAtivosByCentro, getGruposByCentroEFase } from "@/lib/data";
 import { TeamSelector } from "@/components/team-selector";
 
 const equipeSchema = z.object({
@@ -102,30 +102,6 @@ const stopFormSchema = z.object({
 
 
 type StopFormValues = z.infer<typeof stopFormSchema>;
-
-const TotalHHDisplay = ({ control, duracaoPlanejada }) => {
-    const equipes = useWatch({ control, name: "equipes" });
-
-    const totalHH = useMemo(() => {
-        if (!Array.isArray(equipes) || duracaoPlanejada <= 0) {
-            return 0;
-        }
-        return equipes.reduce((total, equipe) => {
-            const capacidade = equipe.capacidade || 0;
-            return total + (capacidade * duracaoPlanejada);
-        }, 0);
-    }, [equipes, duracaoPlanejada]);
-
-    return (
-        <FormItem>
-            <FormLabel>Total de HH</FormLabel>
-            <FormControl>
-                <Input disabled value={totalHH > 0 ? totalHH.toLocaleString('pt-BR') : "Calculado automaticamente"} />
-            </FormControl>
-        </FormItem>
-    );
-};
-
 
 export default function CriarParadaPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -647,7 +623,6 @@ export default function CriarParadaPage() {
                            </FormItem>
                         )}
                     />
-                    <TotalHHDisplay control={control} duracaoPlanejada={duracaoPlanejada ?? 0} />
                 </CardContent>
               </Card>
 
@@ -693,3 +668,5 @@ export default function CriarParadaPage() {
     </MainLayout>
   );
 }
+
+    
