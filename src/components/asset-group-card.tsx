@@ -6,7 +6,7 @@ import {
     Card,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Building, MapPin, Tag, Layers, ListChecks, Trash2, ShieldCheck, Loader2 } from "lucide-react";
+import { Building, MapPin, Tag, Layers, ListChecks, Trash2, ShieldCheck, Loader2, Milestone } from "lucide-react";
 import { EditAssetsDialog } from "./edit-assets-dialog";
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
@@ -112,7 +112,7 @@ export function AssetGroupCard({ grupo, onGroupUpdate, onGroupDelete }: AssetGro
                     <Separator className="md:hidden" />
 
                     {/* Details Section */}
-                    <div className="grid grid-cols-2 sm:flex sm:flex-row gap-4 md:gap-6 text-sm w-full md:w-auto">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 sm:flex sm:flex-row gap-4 md:gap-6 text-sm w-full md:w-auto">
                         <div className="flex items-center gap-2 text-muted-foreground" title={grupo.unidade}>
                             <Building className="w-4 h-4 flex-shrink-0" />
                             <div className="flex flex-col">
@@ -134,6 +134,13 @@ export function AssetGroupCard({ grupo, onGroupUpdate, onGroupDelete }: AssetGro
                                 <span className="font-medium text-foreground truncate">{grupo.categoria}</span>
                             </div>
                         </div>
+                        <div className="flex items-center gap-2 text-muted-foreground" title={grupo.fase}>
+                            <Milestone className="w-4 h-4 flex-shrink-0" />
+                             <div className="flex flex-col">
+                                <span className="text-xs">Fase</span>
+                                <span className="font-medium text-foreground truncate">{grupo.fase}</span>
+                            </div>
+                        </div>
                         <div className="flex items-center gap-2 text-muted-foreground">
                             <ListChecks className="w-4 h-4 flex-shrink-0" />
                             <div className="flex flex-col">
@@ -146,7 +153,6 @@ export function AssetGroupCard({ grupo, onGroupUpdate, onGroupDelete }: AssetGro
                 
                  {/* Actions Section */}
                 <div className="flex items-center gap-2 flex-shrink-0 w-full md:w-auto justify-end">
-                    <Badge variant={grupo.fase ? 'outline' : 'secondary'} className="h-8">{grupo.fase || 'N/A'}</Badge>
                     <Button variant="outline">
                         <ShieldCheck className="w-4 h-4 mr-2" />
                         Ver Estratégia
