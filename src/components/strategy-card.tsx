@@ -108,14 +108,14 @@ export function StrategyCard({ groupId, strategy, onStrategyUpdate, onStrategyDe
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
             
             {/* Left Section: Title & Badges */}
-            <div className="flex items-center gap-3 flex-shrink-0">
+            <div className="flex items-center gap-3 flex-shrink-0 min-w-0">
                 {isAtiva ? (
                     <CheckCircle className="h-6 w-6 text-green-500 flex-shrink-0" />
                 ) : (
                     <PauseCircle className="h-6 w-6 text-gray-500 flex-shrink-0" />
                 )}
-                <div className="flex flex-col">
-                    <h2 className="text-lg font-semibold" title={strategy.title}>{strategy.title}</h2>
+                <div className="flex flex-col min-w-0">
+                    <h2 className="text-lg font-semibold truncate" title={strategy.title}>{strategy.title}</h2>
                     <div className="flex items-center gap-2 mt-1">
                         <Badge variant="outline" className={priorityClasses[strategy.priority]}>{strategy.priority}</Badge>
                         <Badge variant="outline" className={statusClasses}>{strategy.status}</Badge>
@@ -203,7 +203,7 @@ export function StrategyCard({ groupId, strategy, onStrategyUpdate, onStrategyDe
 
         {/* Bottom Section: Description */}
         {strategy.description && (
-          <div className="pl-9">
+          <div>
             <Separator className="my-2" />
             <p className="text-sm text-muted-foreground">{strategy.description}</p>
           </div>
