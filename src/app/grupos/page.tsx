@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { AssetGroupCard } from "@/components/asset-group-card";
 import { MainLayout } from "@/components/main-layout";
 import { supabase } from "@/lib/supabase";
@@ -67,12 +67,16 @@ export default function GruposPage() {
       currentGrupos.filter(g => g.id !== deletedGroupId)
     );
   };
+  
+  const handleFilterChange = useCallback((newFilters: Filtros) => {
+    setFiltros(newFilters);
+  }, []);
 
   return (
     <MainLayout>
       <div className="flex flex-col h-full">
         <div className="p-4 md:p-6 bg-card border-b">
-           <GroupFilters filters={filtros} onFilterChange={setFiltros} />
+           <GroupFilters filters={filtros} onFilterChange={handleFilterChange} />
         </div>
         <div className="flex-1 p-4 md:p-8 overflow-y-auto">
           <div className="max-w-7xl mx-auto">
