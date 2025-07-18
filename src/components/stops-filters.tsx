@@ -22,7 +22,7 @@ export function StopsFilters({ onFilterChange }: StopsFiltersProps) {
     search: "",
     center: "",
     phase: "",
-    year: new Date().getFullYear().toString(),
+    year: "",
     month: "",
     week: "",
   });
@@ -60,7 +60,7 @@ export function StopsFilters({ onFilterChange }: StopsFiltersProps) {
         search: "",
         center: "",
         phase: "",
-        year: new Date().getFullYear().toString(),
+        year: "",
         month: "",
         week: "",
     });
@@ -78,7 +78,7 @@ export function StopsFilters({ onFilterChange }: StopsFiltersProps) {
         />
       </div>
       <div className="space-y-2">
-        <label className="text-sm font-medium">Centro</label>
+        <label className="text-sm font-medium">Centro de Localização</label>
         <Select name="center" value={filters.center || "Todos os centros"} onValueChange={(v) => handleSelectChange("center", v)}>
           <SelectTrigger><SelectValue placeholder="Todos os centros" /></SelectTrigger>
           <SelectContent>
