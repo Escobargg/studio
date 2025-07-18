@@ -47,7 +47,12 @@ export function StopsFilters({ onFilterChange }: StopsFiltersProps) {
   };
 
   const handleSelectChange = (name: string, value: string) => {
-    setFilters(prev => ({ ...prev, [name]: value }));
+    // If the "All" option is selected, reset the filter value to an empty string.
+    if (value.startsWith("Todos")) {
+      setFilters(prev => ({ ...prev, [name]: "" }));
+    } else {
+      setFilters(prev => ({ ...prev, [name]: value }));
+    }
   };
   
   const clearFilters = () => {
@@ -74,19 +79,19 @@ export function StopsFilters({ onFilterChange }: StopsFiltersProps) {
       </div>
       <div className="space-y-2">
         <label className="text-sm font-medium">Centro</label>
-        <Select name="center" value={filters.center} onValueChange={(v) => handleSelectChange("center", v)}>
+        <Select name="center" value={filters.center || "Todos os centros"} onValueChange={(v) => handleSelectChange("center", v)}>
           <SelectTrigger><SelectValue placeholder="Todos os centros" /></SelectTrigger>
           <SelectContent>
-            {centerOptions.map(opt => <SelectItem key={opt} value={opt === "Todos os centros" ? "" : opt}>{opt}</SelectItem>)}
+            {centerOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
           </SelectContent>
         </Select>
       </div>
       <div className="space-y-2">
         <label className="text-sm font-medium">Fase</label>
-        <Select name="phase" value={filters.phase} onValueChange={(v) => handleSelectChange("phase", v)}>
+        <Select name="phase" value={filters.phase || "Todas as fases"} onValueChange={(v) => handleSelectChange("phase", v)}>
           <SelectTrigger><SelectValue placeholder="Todas as fases" /></SelectTrigger>
           <SelectContent>
-            {phaseOptions.map(opt => <SelectItem key={opt} value={opt === "Todas as fases" ? "" : opt}>{opt}</SelectItem>)}
+            {phaseOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
           </SelectContent>
         </Select>
       </div>
@@ -101,23 +106,22 @@ export function StopsFilters({ onFilterChange }: StopsFiltersProps) {
       </div>
        <div className="space-y-2">
         <label className="text-sm font-medium">Mês</label>
-        <Select name="month" value={filters.month} onValueChange={(v) => handleSelectChange("month", v)}>
+        <Select name="month" value={filters.month || "Todos os meses"} onValueChange={(v) => handleSelectChange("month", v)}>
           <SelectTrigger><SelectValue placeholder="Todos os meses" /></SelectTrigger>
           <SelectContent>
-            {monthOptions.map(opt => <SelectItem key={opt} value={opt === "Todos os meses" ? "" : opt}>{opt}</SelectItem>)}
+            {monthOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
           </SelectContent>
         </Select>
       </div>
        <div className="space-y-2">
         <label className="text-sm font-medium">Semana</label>
-        <Select name="week" value={filters.week} onValueChange={(v) => handleSelectChange("week", v)}>
+        <Select name="week" value={filters.week || "Todas as semanas"} onValueChange={(v) => handleSelectChange("week", v)}>
           <SelectTrigger><SelectValue placeholder="Todas as semanas" /></SelectTrigger>
           <SelectContent>
-            {weekOptions.map(opt => <SelectItem key={opt} value={opt === "Todas as semanas" ? "" : opt}>{opt}</SelectItem>)}
+            {weekOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
           </SelectContent>
         </Select>
       </div>
     </div>
   );
 }
-

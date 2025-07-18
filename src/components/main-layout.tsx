@@ -11,7 +11,8 @@ import {
   SidebarMenuItem,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { Building2, LayoutGrid, MountainIcon, PlusCircle, Hand } from "lucide-react";
+import { LayoutGrid, MountainIcon, PlusCircle, Hand } from "lucide-react";
+import { Building2 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
