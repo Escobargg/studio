@@ -97,7 +97,7 @@ export function NewStrategyDialog({ grupo, children, open, onOpenChange }: NewSt
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
         {children}
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>Nova Estratégia</DialogTitle>
           <DialogDescription>
