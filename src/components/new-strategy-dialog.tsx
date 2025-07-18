@@ -106,7 +106,7 @@ export function NewStrategyDialog({ grupo, children, open, onOpenChange }: NewSt
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 min-h-0">
+          <form onSubmit={form.handleSubmit(onSubmit)} id="strategy-form" className="flex-1 min-h-0">
              <ScrollArea className="h-full pr-6">
                 <div className="space-y-4 py-4">
                     <div className="space-y-2 p-1">
@@ -368,21 +368,18 @@ export function NewStrategyDialog({ grupo, children, open, onOpenChange }: NewSt
                     </div>
                 </div>
             </ScrollArea>
-
-            <DialogFooter className="pt-4 border-t">
-              <Button variant="ghost" type="button" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {isSubmitting ? "Salvando..." : "Salvar Estratégia"}
-              </Button>
-            </DialogFooter>
           </form>
         </Form>
+        <DialogFooter className="pt-4 border-t">
+            <Button variant="ghost" type="button" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
+            Cancelar
+            </Button>
+            <Button type="submit" form="strategy-form" disabled={isSubmitting}>
+            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {isSubmitting ? "Salvando..." : "Salvar Estratégia"}
+            </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
-
-    
