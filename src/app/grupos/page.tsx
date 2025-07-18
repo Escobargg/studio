@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
+import { useState, useEffect } from "react";
 import { AssetGroupCard } from "@/components/asset-group-card";
 import { MainLayout } from "@/components/main-layout";
 import { supabase } from "@/lib/supabase";
@@ -43,20 +43,17 @@ async function getGruposDeAtivos(filtros: Filtros) {
 export default function GruposPage() {
   const [grupos, setGrupos] = useState<Grupo[]>([]);
   const [filtros, setFiltros] = useState<Filtros>({});
-  const [isPending, startTransition] = useTransition();
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-        setIsLoading(true);
-        startTransition(async () => {
-            const data = await getGruposDeAtivos(filtros);
-            setGrupos(data as Grupo[]);
-            setIsLoading(false);
-        });
-    }, 300); // Debounce de 300ms
-    
-    return () => clearTimeout(timer);
+    const fetchGrupos = async () => {
+      setIsLoading(true);
+      const data = await getGruposDeAtivos(filtros);
+      setGrupos(data as Grupo[]);
+      setIsLoading(false);
+    };
+
+    fetchGrupos();
   }, [filtros]);
   
   const handleGroupUpdate = (updatedGroup: Grupo) => {
