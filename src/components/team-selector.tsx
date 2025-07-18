@@ -136,7 +136,7 @@ export function TeamSelector({
                       value={String(team.capacidade)}
                       onValueChange={(value) => handleCapacityChange(team.id, value)}
                     >
-                      <SelectTrigger id={`capacity-${team.id}`}>
+                      <SelectTrigger id={`capacity-${team.id}`} className="min-w-[70px]">
                         <SelectValue placeholder="Nº" />
                       </SelectTrigger>
                       <SelectContent>
@@ -164,7 +164,7 @@ export function TeamSelector({
                       value={teamData.hh}
                       disabled
                       placeholder="Auto"
-                      className="w-full"
+                      className="min-w-[70px]"
                     />
                   </div>
                   <div className="col-span-4 md:col-span-2">
@@ -180,7 +180,7 @@ export function TeamSelector({
                       value={team.capacidade * teamData.hh}
                       disabled
                       placeholder="Auto"
-                      className="w-full"
+                      className="min-w-[70px]"
                     />
                   </div>
                 </div>
@@ -192,3 +192,5 @@ export function TeamSelector({
     </div>
   );
 }
+
+    

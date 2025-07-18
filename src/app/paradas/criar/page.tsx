@@ -43,7 +43,7 @@ import { supabase } from "@/lib/supabase";
 const equipeSchema = z.object({
   id: z.string(),
   especialidade: z.string(),
-  capacidade: z.number(),
+  capacidade: z.number().min(1, "A capacidade deve ser pelo menos 1."),
 });
 
 const stopFormSchema = z.object({
@@ -141,9 +141,9 @@ export default function CriarParadaPage() {
       dataInicioPlanejada: undefined,
       dataFimPlanejada: undefined,
       dataInicioRealizado: null,
-      horaInicioRealizado: "",
+      horaInicioRealizado: null,
       dataFimRealizado: null,
-      horaFimRealizado: "",
+      horaFimRealizado: null,
       equipes: [],
       descricao: "",
     },
@@ -267,7 +267,17 @@ export default function CriarParadaPage() {
     const dataFimPlanejadaCompleta = combineDateTime(data.dataFimPlanejada, data.horaFimPlanejada);
 
     // Prepare a slimmed-down version of teams data for insertion
-    const equipesParaInserir = data.equipes?.map(e => ({ id: e.id, capacidade: e.capacidade }));
+    const equipesParaInserir = data.equipes?.map(e => {
+        const teamData = availableTeams.find(t => t.id === e.id);
+        const hh = teamData?.hh ?? 0;
+        return { 
+            id: e.id, 
+            especialidade: e.especialidade,
+            capacidade: e.capacidade,
+            hh: hh,
+            total_hh: e.capacidade * hh
+        };
+    });
 
     const dataToInsert = {
       nome_parada: data.nomeParada,
@@ -288,6 +298,7 @@ export default function CriarParadaPage() {
       duracao_realizada_horas: duracaoRealizada,
       equipes_selecionadas: equipesParaInserir, // Use the slimmed-down version
       descricao: data.descricao,
+      status: 'PLANEJADA', // Default status
     };
 
     try {
@@ -734,3 +745,5 @@ export default function CriarParadaPage() {
     </MainLayout>
   );
 }
+
+    
