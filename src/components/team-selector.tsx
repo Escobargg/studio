@@ -8,6 +8,14 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 import { Label } from "./ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
 
 export type SelectedTeam = {
   id: string;
@@ -117,21 +125,30 @@ export function TeamSelector({
         <div>
           <h4 className="text-md font-medium mb-2">Detalhes por Equipe</h4>
            <div className="space-y-3">
-            {selectedTeams.map((team) => (
+            {selectedTeams.map((team) => {
+              const teamData = availableTeams.find(t => t.id === team.id);
+              const maxCapacity = teamData?.capacidade ?? 1;
+
+              return (
               <div key={team.id} className="grid grid-cols-12 items-end gap-x-4 gap-y-2">
                 <div className="col-span-12 sm:col-span-12 md:col-span-5 self-center">
                     <Label htmlFor={`capacity-${team.id}`}>{team.especialidade}</Label>
                 </div>
                 <div className="col-span-4 sm:col-span-4 md:col-span-2">
                   <Label htmlFor={`capacity-${team.id}`} className="text-xs text-muted-foreground">Capacidade</Label>
-                  <Input
-                    id={`capacity-${team.id}`}
-                    type="number"
-                    min="1"
-                    value={team.capacidade}
-                    onChange={(e) => handleCapacityChange(team.id, parseInt(e.target.value, 10) || 0)}
-                    placeholder="Nº"
-                  />
+                  <Select
+                    value={String(team.capacidade)}
+                    onValueChange={(value) => handleCapacityChange(team.id, parseInt(value, 10))}
+                  >
+                    <SelectTrigger id={`capacity-${team.id}`}>
+                      <SelectValue placeholder="Nº" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Array.from({ length: maxCapacity }, (_, i) => i + 1).map(num => (
+                        <SelectItem key={num} value={String(num)}>{num}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="col-span-4 sm:col-span-4 md:col-span-2">
                   <Label htmlFor={`hh-${team.id}`} className="text-xs text-muted-foreground">HH</Label>
@@ -154,7 +171,7 @@ export function TeamSelector({
                   />
                 </div>
               </div>
-            ))}
+            )})}
           </div>
         </div>
       )}
