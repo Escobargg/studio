@@ -18,9 +18,11 @@ export type HierarquiaData = {
 
 // Fetches and processes hierarchy data from Supabase
 export const getHierarquiaData = async (): Promise<HierarquiaData> => {
+  // Using .throwOnError() to get a more descriptive error message if the query fails.
   const { data: hierarquia_data, error } = await supabase
     .from('hierarquia')
-    .select('descricao_do_centro, fase, diretoria_executiva_corredor, diretoria, unidade, categoria');
+    .select('descricao_do_centro, fase, diretoria, unidade, categoria')
+    .throwOnError();
 
   if (error) {
     console.error('Error fetching hierarquia data:', error);
@@ -38,7 +40,8 @@ export const getHierarquiaData = async (): Promise<HierarquiaData> => {
   return {
     centros: getUniqueValues(hierarquia_data, 'descricao_do_centro'),
     fases: getUniqueValues(hierarquia_data, 'fase'),
-    diretoriasExecutivas: getUniqueValues(hierarquia_data, 'diretoria_executiva_corredor'),
+    // Temporariamente retornando um array vazio para evitar o crash.
+    diretoriasExecutivas: [], 
     diretorias: getUniqueValues(hierarquia_data, 'diretoria'),
     unidades: getUniqueValues(hierarquia_data, 'unidade'),
     categorias: getUniqueValues(hierarquia_data, 'categoria'),
@@ -51,10 +54,12 @@ export const getAtivosByCentro = async (centro: string): Promise<string[]> => {
         return [];
     }
   
+    // Using .throwOnError() to get a more descriptive error message if the query fails.
     const { data: ativos_data, error } = await supabase
         .from('ativos')
         .select('local_de_instalacao')
-        .eq('centro_de_localizacao', centro);
+        .eq('centro_de_localizacao', centro)
+        .throwOnError();
 
     if (error) {
         console.error('Error fetching ativos data:', error);
