@@ -21,7 +21,7 @@ export const getHierarquiaData = async (): Promise<HierarquiaData> => {
   // Using .throwOnError() to get a more descriptive error message if the query fails.
   const { data: hierarquia_data, error } = await supabase
     .from('hierarquia')
-    .select('descricao_do_centro, fase, diretoria, unidade, categoria')
+    .select('descricao_do_centro, fase')
     .throwOnError();
 
   if (error) {
@@ -40,8 +40,9 @@ export const getHierarquiaData = async (): Promise<HierarquiaData> => {
   return {
     centros: getUniqueValues(hierarquia_data, 'descricao_do_centro'),
     fases: getUniqueValues(hierarquia_data, 'fase'),
-    // Temporariamente retornando um array vazio para evitar o crash.
-    diretoriasExecutivas: [], 
+    // Temporarily returning an empty array. We need the correct column name from the user.
+    diretoriasExecutivas: getUniqueValues(hierarquia_data, 'diretoria_executiva'), 
+    // Temporarily returning an empty array. We need the correct column name from the user.
     diretorias: getUniqueValues(hierarquia_data, 'diretoria'),
     unidades: getUniqueValues(hierarquia_data, 'unidade'),
     categorias: getUniqueValues(hierarquia_data, 'categoria'),
