@@ -63,7 +63,7 @@ const stopFormSchema = z.object({
   horaInicioRealizado: z.string().optional().nullable(),
   dataFimRealizado: z.date().optional().nullable(),
   horaFimRealizado: z.string().optional().nullable(),
-  equipes: z.array(equipeSchema).min(1, "Selecione pelo menos uma equipe."),
+  equipes: z.array(equipeSchema),
   descricao: z.string().optional(),
 }).refine(data => {
     if (data.dataInicioPlanejada && data.horaInicioPlanejada && data.dataFimPlanejada && data.horaFimPlanejada) {
@@ -666,7 +666,7 @@ export default function CriarParadaPage() {
 
               <Card>
                 <CardHeader>
-                    <CardTitle>Recursos</CardTitle>
+                    <CardTitle>Recursos (Opcional)</CardTitle>
                     <CardDescription>Selecione as equipes e defina a capacidade para esta parada.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
