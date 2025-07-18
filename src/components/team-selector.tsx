@@ -1,7 +1,6 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
 import { Equipe as ApiEquipe } from "@/lib/data";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -21,6 +20,8 @@ export type SelectedTeam = {
   id: string;
   especialidade: string;
   capacidade: number;
+  hh: number;
+  total_hh: number;
 };
 
 interface TeamSelectorProps {
@@ -39,7 +40,15 @@ export function TeamSelector({
 
   const handleTeamSelectionChange = (team: ApiEquipe, checked: boolean) => {
     if (checked) {
-      onChange([...selectedTeams, { id: team.id, especialidade: team.especialidade, capacidade: 1 }]);
+      // Add new team with default capacity of 1
+      const newTeam: SelectedTeam = { 
+        id: team.id, 
+        especialidade: team.especialidade, 
+        capacidade: 1,
+        hh: team.hh,
+        total_hh: 1 * team.hh, // Calculate total_hh on addition
+      };
+      onChange([...selectedTeams, newTeam]);
     } else {
       onChange(selectedTeams.filter((t) => t.id !== team.id));
     }
@@ -48,7 +57,9 @@ export function TeamSelector({
   const handleCapacityChange = (teamId: string, capacidade: number) => {
     onChange(
       selectedTeams.map((t) =>
-        t.id === teamId ? { ...t, capacidade: capacidade } : t
+        t.id === teamId 
+        ? { ...t, capacidade: capacidade, total_hh: capacidade * t.hh } // Recalculate total_hh on capacity change
+        : t
       )
     );
   };
@@ -103,12 +114,10 @@ export function TeamSelector({
               if (!teamData) return null;
 
               const maxCapacity = teamData.capacidade ?? 1;
-              const teamHH = teamData.hh ?? 0;
-              const totalHH = team.capacidade * teamHH;
-
+             
               return (
               <div key={team.id} className="grid grid-cols-12 items-end gap-x-4 gap-y-2">
-                <div className="col-span-12 sm:col-span-12 md:col-span-6 self-center">
+                <div className="col-span-12 sm:col-span-12 md:col-span-4 self-center">
                     <Label htmlFor={`capacity-${team.id}`}>{team.especialidade}</Label>
                 </div>
                 <div className="col-span-4 sm:col-span-4 md:col-span-2">
@@ -127,22 +136,22 @@ export function TeamSelector({
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="col-span-4 sm:col-span-4 md:col-span-2">
+                <div className="col-span-4 sm:col-span-4 md:col-span-3">
                   <Label htmlFor={`hh-${team.id}`} className="text-xs text-muted-foreground">HH</Label>
                   <Input
                     id={`hh-${team.id}`}
                     type="number"
-                    value={teamHH}
+                    value={team.hh}
                     disabled
                     placeholder="Auto"
                   />
                 </div>
-                 <div className="col-span-4 sm:col-span-4 md:col-span-2">
+                 <div className="col-span-4 sm:col-span-4 md:col-span-3">
                   <Label htmlFor={`total-hh-${team.id}`} className="text-xs text-muted-foreground">HH/Dia</Label>
                   <Input
                     id={`total-hh-${team.id}`}
                     type="number"
-                    value={totalHH}
+                    value={team.total_hh}
                     disabled
                     placeholder="Auto"
                   />
@@ -155,3 +164,5 @@ export function TeamSelector({
     </div>
   );
 }
+
+    

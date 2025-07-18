@@ -4,7 +4,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { ArrowLeft, CalendarIcon, Loader2 } from "lucide-react";
 import { format, differenceInHours, set } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -38,11 +38,14 @@ import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { getHierarquiaOpcoes, getAtivosByCentro, getGruposByCentroEFase, getEquipes, Equipe } from "@/lib/data";
 import { TeamSelector } from "@/components/team-selector";
+import { supabase } from "@/lib/supabase";
 
 const equipeSchema = z.object({
   id: z.string(),
   especialidade: z.string(),
   capacidade: z.coerce.number().min(1, "Capacidade deve ser maior que 0."),
+  hh: z.coerce.number(),
+  total_hh: z.coerce.number(),
 });
 
 const stopFormSchema = z.object({
@@ -74,9 +77,10 @@ const stopFormSchema = z.object({
     path: ["dataFimPlanejada"],
 }).refine(data => {
     if (data.dataInicioRealizado && data.horaInicioRealizado && data.dataFimRealizado && data.horaFimRealizado) {
-      const start = set(data.dataInicioRealizado, { hours: parseInt(data.horaInicioRealizado.split(':')[0]), minutes: parseInt(data.horaInicioRealizado.split(':')[1]) });
-      const end = set(data.dataFimRealizado, { hours: parseInt(data.horaFimRealizado.split(':')[0]), minutes: parseInt(data.horaFimRealizado.split(':')[1]) });
-      return end > start;
+        if(!data.horaInicioRealizado || !data.horaFimRealizado) return true;
+        const start = set(data.dataInicioRealizado, { hours: parseInt(data.horaInicioRealizado.split(':')[0]), minutes: parseInt(data.horaInicioRealizado.split(':')[1]) });
+        const end = set(data.dataFimRealizado, { hours: parseInt(data.horaFimRealizado.split(':')[0]), minutes: parseInt(data.horaFimRealizado.split(':')[1]) });
+        return end > start;
     }
     return true;
 }, {
@@ -102,6 +106,11 @@ const stopFormSchema = z.object({
 
 
 type StopFormValues = z.infer<typeof stopFormSchema>;
+
+const combineDateTime = (date: Date, time: string): Date => {
+  const [hours, minutes] = time.split(':').map(Number);
+  return set(date, { hours, minutes, seconds: 0, milliseconds: 0 });
+};
 
 export default function CriarParadaPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -217,8 +226,8 @@ export default function CriarParadaPage() {
     ] = watchedFields;
 
     if (dataInicioPlanejada && horaInicioPlanejada && dataFimPlanejada && horaFimPlanejada) {
-      const start = set(dataInicioPlanejada, { hours: parseInt(horaInicioPlanejada.split(':')[0]), minutes: parseInt(horaInicioPlanejada.split(':')[1]) });
-      const end = set(dataFimPlanejada, { hours: parseInt(horaFimPlanejada.split(':')[0]), minutes: parseInt(horaFimPlanejada.split(':')[1]) });
+      const start = combineDateTime(dataInicioPlanejada, horaInicioPlanejada);
+      const end = combineDateTime(dataFimPlanejada, horaFimPlanejada);
       if (end > start) {
         setDuracaoPlanejada(differenceInHours(end, start));
       } else {
@@ -229,8 +238,8 @@ export default function CriarParadaPage() {
     }
 
     if (dataInicioRealizado && horaInicioRealizado && dataFimRealizado && horaFimRealizado) {
-        const start = set(dataInicioRealizado, { hours: parseInt(horaInicioRealizado.split(':')[0]), minutes: parseInt(horaInicioRealizado.split(':')[1]) });
-        const end = set(dataFimRealizado, { hours: parseInt(horaFimRealizado.split(':')[0]), minutes: parseInt(horaFimRealizado.split(':')[1]) });
+        const start = combineDateTime(dataInicioRealizado, horaInicioRealizado);
+        const end = combineDateTime(dataFimRealizado, horaFimRealizado);
         if (end > start) {
             setDuracaoRealizada(differenceInHours(end, start));
         } else {
@@ -243,18 +252,53 @@ export default function CriarParadaPage() {
 
   async function onSubmit(data: StopFormValues) {
     setIsSubmitting(true);
-    console.log("Form data:", data);
     
-    // Placeholder for submission logic
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    toast({
-        title: "Parada Criada!",
-        description: "A nova parada de manutenção foi salva com sucesso (simulação).",
-    });
-    router.push(`/paradas`);
+    const dataInicioPlanejadaCompleta = combineDateTime(data.dataInicioPlanejada, data.horaInicioPlanejada);
+    const dataFimPlanejadaCompleta = combineDateTime(data.dataFimPlanejada, data.horaFimPlanejada);
 
-    setIsSubmitting(false);
+    const dataToInsert = {
+      nome_parada: data.nomeParada,
+      centro_de_localizacao: data.centroLocalizacao,
+      fase: data.fase,
+      tipo_selecao: data.tipoSelecao,
+      grupo_de_ativos: data.grupoAtivos || null,
+      ativo_unico: data.ativo || null,
+      data_inicio_planejada: dataInicioPlanejadaCompleta.toISOString(),
+      data_fim_planejada: dataFimPlanejadaCompleta.toISOString(),
+      duracao_planejada_horas: duracaoPlanejada,
+      data_inicio_realizado: data.dataInicioRealizado && data.horaInicioRealizado 
+          ? combineDateTime(data.dataInicioRealizado, data.horaInicioRealizado).toISOString() 
+          : null,
+      data_fim_realizado: data.dataFimRealizado && data.horaFimRealizado 
+          ? combineDateTime(data.dataFimRealizado, data.horaFimRealizado).toISOString() 
+          : null,
+      duracao_realizada_horas: duracaoRealizada,
+      equipes_selecionadas: data.equipes,
+      descricao: data.descricao,
+    };
+
+    try {
+        const { error } = await supabase
+            .from('paradas_de_manutencao')
+            .insert(dataToInsert)
+            .throwOnError();
+
+        toast({
+            title: "Parada Criada!",
+            description: "A nova parada de manutenção foi salva com sucesso.",
+        });
+        router.push(`/paradas`);
+
+    } catch(error: any) {
+        console.error("Error inserting data:", error);
+        toast({
+            title: "Erro ao criar parada",
+            description: "Ocorreu um erro ao salvar a parada. Verifique os dados e tente novamente. Detalhes: " + error.message,
+            variant: "destructive",
+        });
+    } finally {
+        setIsSubmitting(false);
+    }
   }
 
   return (
