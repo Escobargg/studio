@@ -11,7 +11,7 @@ import {
   SidebarMenuItem,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { Building2, LayoutGrid, MountainIcon, PlusCircle } from "lucide-react";
+import { Building2, LayoutGrid, MountainIcon, PlusCircle, Hand } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -33,6 +33,9 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
     }
     if (pathname.includes("/estrategias")) {
        return "Estratégias de Manutenção";
+    }
+    if (pathname === "/paradas/criar") {
+       return "Criar Paradas";
     }
     return "SmartPCM";
   };
@@ -69,6 +72,18 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
                 <Link href="/grupos">
                   <LayoutGrid />
                   <span>Exibir Grupos</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                isActive={pathname.startsWith("/paradas")}
+                tooltip="Criar Paradas"
+              >
+                <Link href="/paradas/criar">
+                  <Hand />
+                  <span>Criar Paradas</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
