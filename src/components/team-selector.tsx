@@ -119,7 +119,7 @@ export function TeamSelector({
            <div className="space-y-3">
             {selectedTeams.map((team) => (
               <div key={team.id} className="grid grid-cols-12 items-end gap-x-4 gap-y-2">
-                <div className="col-span-12 sm:col-span-12 md:col-span-4 self-center">
+                <div className="col-span-12 sm:col-span-12 md:col-span-5 self-center">
                     <Label htmlFor={`capacity-${team.id}`}>{team.especialidade}</Label>
                 </div>
                 <div className="col-span-4 sm:col-span-4 md:col-span-2">
@@ -133,7 +133,7 @@ export function TeamSelector({
                     placeholder="Nº"
                   />
                 </div>
-                <div className="col-span-4 sm:col-span-4 md:col-span-3">
+                <div className="col-span-4 sm:col-span-4 md:col-span-2">
                   <Label htmlFor={`hh-${team.id}`} className="text-xs text-muted-foreground">HH</Label>
                   <Input
                     id={`hh-${team.id}`}
