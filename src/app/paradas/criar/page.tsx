@@ -2,9 +2,9 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import * as z from "zod";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { ArrowLeft, CalendarIcon, Loader2 } from "lucide-react";
 import { format, differenceInHours, set } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -37,7 +37,13 @@ import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { getHierarquiaOpcoes, getAtivosByCentro, getGruposByCentroEFase } from "@/lib/data";
+import { TeamSelector } from "@/components/team-selector";
 
+const equipeSchema = z.object({
+  id: z.string(),
+  especialidade: z.string(),
+  capacidade: z.coerce.number().min(1, "Capacidade deve ser maior que 0."),
+});
 
 const stopFormSchema = z.object({
   nomeParada: z.string().min(1, "O nome da parada é obrigatório."),
@@ -54,7 +60,7 @@ const stopFormSchema = z.object({
   horaInicioRealizado: z.string().optional().nullable(),
   dataFimRealizado: z.date().optional().nullable(),
   horaFimRealizado: z.string().optional().nullable(),
-  equipes: z.coerce.number().optional(),
+  equipes: z.array(equipeSchema).min(1, "Selecione pelo menos uma equipe."),
   descricao: z.string().optional(),
 }).refine(data => {
     if (data.dataInicioPlanejada && data.horaInicioPlanejada && data.dataFimPlanejada && data.horaFimPlanejada) {
@@ -97,13 +103,49 @@ const stopFormSchema = z.object({
 
 type StopFormValues = z.infer<typeof stopFormSchema>;
 
+const TotalHHDisplay = ({ control }) => {
+    const equipes = useWatch({ control, name: "equipes" });
+    const dataInicioPlanejada = useWatch({ control, name: "dataInicioPlanejada" });
+    const horaInicioPlanejada = useWatch({ control, name: "horaInicioPlanejada" });
+    const dataFimPlanejada = useWatch({ control, name: "dataFimPlanejada" });
+    const horaFimPlanejada = useWatch({ control, name: "horaFimPlanejada" });
+    
+    const duracaoPlanejada = useMemo(() => {
+        if (dataInicioPlanejada && horaInicioPlanejada && dataFimPlanejada && horaFimPlanejada) {
+            const start = set(dataInicioPlanejada, { hours: parseInt(horaInicioPlanejada.split(':')[0]), minutes: parseInt(horaInicioPlanejada.split(':')[1]) });
+            const end = set(dataFimPlanejada, { hours: parseInt(horaFimPlanejada.split(':')[0]), minutes: parseInt(horaFimPlanejada.split(':')[1]) });
+            if (end > start) {
+                return differenceInHours(end, start);
+            }
+        }
+        return 0;
+    }, [dataInicioPlanejada, horaInicioPlanejada, dataFimPlanejada, horaFimPlanejada]);
+
+    const totalHH = useMemo(() => {
+        if (!Array.isArray(equipes) || duracaoPlanejada <= 0) {
+            return 0;
+        }
+        return equipes.reduce((total, equipe) => {
+            const capacidade = equipe.capacidade || 0;
+            return total + (capacidade * duracaoPlanejada);
+        }, 0);
+    }, [equipes, duracaoPlanejada]);
+
+    return (
+        <FormItem>
+            <FormLabel>Total de HH</FormLabel>
+            <FormControl>
+                <Input disabled value={totalHH > 0 ? totalHH.toLocaleString('pt-BR') : "Calculado automaticamente"} />
+            </FormControl>
+        </FormItem>
+    );
+};
+
+
 export default function CriarParadaPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
-
-  const [duracaoPlanejada, setDuracaoPlanejada] = useState<number | null>(null);
-  const [duracaoRealizada, setDuracaoRealizada] = useState<number | null>(null);
 
   // State for select options and loading
   const [centrosLocalizacao, setCentrosLocalizacao] = useState<string[]>([]);
@@ -122,11 +164,15 @@ export default function CriarParadaPage() {
       nomeParada: "",
       descricao: "",
       tipoSelecao: "grupo",
+      equipes: [],
     },
   });
 
   const { watch, control, setValue } = form;
 
+  const [duracaoPlanejada, setDuracaoPlanejada] = useState<number | null>(null);
+  const [duracaoRealizada, setDuracaoRealizada] = useState<number | null>(null);
+  
   const watchedFields = watch([
       "dataInicioPlanejada", "horaInicioPlanejada", "dataFimPlanejada", "horaFimPlanejada",
       "dataInicioRealizado", "horaInicioRealizado", "dataFimRealizado", "horaFimRealizado"
@@ -155,6 +201,7 @@ export default function CriarParadaPage() {
         setValue("fase", ""); 
         setValue("grupoAtivos", "");
         setValue("ativo", "");
+        setValue("equipes", []);
 
         const [fasesData, ativosData] = await Promise.all([
           getHierarquiaOpcoes("fase", { centro_de_localizacao: watchedCentro }),
@@ -169,6 +216,7 @@ export default function CriarParadaPage() {
         setFases([]);
         setAtivos([]);
         setGruposDeAtivos([]);
+        setValue("equipes", []);
       }
     };
     fetchDataForCentro();
@@ -189,6 +237,11 @@ export default function CriarParadaPage() {
     };
     fetchGrupos();
   }, [watchedCentro, watchedFase, setValue]);
+
+  // Reset equipes when fase changes
+  useEffect(() => {
+    setValue("equipes", []);
+  }, [watchedFase, setValue]);
   
 
   useEffect(() => {
@@ -260,7 +313,10 @@ export default function CriarParadaPage() {
               </div>
 
               <Card>
-                <CardContent className="pt-6 space-y-4">
+                <CardHeader>
+                  <CardTitle>Informações Gerais</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <FormField
                       control={control}
@@ -337,7 +393,7 @@ export default function CriarParadaPage() {
                       control={control}
                       name="tipoSelecao"
                       render={({ field }) => (
-                        <FormItem className="space-y-3">
+                        <FormItem className="space-y-3 pt-2">
                           <FormLabel>Criar parada para:</FormLabel>
                           <FormControl>
                             <RadioGroup
@@ -413,8 +469,15 @@ export default function CriarParadaPage() {
                             )}
                         />
                     )}
+                </CardContent>
+              </Card>
 
-
+              <Card>
+                <CardHeader>
+                    <CardTitle>Planejamento</CardTitle>
+                    <CardDescription>Datas e horários planejados para a parada.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
                     <FormField
                       control={control}
@@ -485,8 +548,22 @@ export default function CriarParadaPage() {
                       )}
                     />
                   </div>
-                  
-                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
+                  <FormItem>
+                    <FormLabel>Duração planejada (horas)</FormLabel>
+                    <FormControl>
+                        <Input type="number" disabled value={duracaoPlanejada ?? ""} placeholder="Calculado automaticamente"/>
+                    </FormControl>
+                  </FormItem>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                    <CardTitle>Realizado</CardTitle>
+                    <CardDescription>Datas e horários em que a parada realmente ocorreu.</CardDescription>
+                </CardHeader>
+                 <CardContent className="space-y-4">
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
                      <FormField
                       control={control}
                       name="dataInicioRealizado"
@@ -555,64 +632,69 @@ export default function CriarParadaPage() {
                         </FormItem>
                       )}
                     />
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <FormItem>
-                        <FormLabel>Duração planejada (horas)</FormLabel>
-                        <FormControl>
-                            <Input type="number" disabled value={duracaoPlanejada ?? ""} placeholder="Calculado automaticamente"/>
-                        </FormControl>
-                    </FormItem>
+                    </div>
                      <FormItem>
                         <FormLabel>Duração realizada (horas)</FormLabel>
                         <FormControl>
                             <Input type="number" disabled value={duracaoRealizada ?? ""} placeholder="Calculado automaticamente" />
                         </FormControl>
                     </FormItem>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <FormField
-                      control={control}
-                      name="equipes"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Equipes</FormLabel>
-                          <FormControl>
-                            <Input type="number" placeholder="Ex: 15" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                     <FormItem>
-                        <FormLabel>Total de HH</FormLabel>
-                        <FormControl>
-                            <Input disabled value="Calculado automaticamente" />
-                        </FormControl>
-                    </FormItem>
-                  </div>
-                  
-                  <FormField
-                    control={control}
-                    name="descricao"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Descrição</FormLabel>
-                        <FormControl>
-                          <Textarea
-                            placeholder="Descreva a parada de manutenção..."
-                            className="resize-none"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
                 </CardContent>
               </Card>
+
+              <Card>
+                <CardHeader>
+                    <CardTitle>Recursos</CardTitle>
+                    <CardDescription>Selecione as equipes e defina a capacidade para esta parada.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <FormField
+                        control={control}
+                        name="equipes"
+                        render={({ field }) => (
+                           <FormItem>
+                             <FormLabel>Equipes e Capacidade</FormLabel>
+                             <FormControl>
+                                <TeamSelector
+                                    centroDeLocalizacao={watchedCentro}
+                                    fase={watchedFase}
+                                    selectedTeams={field.value}
+                                    onChange={field.onChange}
+                                />
+                             </FormControl>
+                             <FormMessage />
+                           </FormItem>
+                        )}
+                    />
+                    <TotalHHDisplay control={control} />
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                    <CardTitle>Descrição</CardTitle>
+                    <CardDescription>Adicione informações adicionais sobre a parada.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <FormField
+                        control={control}
+                        name="descricao"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormControl>
+                            <Textarea
+                                placeholder="Descreva os detalhes da parada de manutenção..."
+                                className="resize-none"
+                                {...field}
+                            />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                </CardContent>
+              </Card>
+
 
               <div className="flex justify-end gap-2">
                 <Button variant="ghost" type="button" asChild>
