@@ -105,62 +105,69 @@ export function StrategyCard({ groupId, strategy, onStrategyUpdate, onStrategyDe
     <Card className="w-full shadow-sm hover:shadow-md transition-shadow duration-300 border-border/60">
       <div className="p-4 space-y-3">
         {/* Top Row */}
-        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-x-4 gap-y-2">
             
-            {/* Left Section: Title & Badges */}
-            <div className="flex items-center gap-3 flex-shrink-0 min-w-0">
-                {isAtiva ? (
-                    <CheckCircle className="h-6 w-6 text-green-500 flex-shrink-0" />
-                ) : (
-                    <PauseCircle className="h-6 w-6 text-gray-500 flex-shrink-0" />
-                )}
-                <div className="flex flex-col min-w-0">
-                    <h2 className="text-lg font-semibold truncate" title={strategy.title}>{strategy.title}</h2>
-                    <div className="flex items-center gap-2 mt-1">
-                        <Badge variant="outline" className={priorityClasses[strategy.priority]}>{strategy.priority}</Badge>
-                        <Badge variant="outline" className={statusClasses}>{strategy.status}</Badge>
+            {/* Left & Middle Section */}
+            <div className="flex-1 flex flex-col md:flex-row md:items-center gap-4 min-w-0">
+                {/* Left Section: Title & Badges */}
+                <div className="flex items-center gap-3 flex-shrink-0">
+                    {isAtiva ? (
+                        <CheckCircle className="h-6 w-6 text-green-500 flex-shrink-0" />
+                    ) : (
+                        <PauseCircle className="h-6 w-6 text-gray-500 flex-shrink-0" />
+                    )}
+                    <div className="flex flex-col min-w-0">
+                        <h2 className="text-lg font-semibold truncate" title={strategy.title}>{strategy.title}</h2>
+                        <div className="flex items-center gap-2 mt-1">
+                            <Badge variant="outline" className={priorityClasses[strategy.priority]}>{strategy.priority}</Badge>
+                            <Badge variant="outline" className={statusClasses}>{strategy.status}</Badge>
+                        </div>
+                    </div>
+                </div>
+
+                <Separator orientation="vertical" className="h-10 hidden md:block" />
+                <Separator className="md:hidden" />
+                
+                {/* Middle Section: Details */}
+                <div className="flex-1 grid grid-cols-2 lg:flex lg:items-center lg:justify-start gap-x-6 gap-y-2 text-sm">
+                    <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-muted-foreground" />
+                        <div>
+                        <p className="text-muted-foreground text-xs">Frequência</p>
+                        <p className="font-medium">{strategy.frequency}</p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Clock className="h-4 w-4 text-muted-foreground" />
+                        <div>
+                        <p className="text-muted-foreground text-xs">Duração</p>
+                        <p className="font-medium">{strategy.duration}</p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <ShieldAlert className="h-4 w-4 text-muted-foreground" />
+                        <div>
+                        <p className="text-muted-foreground text-xs">Tolerância</p>
+                        <p className="font-medium">{strategy.toleranceInDays ?? 0} dias</p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Play className="h-4 w-4 text-muted-foreground" />
+                        <div>
+                        <p className="text-muted-foreground text-xs">Início</p>
+                        <p className="font-medium">{strategy.startDate}</p>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            {/* Middle Section: Details */}
-            <div className="flex-grow grid grid-cols-2 md:flex md:items-center md:justify-center gap-x-6 gap-y-2 text-sm">
-                <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <div>
-                    <p className="text-muted-foreground text-xs">Frequência</p>
-                    <p className="font-medium">{strategy.frequency}</p>
-                    </div>
-                </div>
-                <div className="flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-muted-foreground" />
-                    <div>
-                    <p className="text-muted-foreground text-xs">Duração</p>
-                    <p className="font-medium">{strategy.duration}</p>
-                    </div>
-                </div>
-                <div className="flex items-center gap-2">
-                    <ShieldAlert className="h-4 w-4 text-muted-foreground" />
-                    <div>
-                    <p className="text-muted-foreground text-xs">Tolerância</p>
-                    <p className="font-medium">{strategy.toleranceInDays ?? 0} dias</p>
-                    </div>
-                </div>
-                <div className="flex items-center gap-2">
-                    <Play className="h-4 w-4 text-muted-foreground" />
-                    <div>
-                    <p className="text-muted-foreground text-xs">Início</p>
-                    <p className="font-medium">{strategy.startDate}</p>
-                    </div>
-                </div>
-            </div>
 
             {/* Right Section: Actions */}
-            <div className="flex items-center gap-3 flex-shrink-0">
+            <div className="flex items-center gap-3 flex-shrink-0 justify-end">
                 {isUpdatingStatus && <Loader2 className="h-4 w-4 animate-spin" />}
                 <div className="flex items-center gap-2">
-                <Switch id={`status-switch-${strategy.id}`} checked={isAtiva} onCheckedChange={handleStatusChange} disabled={isUpdatingStatus} />
-                <label htmlFor={`status-switch-${strategy.id}`} className="text-sm font-medium">{isAtiva ? 'Ativa' : 'Inativa'}</label>
+                    <Switch id={`status-switch-${strategy.id}`} checked={isAtiva} onCheckedChange={handleStatusChange} disabled={isUpdatingStatus} />
+                    <label htmlFor={`status-switch-${strategy.id}`} className="text-sm font-medium">{isAtiva ? 'Ativa' : 'Inativa'}</label>
                 </div>
 
                 <Separator orientation="vertical" className="h-6" />
