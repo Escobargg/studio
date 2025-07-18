@@ -1,6 +1,6 @@
 import { AssetRegistrationForm } from "@/components/asset-registration-form";
 import { getHierarquiaOpcoes } from "@/lib/data";
-import { Building2, List, MountainIcon } from "lucide-react";
+import { Building2, MountainIcon } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
@@ -17,12 +17,6 @@ export default async function Home() {
           </h1>
         </div>
         <div className="flex items-center gap-4">
-            <Button asChild variant="outline">
-              <Link href="/grupos" className="flex items-center gap-2 text-sm font-medium">
-                  <List className="w-4 h-4" />
-                  Ver Grupos
-              </Link>
-            </Button>
             <div className="flex items-center gap-2">
                 <Building2 className="w-5 h-5 text-muted-foreground"/>
                 <p className="text-sm font-medium text-muted-foreground">Vale S.A.</p>
