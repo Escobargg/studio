@@ -77,7 +77,6 @@ export default function NovaEstrategiaPage({ params }: { params: { id: string } 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
-  const groupId = params.id;
 
   const form = useForm<StrategyFormValues>({
     resolver: zodResolver(strategyFormSchema),
@@ -92,8 +91,10 @@ export default function NovaEstrategiaPage({ params }: { params: { id: string } 
   });
 
   useEffect(() => {
+    const groupId = params.id;
+    if (!groupId) return;
+
     const fetchGroup = async () => {
-      if (!groupId) return;
       setLoading(true);
       const groupDetails = await getGroupDetails(groupId);
       setGrupo(groupDetails);
@@ -101,11 +102,12 @@ export default function NovaEstrategiaPage({ params }: { params: { id: string } 
     };
 
     fetchGroup();
-  }, [groupId]);
+  }, [params.id]);
 
 
   async function onSubmit(data: StrategyFormValues) {
     setIsSubmitting(true);
+    const groupId = params.id;
     
     const { error } = await supabase
         .from('estrategias')
@@ -171,7 +173,7 @@ export default function NovaEstrategiaPage({ params }: { params: { id: string } 
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                         <div className="flex items-center gap-4 mb-6">
                             <Button variant="outline" size="icon" asChild>
-                                <Link href={`/grupos/${groupId}/estrategias`}>
+                                <Link href={`/grupos/${params.id}/estrategias`}>
                                     <ArrowLeft className="h-4 w-4" />
                                     <span className="sr-only">Voltar</span>
                                 </Link>
@@ -398,7 +400,7 @@ export default function NovaEstrategiaPage({ params }: { params: { id: string } 
                         
                         <div className="flex justify-end gap-2">
                             <Button variant="ghost" type="button" asChild>
-                                <Link href={`/grupos/${groupId}/estrategias`}>Cancelar</Link>
+                                <Link href={`/grupos/${params.id}/estrategias`}>Cancelar</Link>
                             </Button>
                             <Button type="submit" disabled={isSubmitting}>
                                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

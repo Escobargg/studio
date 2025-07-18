@@ -58,12 +58,12 @@ export default function EstrategiasPage({ params }: { params: { id: string } }) 
   const [grupo, setGrupo] = useState<Grupo | null>(null);
   const [strategies, setStrategies] = useState<Strategy[]>([]);
   const [loading, setLoading] = useState(true);
-  const groupId = params.id;
-
+  
   useEffect(() => {
-    const fetchData = async () => {
-      if (!groupId) return;
+    const groupId = params.id;
+    if (!groupId) return;
 
+    const fetchData = async () => {
       setLoading(true);
       const [groupDetails, groupStrategies] = await Promise.all([
         getGroupDetails(groupId),
@@ -75,7 +75,7 @@ export default function EstrategiasPage({ params }: { params: { id: string } }) 
     };
 
     fetchData();
-  }, [groupId]);
+  }, [params.id]);
 
   if (loading) {
     return (
@@ -111,7 +111,7 @@ export default function EstrategiasPage({ params }: { params: { id: string } }) 
                     </p>
                 </div>
                 <Button asChild className="mt-4 md:mt-0">
-                  <Link href={`/grupos/${groupId}/estrategias/nova`}>
+                  <Link href={`/grupos/${params.id}/estrategias/nova`}>
                     <PlusCircle className="mr-2 h-4 w-4" />
                     Nova Estratégia
                   </Link>
