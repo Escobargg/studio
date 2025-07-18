@@ -3,7 +3,8 @@ import { supabase } from './supabase';
 // Helper to get unique values from an array of objects
 const getUniqueValues = (data: any[], key: string): string[] => {
   if (!data) return [];
-  return [...new Set(data.map(item => item[key]))].sort();
+  // Filter out null or undefined values before creating the Set
+  return [...new Set(data.map(item => item[key]).filter(Boolean))].sort();
 };
 
 export type HierarquiaData = {
@@ -19,7 +20,7 @@ export type HierarquiaData = {
 export const getHierarquiaData = async (): Promise<HierarquiaData> => {
   const { data: hierarquia_data, error } = await supabase
     .from('hierarquia')
-    .select('descricao_do_centro, fase, Diretoria_Executiva_Corredor, Diretoria, Unidade, Categoria');
+    .select('descricao_do_centro, fase, diretoria_executiva_corredor, diretoria, unidade, categoria');
 
   if (error) {
     console.error('Error fetching hierarquia data:', error);
@@ -37,10 +38,10 @@ export const getHierarquiaData = async (): Promise<HierarquiaData> => {
   return {
     centros: getUniqueValues(hierarquia_data, 'descricao_do_centro'),
     fases: getUniqueValues(hierarquia_data, 'fase'),
-    diretoriasExecutivas: getUniqueValues(hierarquia_data, 'Diretoria_Executiva_Corredor'),
-    diretorias: getUniqueValues(hierarquia_data, 'Diretoria'),
-    unidades: getUniqueValues(hierarquia_data, 'Unidade'),
-    categorias: getUniqueValues(hierarquia_data, 'Categoria'),
+    diretoriasExecutivas: getUniqueValues(hierarquia_data, 'diretoria_executiva_corredor'),
+    diretorias: getUniqueValues(hierarquia_data, 'diretoria'),
+    unidades: getUniqueValues(hierarquia_data, 'unidade'),
+    categorias: getUniqueValues(hierarquia_data, 'categoria'),
   };
 };
 
