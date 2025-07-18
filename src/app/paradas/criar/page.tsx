@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { useState, useEffect } from "react";
 import { ArrowLeft, CalendarIcon, Loader2 } from "lucide-react";
-import { format } from "date-fns";
+import { format, differenceInHours, set } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 import { Button } from "@/components/ui/button";
@@ -43,11 +43,35 @@ const stopFormSchema = z.object({
   fase: z.string({ required_error: "Selecione a fase." }),
   grupoAtivos: z.string({ required_error: "Selecione o grupo de ativos." }),
   dataInicioPlanejada: z.date({ required_error: "A data de início planejada é obrigatória." }),
+  horaInicioPlanejada: z.string({ required_error: "A hora de início é obrigatória." }),
   dataFimPlanejada: z.date({ required_error: "A data de fim planejada é obrigatória." }),
+  horaFimPlanejada: z.string({ required_error: "A hora de fim é obrigatória." }),
   dataInicioRealizado: z.date().optional().nullable(),
+  horaInicioRealizado: z.string().optional().nullable(),
   dataFimRealizado: z.date().optional().nullable(),
+  horaFimRealizado: z.string().optional().nullable(),
   equipes: z.coerce.number().optional(),
   descricao: z.string().optional(),
+}).refine(data => {
+    if (data.dataInicioPlanejada && data.horaInicioPlanejada && data.dataFimPlanejada && data.horaFimPlanejada) {
+      const start = set(data.dataInicioPlanejada, { hours: parseInt(data.horaInicioPlanejada.split(':')[0]), minutes: parseInt(data.horaInicioPlanejada.split(':')[1]) });
+      const end = set(data.dataFimPlanejada, { hours: parseInt(data.horaFimPlanejada.split(':')[0]), minutes: parseInt(data.horaFimPlanejada.split(':')[1]) });
+      return end > start;
+    }
+    return true;
+}, {
+    message: "A data/hora final planejada deve ser posterior à data/hora inicial.",
+    path: ["dataFimPlanejada"],
+}).refine(data => {
+    if (data.dataInicioRealizado && data.horaInicioRealizado && data.dataFimRealizado && data.horaFimRealizado) {
+      const start = set(data.dataInicioRealizado, { hours: parseInt(data.horaInicioRealizado.split(':')[0]), minutes: parseInt(data.horaInicioRealizado.split(':')[1]) });
+      const end = set(data.dataFimRealizado, { hours: parseInt(data.horaFimRealizado.split(':')[0]), minutes: parseInt(data.horaFimRealizado.split(':')[1]) });
+      return end > start;
+    }
+    return true;
+}, {
+    message: "A data/hora final realizada deve ser posterior à data/hora inicial.",
+    path: ["dataFimRealizado"],
 });
 
 type StopFormValues = z.infer<typeof stopFormSchema>;
@@ -57,6 +81,9 @@ export default function CriarParadaPage() {
   const { toast } = useToast();
   const router = useRouter();
 
+  const [duracaoPlanejada, setDuracaoPlanejada] = useState<number | null>(null);
+  const [duracaoRealizada, setDuracaoRealizada] = useState<number | null>(null);
+
   const form = useForm<StopFormValues>({
     resolver: zodResolver(stopFormSchema),
     defaultValues: {
@@ -64,6 +91,44 @@ export default function CriarParadaPage() {
       descricao: "",
     },
   });
+
+  const { watch } = form;
+
+  const watchedFields = watch([
+      "dataInicioPlanejada", "horaInicioPlanejada", "dataFimPlanejada", "horaFimPlanejada",
+      "dataInicioRealizado", "horaInicioRealizado", "dataFimRealizado", "horaFimRealizado"
+  ]);
+
+  useEffect(() => {
+    const [
+      dataInicioPlanejada, horaInicioPlanejada, dataFimPlanejada, horaFimPlanejada,
+      dataInicioRealizado, horaInicioRealizado, dataFimRealizado, horaFimRealizado
+    ] = watchedFields;
+
+    if (dataInicioPlanejada && horaInicioPlanejada && dataFimPlanejada && horaFimPlanejada) {
+      const start = set(dataInicioPlanejada, { hours: parseInt(horaInicioPlanejada.split(':')[0]), minutes: parseInt(horaInicioPlanejada.split(':')[1]) });
+      const end = set(dataFimPlanejada, { hours: parseInt(horaFimPlanejada.split(':')[0]), minutes: parseInt(horaFimPlanejada.split(':')[1]) });
+      if (end > start) {
+        setDuracaoPlanejada(differenceInHours(end, start));
+      } else {
+        setDuracaoPlanejada(null);
+      }
+    } else {
+        setDuracaoPlanejada(null);
+    }
+
+    if (dataInicioRealizado && horaInicioRealizado && dataFimRealizado && horaFimRealizado) {
+        const start = set(dataInicioRealizado, { hours: parseInt(horaInicioRealizado.split(':')[0]), minutes: parseInt(horaInicioRealizado.split(':')[1]) });
+        const end = set(dataFimRealizado, { hours: parseInt(horaFimRealizado.split(':')[0]), minutes: parseInt(horaFimRealizado.split(':')[1]) });
+        if (end > start) {
+            setDuracaoRealizada(differenceInHours(end, start));
+        } else {
+            setDuracaoRealizada(null);
+        }
+    } else {
+        setDuracaoRealizada(null);
+    }
+  }, [watchedFields]);
 
   async function onSubmit(data: StopFormValues) {
     setIsSubmitting(true);
@@ -184,89 +249,123 @@ export default function CriarParadaPage() {
                     )}
                   />
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
                     <FormField
                       control={form.control}
                       name="dataInicioPlanejada"
                       render={({ field }) => (
                         <FormItem className="flex flex-col">
-                          <FormLabel>Data início planejada</FormLabel>
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <FormControl>
-                                <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                                  {field.value ? (format(field.value, "PPP", { locale: ptBR })) : (<span>dd/mm/aaaa</span>)}
-                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                </Button>
-                              </FormControl>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                              <Calendar mode="single" selected={field.value ?? undefined} onSelect={field.onChange} initialFocus />
-                            </PopoverContent>
-                          </Popover>
+                          <FormLabel>Data Início Planejada</FormLabel>
+                          <div className="flex gap-2">
+                             <Popover>
+                                <PopoverTrigger asChild>
+                                  <FormControl>
+                                    <Button variant={"outline"} className={cn("flex-1 pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                      {field.value ? (format(field.value, "PPP", { locale: ptBR })) : (<span>dd/mm/aaaa</span>)}
+                                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                    </Button>
+                                  </FormControl>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="start">
+                                  <Calendar mode="single" selected={field.value ?? undefined} onSelect={field.onChange} initialFocus />
+                                </PopoverContent>
+                             </Popover>
+                             <FormField
+                                control={form.control}
+                                name="horaInicioPlanejada"
+                                render={({ field }) => (
+                                    <FormControl>
+                                      <Input type="time" {...field} className="w-[120px]"/>
+                                    </FormControl>
+                                )}
+                              />
+                          </div>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-                    <FormField
+                     <FormField
                       control={form.control}
                       name="dataFimPlanejada"
                       render={({ field }) => (
                         <FormItem className="flex flex-col">
-                          <FormLabel>Fim planejada</FormLabel>
-                           <Popover>
-                            <PopoverTrigger asChild>
-                              <FormControl>
-                                <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                                  {field.value ? (format(field.value, "PPP", { locale: ptBR })) : (<span>dd/mm/aaaa</span>)}
-                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                </Button>
-                              </FormControl>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                              <Calendar mode="single" selected={field.value ?? undefined} onSelect={field.onChange} disabled={(date) => form.getValues("dataInicioPlanejada") ? date < form.getValues("dataInicioPlanejada") : false} initialFocus />
-                            </PopoverContent>
-                          </Popover>
+                          <FormLabel>Data Fim Planejada</FormLabel>
+                          <div className="flex gap-2">
+                             <Popover>
+                                <PopoverTrigger asChild>
+                                  <FormControl>
+                                    <Button variant={"outline"} className={cn("flex-1 pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                      {field.value ? (format(field.value, "PPP", { locale: ptBR })) : (<span>dd/mm/aaaa</span>)}
+                                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                    </Button>
+                                  </FormControl>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="start">
+                                  <Calendar mode="single" selected={field.value ?? undefined} onSelect={field.onChange} disabled={(date) => form.getValues("dataInicioPlanejada") ? date < form.getValues("dataInicioPlanejada") : false} initialFocus />
+                                </PopoverContent>
+                              </Popover>
+                              <FormField
+                                control={form.control}
+                                name="horaFimPlanejada"
+                                render={({ field }) => (
+                                    <FormControl>
+                                      <Input type="time" {...field} className="w-[120px]"/>
+                                    </FormControl>
+                                )}
+                              />
+                          </div>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
                   </div>
                   
-                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <FormField
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
+                     <FormField
                       control={form.control}
                       name="dataInicioRealizado"
                       render={({ field }) => (
                         <FormItem className="flex flex-col">
-                          <FormLabel>Data início realizado</FormLabel>
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <FormControl>
-                                <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                                  {field.value ? (format(field.value, "PPP", { locale: ptBR })) : (<span>dd/mm/aaaa</span>)}
-                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                </Button>
-                              </FormControl>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                              <Calendar mode="single" selected={field.value ?? undefined} onSelect={field.onChange} initialFocus />
-                            </PopoverContent>
-                          </Popover>
-                          <FormMessage />
+                          <FormLabel>Data Início Realizado</FormLabel>
+                           <div className="flex gap-2">
+                             <Popover>
+                                <PopoverTrigger asChild>
+                                  <FormControl>
+                                    <Button variant={"outline"} className={cn("flex-1 pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                      {field.value ? (format(field.value, "PPP", { locale: ptBR })) : (<span>dd/mm/aaaa</span>)}
+                                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                    </Button>
+                                  </FormControl>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="start">
+                                  <Calendar mode="single" selected={field.value ?? undefined} onSelect={field.onChange} initialFocus />
+                                </PopoverContent>
+                              </Popover>
+                               <FormField
+                                control={form.control}
+                                name="horaInicioRealizado"
+                                render={({ field }) => (
+                                    <FormControl>
+                                      <Input type="time" {...field} className="w-[120px]"/>
+                                    </FormControl>
+                                )}
+                              />
+                           </div>
+                           <FormMessage />
                         </FormItem>
                       )}
                     />
-                    <FormField
+                     <FormField
                       control={form.control}
                       name="dataFimRealizado"
                       render={({ field }) => (
                         <FormItem className="flex flex-col">
-                          <FormLabel>Fim realizado</FormLabel>
+                          <FormLabel>Data Fim Realizado</FormLabel>
+                          <div className="flex gap-2">
                            <Popover>
                             <PopoverTrigger asChild>
                               <FormControl>
-                                <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                <Button variant={"outline"} className={cn("flex-1 pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
                                   {field.value ? (format(field.value, "PPP", { locale: ptBR })) : (<span>dd/mm/aaaa</span>)}
                                   <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                                 </Button>
@@ -275,20 +374,39 @@ export default function CriarParadaPage() {
                             <PopoverContent className="w-auto p-0" align="start">
                               <Calendar mode="single" selected={field.value ?? undefined} onSelect={field.onChange} disabled={(date) => form.getValues("dataInicioRealizado") ? date < form.getValues("dataInicioRealizado") : false} initialFocus />
                             </PopoverContent>
-                          </Popover>
+                           </Popover>
+                            <FormField
+                                control={form.control}
+                                name="horaFimRealizado"
+                                render={({ field }) => (
+                                    <FormControl>
+                                      <Input type="time" {...field} className="w-[120px]"/>
+                                    </FormControl>
+                                )}
+                              />
+                          </div>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
                   </div>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <FormItem>
-                        <FormLabel>Duração (horas)</FormLabel>
+                        <FormLabel>Duração planejada (horas)</FormLabel>
                         <FormControl>
-                            <Input type="number" disabled value="72" />
+                            <Input type="number" disabled value={duracaoPlanejada ?? ""} placeholder="Calculado automaticamente"/>
                         </FormControl>
                     </FormItem>
+                     <FormItem>
+                        <FormLabel>Duração realizada (horas)</FormLabel>
+                        <FormControl>
+                            <Input type="number" disabled value={duracaoRealizada ?? ""} placeholder="Calculado automaticamente" />
+                        </FormControl>
+                    </FormItem>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <FormField
                       control={form.control}
                       name="equipes"
@@ -346,3 +464,5 @@ export default function CriarParadaPage() {
     </MainLayout>
   );
 }
+
+    
