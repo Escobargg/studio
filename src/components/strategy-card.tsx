@@ -102,96 +102,96 @@ export function StrategyCard({ groupId, strategy, onStrategyUpdate, onStrategyDe
 
   return (
     <Card className="w-full shadow-sm hover:shadow-md transition-shadow duration-300 border-border/60">
-        <div className="p-5">
-            {/* Header */}
-            <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-4">
-                <div className="flex items-center gap-3 flex-1">
+        <div className="p-5 flex flex-col sm:flex-row justify-between sm:items-start gap-4">
+             {/* Info Section */}
+            <div className="flex-1">
+                <div className="flex items-start gap-4">
                     {isAtiva ? (
-                        <CheckCircle className="h-6 w-6 text-green-500 flex-shrink-0" />
+                        <CheckCircle className="h-6 w-6 text-green-500 flex-shrink-0 mt-1" />
                     ) : (
-                        <PauseCircle className="h-6 w-6 text-gray-500 flex-shrink-0" />
+                        <PauseCircle className="h-6 w-6 text-gray-500 flex-shrink-0 mt-1" />
                     )}
-                    <div>
+                    <div className="flex-1">
                         <h2 className="text-lg font-semibold">{strategy.title}</h2>
                         <div className="flex items-center gap-2 mt-1 flex-wrap">
                            <Badge variant="outline" className={priorityClasses[strategy.priority]}>{strategy.priority}</Badge>
                            <Badge variant="outline" className={statusClasses}>{strategy.status}</Badge>
                         </div>
+                        <p className="text-muted-foreground mt-3">{strategy.description}</p>
                     </div>
                 </div>
-                <div className="flex items-center gap-2 self-start sm:self-center">
-                    {isUpdatingStatus && <Loader2 className="h-4 w-4 animate-spin" />}
-                    <Switch id={`status-switch-${strategy.id}`} checked={isAtiva} onCheckedChange={handleStatusChange} disabled={isUpdatingStatus} />
-                    <label htmlFor={`status-switch-${strategy.id}`} className="text-sm font-medium mr-2">{isAtiva ? 'Ativa' : 'Inativa'}</label>
-                    <Button variant="ghost" size="icon" asChild>
-                        <Link href={`/grupos/${groupId}/estrategias/${strategy.id}/editar`}>
-                            <Edit className="w-4 h-4" />
-                            <span className="sr-only">Editar</span>
-                        </Link>
-                    </Button>
-                     <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" disabled={isDeleting}>
-                                {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                            </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                            <AlertDialogHeader>
-                            <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                                Esta ação não pode ser desfeita. Isso excluirá permanentemente a estratégia
-                                <strong className="px-1">{strategy.title}</strong>.
-                            </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
-                            <AlertDialogAction
-                                onClick={handleDelete}
-                                disabled={isDeleting}
-                                className="bg-destructive hover:bg-destructive/90"
-                            >
-                                {isDeleting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                                {isDeleting ? "Excluindo..." : "Sim, excluir"}
-                            </AlertDialogAction>
-                            </AlertDialogFooter>
-                        </AlertDialogContent>
-                    </AlertDialog>
+                
+                 {/* Details */}
+                <div className="flex flex-wrap items-center gap-x-6 gap-y-4 mt-4 pl-10 text-sm">
+                    <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-muted-foreground" />
+                        <div>
+                            <span className="text-muted-foreground">Frequência:</span>
+                            <p className="font-medium">{strategy.frequency}</p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Clock className="h-4 w-4 text-muted-foreground" />
+                        <div>
+                            <span className="text-muted-foreground">Duração:</span>
+                            <p className="font-medium">{strategy.duration}</p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <ShieldAlert className="h-4 w-4 text-muted-foreground" />
+                        <div>
+                            <span className="text-muted-foreground">Tolerância:</span>
+                            <p className="font-medium">{strategy.toleranceInDays ?? 0} dias</p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Play className="h-4 w-4 text-muted-foreground" />
+                        <div>
+                            <span className="text-muted-foreground">Início:</span>
+                            <p className="font-medium">{strategy.startDate}</p>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            {/* Description */}
-            <p className="text-muted-foreground mt-4 ml-9">{strategy.description}</p>
-            
-            {/* Details */}
-            <div className="flex flex-wrap items-center gap-x-8 gap-y-4 mt-4 ml-9 text-sm">
-                <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <div>
-                        <span className="text-muted-foreground">Frequência:</span>
-                        <p className="font-medium">{strategy.frequency}</p>
-                    </div>
-                </div>
-                 <div className="flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-muted-foreground" />
-                    <div>
-                        <span className="text-muted-foreground">Duração:</span>
-                        <p className="font-medium">{strategy.duration}</p>
-                    </div>
-                </div>
-                <div className="flex items-center gap-2">
-                    <ShieldAlert className="h-4 w-4 text-muted-foreground" />
-                    <div>
-                        <span className="text-muted-foreground">Tolerância:</span>
-                        <p className="font-medium">{strategy.toleranceInDays ?? 0} dias</p>
-                    </div>
-                </div>
-                 <div className="flex items-center gap-2">
-                    <Play className="h-4 w-4 text-muted-foreground" />
-                    <div>
-                        <span className="text-muted-foreground">Início:</span>
-                        <p className="font-medium">{strategy.startDate}</p>
-                    </div>
-                </div>
+            {/* Actions Section */}
+            <div className="flex items-center gap-2 self-start sm:self-center flex-shrink-0 pt-1">
+                {isUpdatingStatus && <Loader2 className="h-4 w-4 animate-spin" />}
+                <Switch id={`status-switch-${strategy.id}`} checked={isAtiva} onCheckedChange={handleStatusChange} disabled={isUpdatingStatus} />
+                <label htmlFor={`status-switch-${strategy.id}`} className="text-sm font-medium mr-2">{isAtiva ? 'Ativa' : 'Inativa'}</label>
+                <Button variant="ghost" size="icon" asChild>
+                    <Link href={`/grupos/${groupId}/estrategias/${strategy.id}/editar`}>
+                        <Edit className="w-4 h-4" />
+                        <span className="sr-only">Editar</span>
+                    </Link>
+                </Button>
+                 <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" disabled={isDeleting}>
+                            {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                        </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                        <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Esta ação não pode ser desfeita. Isso excluirá permanentemente a estratégia
+                            <strong className="px-1">{strategy.title}</strong>.
+                        </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                        <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={handleDelete}
+                            disabled={isDeleting}
+                            className="bg-destructive hover:bg-destructive/90"
+                        >
+                            {isDeleting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                            {isDeleting ? "Excluindo..." : "Sim, excluir"}
+                        </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
             </div>
         </div>
     </Card>
