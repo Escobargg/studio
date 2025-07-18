@@ -180,7 +180,7 @@ export function AssetGroupCard({ grupo, onGroupUpdate, onGroupDelete }: AssetGro
                             Esta ação não pode ser desfeita. Isso excluirá permanentemente o grupo
                             <strong className="px-1">{grupo.nome_grupo}</strong>
                             e removerá seus dados de nossos servidores.
-                          </Description>
+                          </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                           <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
