@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { getEquipes, Equipe as ApiEquipe } from "@/lib/data";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -20,6 +20,7 @@ interface TeamSelectorProps {
   fase: string;
   selectedTeams: SelectedTeam[];
   onChange: (teams: SelectedTeam[]) => void;
+  duracaoParada: number;
 }
 
 export function TeamSelector({
@@ -27,6 +28,7 @@ export function TeamSelector({
   fase,
   selectedTeams,
   onChange,
+  duracaoParada,
 }: TeamSelectorProps) {
   const [availableTeams, setAvailableTeams] = useState<ApiEquipe[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -47,10 +49,8 @@ export function TeamSelector({
 
   const handleTeamSelectionChange = (team: ApiEquipe, checked: boolean) => {
     if (checked) {
-      // Add team to selected list
       onChange([...selectedTeams, { id: team.id, especialidade: team.especialidade, capacidade: 1 }]);
     } else {
-      // Remove team from selected list
       onChange(selectedTeams.filter((t) => t.id !== team.id));
     }
   };
@@ -115,20 +115,32 @@ export function TeamSelector({
 
       {selectedTeams.length > 0 && (
         <div>
-          <h4 className="text-md font-medium mb-2">Capacidade por Equipe</h4>
+          <h4 className="text-md font-medium mb-2">Detalhes por Equipe</h4>
            <div className="space-y-3">
             {selectedTeams.map((team) => (
-              <div key={team.id} className="grid grid-cols-3 items-center gap-4">
-                <Label htmlFor={`capacity-${team.id}`} className="col-span-1">{team.especialidade}</Label>
-                <Input
-                  id={`capacity-${team.id}`}
-                  type="number"
-                  min="1"
-                  value={team.capacidade}
-                  onChange={(e) => handleCapacityChange(team.id, parseInt(e.target.value, 10) || 0)}
-                  className="col-span-2"
-                  placeholder="Nº de pessoas"
-                />
+              <div key={team.id} className="grid grid-cols-12 items-center gap-4">
+                <Label htmlFor={`capacity-${team.id}`} className="col-span-12 sm:col-span-4">{team.especialidade}</Label>
+                <div className="col-span-6 sm:col-span-4">
+                  <Label htmlFor={`capacity-${team.id}`} className="text-xs text-muted-foreground">Capacidade</Label>
+                  <Input
+                    id={`capacity-${team.id}`}
+                    type="number"
+                    min="1"
+                    value={team.capacidade}
+                    onChange={(e) => handleCapacityChange(team.id, parseInt(e.target.value, 10) || 0)}
+                    placeholder="Nº"
+                  />
+                </div>
+                <div className="col-span-6 sm:col-span-4">
+                  <Label htmlFor={`hh-${team.id}`} className="text-xs text-muted-foreground">HH</Label>
+                  <Input
+                    id={`hh-${team.id}`}
+                    type="number"
+                    value={team.capacidade * duracaoParada}
+                    disabled
+                    placeholder="Auto"
+                  />
+                </div>
               </div>
             ))}
           </div>
@@ -137,3 +149,5 @@ export function TeamSelector({
     </div>
   );
 }
+
+    

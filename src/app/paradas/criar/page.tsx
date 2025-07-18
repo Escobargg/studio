@@ -103,23 +103,8 @@ const stopFormSchema = z.object({
 
 type StopFormValues = z.infer<typeof stopFormSchema>;
 
-const TotalHHDisplay = ({ control }) => {
+const TotalHHDisplay = ({ control, duracaoPlanejada }) => {
     const equipes = useWatch({ control, name: "equipes" });
-    const dataInicioPlanejada = useWatch({ control, name: "dataInicioPlanejada" });
-    const horaInicioPlanejada = useWatch({ control, name: "horaInicioPlanejada" });
-    const dataFimPlanejada = useWatch({ control, name: "dataFimPlanejada" });
-    const horaFimPlanejada = useWatch({ control, name: "horaFimPlanejada" });
-    
-    const duracaoPlanejada = useMemo(() => {
-        if (dataInicioPlanejada && horaInicioPlanejada && dataFimPlanejada && horaFimPlanejada) {
-            const start = set(dataInicioPlanejada, { hours: parseInt(horaInicioPlanejada.split(':')[0]), minutes: parseInt(horaInicioPlanejada.split(':')[1]) });
-            const end = set(dataFimPlanejada, { hours: parseInt(horaFimPlanejada.split(':')[0]), minutes: parseInt(horaFimPlanejada.split(':')[1]) });
-            if (end > start) {
-                return differenceInHours(end, start);
-            }
-        }
-        return 0;
-    }, [dataInicioPlanejada, horaInicioPlanejada, dataFimPlanejada, horaFimPlanejada]);
 
     const totalHH = useMemo(() => {
         if (!Array.isArray(equipes) || duracaoPlanejada <= 0) {
@@ -147,7 +132,6 @@ export default function CriarParadaPage() {
   const { toast } = useToast();
   const router = useRouter();
 
-  // State for select options and loading
   const [centrosLocalizacao, setCentrosLocalizacao] = useState<string[]>([]);
   const [fases, setFases] = useState<string[]>([]);
   const [ativos, setAtivos] = useState<string[]>([]);
@@ -181,7 +165,6 @@ export default function CriarParadaPage() {
   const watchedFase = watch("fase");
   const watchedTipoSelecao = watch("tipoSelecao");
 
-  // Fetch Centro de Localizacao on mount
   useEffect(() => {
     async function fetchCentros() {
       setLoadingCentros(true);
@@ -192,7 +175,6 @@ export default function CriarParadaPage() {
     fetchCentros();
   }, []);
 
-  // Fetch Fases and Ativos when Centro de Localizacao changes
   useEffect(() => {
     const fetchDataForCentro = async () => {
       if (watchedCentro) {
@@ -222,7 +204,6 @@ export default function CriarParadaPage() {
     fetchDataForCentro();
   }, [watchedCentro, setValue]);
 
-  // Fetch Grupos de Ativos when Centro and Fase change
   useEffect(() => {
     const fetchGrupos = async () => {
         if (watchedCentro && watchedFase) {
@@ -238,7 +219,6 @@ export default function CriarParadaPage() {
     fetchGrupos();
   }, [watchedCentro, watchedFase, setValue]);
 
-  // Reset equipes when fase changes
   useEffect(() => {
     setValue("equipes", []);
   }, [watchedFase, setValue]);
@@ -660,13 +640,14 @@ export default function CriarParadaPage() {
                                     fase={watchedFase}
                                     selectedTeams={field.value}
                                     onChange={field.onChange}
+                                    duracaoParada={duracaoPlanejada ?? 0}
                                 />
                              </FormControl>
                              <FormMessage />
                            </FormItem>
                         )}
                     />
-                    <TotalHHDisplay control={control} />
+                    <TotalHHDisplay control={control} duracaoPlanejada={duracaoPlanejada ?? 0} />
                 </CardContent>
               </Card>
 
@@ -712,3 +693,5 @@ export default function CriarParadaPage() {
     </MainLayout>
   );
 }
+
+    
