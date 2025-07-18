@@ -1,10 +1,9 @@
+
 "use client";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-    Card,
-} from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Building, MapPin, Tag, Layers, ListChecks, Trash2, ShieldCheck, Loader2, Milestone } from "lucide-react";
 import { EditAssetsDialog } from "./edit-assets-dialog";
