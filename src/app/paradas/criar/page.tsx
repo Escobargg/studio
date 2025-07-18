@@ -266,6 +266,9 @@ export default function CriarParadaPage() {
     const dataInicioPlanejadaCompleta = combineDateTime(data.dataInicioPlanejada, data.horaInicioPlanejada);
     const dataFimPlanejadaCompleta = combineDateTime(data.dataFimPlanejada, data.horaFimPlanejada);
 
+    // Prepare a slimmed-down version of teams data for insertion
+    const equipesParaInserir = data.equipes?.map(e => ({ id: e.id, capacidade: e.capacidade }));
+
     const dataToInsert = {
       nome_parada: data.nomeParada,
       centro_de_localizacao: data.centroLocalizacao,
@@ -283,7 +286,7 @@ export default function CriarParadaPage() {
           ? combineDateTime(data.dataFimRealizado, data.horaFimRealizado).toISOString() 
           : null,
       duracao_realizada_horas: duracaoRealizada,
-      equipes_selecionadas: data.equipes,
+      equipes_selecionadas: equipesParaInserir, // Use the slimmed-down version
       descricao: data.descricao,
     };
 
@@ -678,7 +681,7 @@ export default function CriarParadaPage() {
                                 <TeamSelector
                                     availableTeams={availableTeams}
                                     isLoading={loadingEquipes}
-                                    selectedTeams={field.value}
+                                    selectedTeams={field.value || []}
                                     onChange={field.onChange}
                                 />
                              </FormControl>
