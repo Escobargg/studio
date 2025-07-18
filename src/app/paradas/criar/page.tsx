@@ -30,19 +30,22 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { cn } from "@/lib/utils";
 import { MainLayout } from "@/components/main-layout";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { getHierarquiaOpcoes } from "@/lib/data";
+import { getHierarquiaOpcoes, getAtivosByCentro } from "@/lib/data";
 
 
 const stopFormSchema = z.object({
   nomeParada: z.string().min(1, "O nome da parada é obrigatório."),
   centroLocalizacao: z.string({ required_error: "Selecione o centro de localização." }),
   fase: z.string({ required_error: "Selecione a fase." }),
-  grupoAtivos: z.string({ required_error: "Selecione o grupo de ativos." }),
+  tipoSelecao: z.enum(["grupo", "ativo"], { required_error: "Selecione o tipo."}),
+  grupoAtivos: z.string().optional(),
+  ativo: z.string().optional(),
   dataInicioPlanejada: z.date({ required_error: "A data de início planejada é obrigatória." }),
   horaInicioPlanejada: z.string({ required_error: "A hora de início é obrigatória." }),
   dataFimPlanejada: z.date({ required_error: "A data de fim planejada é obrigatória." }),
@@ -73,7 +76,24 @@ const stopFormSchema = z.object({
 }, {
     message: "A data/hora final realizada deve ser posterior à data/hora inicial.",
     path: ["dataFimRealizado"],
+}).refine(data => {
+    if (data.tipoSelecao === "grupo") {
+        return !!data.grupoAtivos;
+    }
+    return true;
+}, {
+    message: "Selecione o grupo de ativos.",
+    path: ["grupoAtivos"],
+}).refine(data => {
+    if (data.tipoSelecao === "ativo") {
+        return !!data.ativo;
+    }
+    return true;
+}, {
+    message: "Selecione o ativo.",
+    path: ["ativo"],
 });
+
 
 type StopFormValues = z.infer<typeof stopFormSchema>;
 
@@ -88,14 +108,17 @@ export default function CriarParadaPage() {
   // State for select options and loading
   const [centrosLocalizacao, setCentrosLocalizacao] = useState<string[]>([]);
   const [fases, setFases] = useState<string[]>([]);
+  const [ativos, setAtivos] = useState<string[]>([]);
   const [loadingCentros, setLoadingCentros] = useState(true);
   const [loadingFases, setLoadingFases] = useState(false);
+  const [loadingAtivos, setLoadingAtivos] = useState(false);
   
   const form = useForm<StopFormValues>({
     resolver: zodResolver(stopFormSchema),
     defaultValues: {
       nomeParada: "",
       descricao: "",
+      tipoSelecao: "grupo",
     },
   });
 
@@ -106,6 +129,7 @@ export default function CriarParadaPage() {
       "dataInicioRealizado", "horaInicioRealizado", "dataFimRealizado", "horaFimRealizado"
   ]);
   const watchedCentro = watch("centroLocalizacao");
+  const watchedTipoSelecao = watch("tipoSelecao");
 
   // Fetch Centro de Localizacao on mount
   useEffect(() => {
@@ -118,20 +142,31 @@ export default function CriarParadaPage() {
     fetchCentros();
   }, []);
 
-  // Fetch Fases when Centro de Localizacao changes
+  // Fetch Fases and Ativos when Centro de Localizacao changes
   useEffect(() => {
-    const fetchFases = async () => {
+    const fetchDataForCentro = async () => {
       if (watchedCentro) {
         setLoadingFases(true);
-        setValue("fase", ""); // Reset fase on centro change
-        const data = await getHierarquiaOpcoes("fase", { centro_de_localizacao: watchedCentro });
-        setFases(data);
+        setLoadingAtivos(true);
+        setValue("fase", ""); 
+        setValue("grupoAtivos", "");
+        setValue("ativo", "");
+
+        const [fasesData, ativosData] = await Promise.all([
+          getHierarquiaOpcoes("fase", { centro_de_localizacao: watchedCentro }),
+          getAtivosByCentro(watchedCentro)
+        ]);
+
+        setFases(fasesData);
+        setAtivos(ativosData);
         setLoadingFases(false);
+        setLoadingAtivos(false);
       } else {
         setFases([]);
+        setAtivos([]);
       }
     };
-    fetchFases();
+    fetchDataForCentro();
   }, [watchedCentro, setValue]);
   
 
@@ -278,22 +313,81 @@ export default function CriarParadaPage() {
                   </div>
                   
                   <FormField
-                    control={control}
-                    name="grupoAtivos"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Grupo de Ativos</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl><SelectTrigger><SelectValue placeholder="Selecionar Grupo de Ativos" /></SelectTrigger></FormControl>
-                          <SelectContent>
-                            <SelectItem value="grupo1">Britadores Carajás</SelectItem>
-                            <SelectItem value="grupo2">Fornos Alto Forno Vitória</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
+                      control={control}
+                      name="tipoSelecao"
+                      render={({ field }) => (
+                        <FormItem className="space-y-3">
+                          <FormLabel>Criar parada para:</FormLabel>
+                          <FormControl>
+                            <RadioGroup
+                              onValueChange={field.onChange}
+                              defaultValue={field.value}
+                              className="flex space-x-4"
+                            >
+                              <FormItem className="flex items-center space-x-2 space-y-0">
+                                <FormControl>
+                                  <RadioGroupItem value="grupo" />
+                                </FormControl>
+                                <FormLabel className="font-normal">Grupo de Ativo</FormLabel>
+                              </FormItem>
+                              <FormItem className="flex items-center space-x-2 space-y-0">
+                                <FormControl>
+                                  <RadioGroupItem value="ativo" />
+                                </FormControl>
+                                <FormLabel className="font-normal">Ativo Único</FormLabel>
+                              </FormItem>
+                            </RadioGroup>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {watchedTipoSelecao === "grupo" && (
+                        <FormField
+                            control={control}
+                            name="grupoAtivos"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Grupo de Ativos</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value} disabled={!watchedCentro}>
+                                <FormControl><SelectTrigger><SelectValue placeholder="Selecionar Grupo de Ativos" /></SelectTrigger></FormControl>
+                                <SelectContent>
+                                    <SelectItem value="grupo1">Britadores Carajás</SelectItem>
+                                    <SelectItem value="grupo2">Fornos Alto Forno Vitória</SelectItem>
+                                </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
                     )}
-                  />
+
+                    {watchedTipoSelecao === "ativo" && (
+                         <FormField
+                            control={control}
+                            name="ativo"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Ativo</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value} disabled={!watchedCentro || loadingAtivos}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    {loadingAtivos ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <SelectValue placeholder="Selecionar Ativo" />}
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                    {ativos.map(ativo => (
+                                        <SelectItem key={ativo} value={ativo}>{ativo}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
+                    )}
+
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
                     <FormField
