@@ -105,7 +105,7 @@ export function AssetRegistrationForm({ initialDiretoriasExecutivas }: AssetRegi
   const watch = form.watch;
 
   useEffect(() => {
-    // Reativado: Busca as diretorias executivas se não forem passadas inicialmente.
+    // Busca as diretorias executivas se não forem passadas inicialmente.
     if (!initialDiretoriasExecutivas || initialDiretoriasExecutivas.length === 0) {
       setIsLoading(prev => ({...prev, diretoriasExecutivas: true}));
       getHierarquiaOpcoes("diretoria_executiva")
@@ -121,60 +121,70 @@ export function AssetRegistrationForm({ initialDiretoriasExecutivas }: AssetRegi
   const handleFieldChange = useCallback(
     (fieldName: keyof AssetFormValues, nextFieldName: keyof OptionsState | null, resetFields: (keyof AssetFormValues)[]) => {
       startTransition(() => {
-        resetFields.forEach(field => form.setValue(field, "" as any));
-        const currentFilters = {
-          diretoria_executiva: watch("diretoria_executiva"),
-          diretoria: watch("diretoria"),
-          unidade: watch("unidade"),
-          centro_de_localizacao: watch("centro_de_localizacao"),
-          fase: watch("fase"),
-        };
+        // Reseta os campos filhos e suas opções
+        resetFields.forEach(field => form.setValue(field, "" as any, { shouldValidate: true }));
+        const emptyOptions: Partial<OptionsState> = {};
+        if (resetFields.includes("diretoria")) emptyOptions.diretorias = [];
+        if (resetFields.includes("unidade")) emptyOptions.unidades = [];
+        if (resetFields.includes("centro_de_localizacao")) emptyOptions.centrosLocalizacao = [];
+        if (resetFields.includes("fase")) emptyOptions.fases = [];
+        if (resetFields.includes("categoria")) emptyOptions.categorias = [];
+        if (resetFields.includes("ativos")) emptyOptions.ativos = [];
+        setOptions(prev => ({ ...prev, ...emptyOptions }));
 
+        // Monta os filtros com os valores atuais
+        const currentFilters = {
+          diretoria_executiva: form.getValues("diretoria_executiva"),
+          diretoria: form.getValues("diretoria"),
+          unidade: form.getValues("unidade"),
+          centro_de_localizacao: form.getValues("centro_de_localizacao"),
+          fase: form.getValues("fase"),
+        };
+        
+        // Busca novas opções para o próximo campo
         if (nextFieldName) {
-          setIsLoading(prev => ({ ...prev, [nextFieldName]: true }));
-          getHierarquiaOpcoes(nextFieldName as any, currentFilters)
-            .then(newOptions => {
-              setOptions(prev => ({ ...prev, [nextFieldName]: newOptions }));
-            })
-            .finally(() => {
-              setIsLoading(prev => ({ ...prev, [nextFieldName]: false }));
-            });
+            const apiFieldName = nextFieldName === 'centrosLocalizacao' ? 'centro_de_localizacao' : nextFieldName;
+            setIsLoading(prev => ({ ...prev, [nextFieldName]: true }));
+            getHierarquiaOpcoes(apiFieldName as any, currentFilters)
+                .then(newOptions => {
+                    setOptions(prev => ({ ...prev, [nextFieldName]: newOptions }));
+                })
+                .finally(() => {
+                    setIsLoading(prev => ({ ...prev, [nextFieldName]: false }));
+                });
         }
       });
     },
-    [form, watch]
+    [form, startTransition]
   );
   
   useEffect(() => {
-    if(watch("diretoria_executiva")) handleFieldChange("diretoria_executiva", "diretorias", ["diretoria", "unidade", "centro_de_localizacao", "fase", "categoria", "ativos"]);
-  }, [watch("diretoria_executiva")]);
+    const subscription = watch((value, { name }) => {
+        if (name === "diretoria_executiva") {
+            handleFieldChange("diretoria_executiva", "diretorias", ["diretoria", "unidade", "centro_de_localizacao", "fase", "categoria", "ativos"]);
+        } else if (name === "diretoria") {
+            handleFieldChange("diretoria", "unidades", ["unidade", "centro_de_localizacao", "fase", "categoria", "ativos"]);
+        } else if (name === "unidade") {
+            handleFieldChange("unidade", "centrosLocalizacao", ["centro_de_localizacao", "fase", "categoria", "ativos"]);
+        } else if (name === "centro_de_localizacao") {
+            handleFieldChange("centro_de_localizacao", "fases", ["fase", "categoria", "ativos"]);
+            const centro = value.centro_de_localizacao;
+            if (centro) {
+                setIsLoading(prev => ({ ...prev, categorias: true, ativos: true }));
+                getHierarquiaOpcoes("categoria", { centro_de_localizacao: centro }).then(newOptions => {
+                    setOptions(prev => ({ ...prev, categorias: newOptions }));
+                }).finally(() => setIsLoading(prev => ({ ...prev, categorias: false })));
 
-  useEffect(() => {
-    if(watch("diretoria")) handleFieldChange("diretoria", "unidades", ["unidade", "centro_de_localizacao", "fase", "categoria", "ativos"]);
-  }, [watch("diretoria")]);
-  
-  useEffect(() => {
-    if(watch("unidade")) handleFieldChange("unidade", "centrosLocalizacao", ["centro_de_localizacao", "fase", "categoria", "ativos"]);
-  }, [watch("unidade")]);
-
-  useEffect(() => {
-    if(watch("centro_de_localizacao")) {
-        handleFieldChange("centro_de_localizacao", "fases", ["fase", "categoria", "ativos"]);
-        const centro = watch("centro_de_localizacao");
-        if (centro) {
-          setIsLoading(prev => ({ ...prev, categorias: true, ativos: true }));
-          getHierarquiaOpcoes("categoria", { centro_de_localizacao: centro }).then(newOptions => {
-            setOptions(prev => ({ ...prev, categorias: newOptions }));
-          }).finally(() => setIsLoading(prev => ({ ...prev, categorias: false })));
-
-          getAtivosByCentro(centro).then(newAssets => {
-            setOptions(prev => ({ ...prev, ativos: newAssets }));
-          }).finally(() => setIsLoading(prev => ({...prev, ativos: false})));
+                getAtivosByCentro(centro).then(newAssets => {
+                    setOptions(prev => ({ ...prev, ativos: newAssets }));
+                }).finally(() => setIsLoading(prev => ({...prev, ativos: false})));
+            } else {
+                setOptions(prev => ({...prev, ativos: [], categorias: [], fases: []}));
+            }
         }
-    } else {
-        setOptions(prev => ({...prev, ativos: [], categorias: [], fases: []}));
-    }
-  }, [watch("centro_de_localizacao")]);
+    });
+    return () => subscription.unsubscribe();
+  }, [watch, handleFieldChange]);
   
   async function onSubmit(data: AssetFormValues) {
     setIsSubmitting(true);
