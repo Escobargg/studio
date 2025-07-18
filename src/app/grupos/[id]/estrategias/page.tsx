@@ -139,7 +139,8 @@ export default function EstrategiasPage() {
             {strategies.length > 0 ? (
                 strategies.map((strategy) => (
                     <StrategyCard 
-                        key={strategy.id} 
+                        key={strategy.id}
+                        groupId={groupId}
                         strategy={strategy} 
                         onStrategyUpdate={handleStrategyUpdate}
                         onStrategyDelete={handleStrategyDelete}

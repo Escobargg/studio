@@ -20,6 +20,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import Link from "next/link";
 
 
 export type Strategy = {
@@ -35,12 +36,13 @@ export type Strategy = {
 };
 
 interface StrategyCardProps {
+  groupId: string;
   strategy: Strategy;
   onStrategyUpdate: (strategy: Strategy) => void;
   onStrategyDelete: (strategyId: string) => void;
 }
 
-export function StrategyCard({ strategy, onStrategyUpdate, onStrategyDelete }: StrategyCardProps) {
+export function StrategyCard({ groupId, strategy, onStrategyUpdate, onStrategyDelete }: StrategyCardProps) {
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -121,7 +123,12 @@ export function StrategyCard({ strategy, onStrategyUpdate, onStrategyDelete }: S
                     {isUpdatingStatus && <Loader2 className="h-4 w-4 animate-spin" />}
                     <Switch id={`status-switch-${strategy.id}`} checked={isAtiva} onCheckedChange={handleStatusChange} disabled={isUpdatingStatus} />
                     <label htmlFor={`status-switch-${strategy.id}`} className="text-sm font-medium mr-2">{isAtiva ? 'Ativa' : 'Inativa'}</label>
-                    <Button variant="ghost" size="icon" disabled><Edit className="w-4 h-4" /></Button>
+                    <Button variant="ghost" size="icon" asChild>
+                        <Link href={`/grupos/${groupId}/estrategias/${strategy.id}/editar`}>
+                            <Edit className="w-4 h-4" />
+                            <span className="sr-only">Editar</span>
+                        </Link>
+                    </Button>
                      <AlertDialog>
                         <AlertDialogTrigger asChild>
                             <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" disabled={isDeleting}>
