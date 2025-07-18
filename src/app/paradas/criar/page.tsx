@@ -63,7 +63,7 @@ const stopFormSchema = z.object({
   horaInicioRealizado: z.string().optional().nullable(),
   dataFimRealizado: z.date().optional().nullable(),
   horaFimRealizado: z.string().optional().nullable(),
-  equipes: z.array(equipeSchema),
+  equipes: z.array(equipeSchema).optional(),
   descricao: z.string().optional(),
 }).refine(data => {
     if (data.dataInicioPlanejada && data.horaInicioPlanejada && data.dataFimPlanejada && data.horaFimPlanejada) {
