@@ -31,13 +31,13 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen w-full">
       <Sidebar>
-        <SidebarHeader>
+        <SidebarHeader className="p-2">
           <div className="flex items-center gap-2">
             <MountainIcon className="w-6 h-6 text-primary" />
             <span className="text-lg font-semibold">SmartPCM</span>
           </div>
         </SidebarHeader>
-        <SidebarContent>
+        <SidebarContent className="p-2">
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton
