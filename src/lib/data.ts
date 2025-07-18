@@ -99,6 +99,7 @@ export type Equipe = {
     id: string;
     especialidade: string;
     capacidade: number;
+    hh: number;
 };
 export const getEquipes = async (centro: string, fase: string): Promise<Equipe[]> => {
     if (!centro || !fase) {
@@ -107,7 +108,7 @@ export const getEquipes = async (centro: string, fase: string): Promise<Equipe[]
     try {
         const { data, error } = await supabase
             .from('equipes')
-            .select('id, especialidade, capacidade')
+            .select('id, especialidade, capacidade, hh')
             .eq('centro_de_localizacao', centro)
             .eq('fase', fase)
             .throwOnError();

@@ -127,7 +127,11 @@ export function TeamSelector({
            <div className="space-y-3">
             {selectedTeams.map((team) => {
               const teamData = availableTeams.find(t => t.id === team.id);
-              const maxCapacity = teamData?.capacidade ?? 1;
+              if (!teamData) return null;
+
+              const maxCapacity = teamData.capacidade ?? 1;
+              const teamHH = teamData.hh ?? 0;
+              const totalHH = team.capacidade * teamHH;
 
               return (
               <div key={team.id} className="grid grid-cols-12 items-end gap-x-4 gap-y-2">
@@ -155,7 +159,7 @@ export function TeamSelector({
                   <Input
                     id={`hh-${team.id}`}
                     type="number"
-                    value={team.capacidade * duracaoParada}
+                    value={teamHH}
                     disabled
                     placeholder="Auto"
                   />
@@ -165,7 +169,7 @@ export function TeamSelector({
                   <Input
                     id={`total-hh-${team.id}`}
                     type="number"
-                    value={team.capacidade * duracaoParada}
+                    value={totalHH}
                     disabled
                     placeholder="Auto"
                   />
