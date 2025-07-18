@@ -1,4 +1,4 @@
-import { Building2, List, MountainIcon, PlusCircle } from 'lucide-react';
+import { Building, List, MountainIcon, PlusCircle } from 'lucide-react';
 import Link from 'next/link';
 
 import { supabase } from '@/lib/supabase';
@@ -14,7 +14,6 @@ async function getAssetGroups(): Promise<AssetGroup[]> {
 
   if (error) {
     console.error('Error fetching asset groups:', error);
-    // Retorna um array vazio em caso de erro, a página mostrará uma mensagem.
     return [];
   }
   return data || [];
@@ -29,7 +28,7 @@ export default async function GruposPage() {
         <div className="flex items-center gap-3">
           <MountainIcon className="w-6 h-6 text-primary" />
           <h1 className="text-lg font-semibold font-headline">
-            Grupos de Ativos Criados
+            Registro de Grupos de Ativos
           </h1>
         </div>
         <div className="flex items-center gap-4">
@@ -38,15 +37,16 @@ export default async function GruposPage() {
                 Criar Novo Grupo
             </Link>
             <div className="flex items-center gap-2">
-                <Building2 className="w-5 h-5 text-muted-foreground"/>
+                <Building className="w-5 h-5 text-muted-foreground"/>
                 <p className="text-sm font-medium text-muted-foreground">Vale S.A.</p>
             </div>
         </div>
       </header>
       <main className="flex-1 p-4 md:p-8">
         <div className="max-w-7xl mx-auto">
+          <h2 className="text-2xl font-bold mb-6">Grupos Encontrados ({groups.length})</h2>
           {groups.length > 0 ? (
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            <div className="space-y-4">
               {groups.map((group) => (
                 <AssetGroupCard key={group.id} group={group} />
               ))}

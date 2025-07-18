@@ -3,14 +3,11 @@
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
-  CardTitle,
-  CardFooter,
 } from "@/components/ui/card"
-import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
-import { ScrollArea } from "@/components/ui/scroll-area"
+import { Button } from "./ui/button";
+import { Building, MapPin } from "lucide-react";
 
 export interface AssetGroup {
   id: string;
@@ -30,57 +27,47 @@ interface AssetGroupCardProps {
   group: AssetGroup;
 }
 
-function DetailItem({ label, value }: { label: string; value: string | null | undefined }) {
+function DetailItem({ label, value, icon: Icon }: { label: string; value: string | null | undefined, icon?: React.ElementType }) {
   if (!value) return null;
   return (
-    <div className="flex justify-between text-sm">
-      <p className="text-muted-foreground">{label}:</p>
-      <p className="font-medium text-right truncate">{value}</p>
+    <div className="flex items-center gap-2 text-sm">
+      {Icon && <Icon className="w-4 h-4 text-muted-foreground" />}
+      <p><span className="text-muted-foreground">{label}:</span> <span className="font-medium">{value}</span></p>
     </div>
   );
 }
 
 export function AssetGroupCard({ group }: AssetGroupCardProps) {
-    const formattedDate = new Date(group.created_at).toLocaleDateString('pt-BR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-    });
+    const ativosCount = group.ativos?.length || 0;
 
     return (
-        <Card className="flex flex-col h-full shadow-md hover:shadow-lg transition-shadow duration-300">
-            <CardHeader>
-                <CardTitle className="font-headline text-xl truncate">{group.nome_grupo}</CardTitle>
-                <div className="flex items-center justify-between text-xs text-muted-foreground pt-1">
-                    <span>Criado em: {formattedDate}</span>
-                    {group.tipo_grupo && <Badge variant={group.tipo_grupo === 'Frota' ? 'default' : 'secondary'}>{group.tipo_grupo}</Badge>}
+        <Card className="shadow-md hover:shadow-lg transition-shadow duration-300 w-full">
+            <CardHeader className="flex-row items-center gap-4 space-y-0 pb-4">
+                <Building className="w-6 h-6 text-primary" />
+                <div className="flex-1 flex items-center gap-3">
+                  <h2 className="font-bold text-lg uppercase truncate">{group.nome_grupo}</h2>
+                  {group.tipo_grupo && <Badge variant="outline" className="font-mono uppercase">{group.tipo_grupo}</Badge>}
+                  {group.fase && <Badge variant="outline" className="font-mono uppercase">{group.fase}</Badge>}
                 </div>
+                <Button variant="outline" size="sm">Ver Estratégias</Button>
             </CardHeader>
-            <Separator />
-            <CardContent className="py-4 space-y-3 flex-1">
-                <DetailItem label="Diretoria Executiva" value={group.diretoria_executiva} />
-                <DetailItem label="Diretoria" value={group.diretoria} />
-                <DetailItem label="Unidade" value={group.unidade} />
-                <DetailItem label="Centro de Localização" value={group.centro_de_localizacao} />
-                <DetailItem label="Fase" value={group.fase} />
-                <DetailItem label="Categoria" value={group.categoria} />
+            <CardContent>
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2 border-t pt-4">
+                    {/* Coluna da Esquerda */}
+                    <div className="space-y-1.5">
+                        <DetailItem label="Centro" value={group.centro_de_localizacao} icon={MapPin} />
+                        <DetailItem label="Categoria" value={group.categoria} />
+                        <p className="text-sm"><span className="text-muted-foreground">Estratégias Ativas:</span> <span className="font-medium">1 estratégias</span></p>
+                        <DetailItem label="Diretoria" value={group.diretoria_executiva} />
+                        <DetailItem label="Gerência" value={group.diretoria} />
+                    </div>
+                    {/* Coluna da Direita */}
+                    <div className="space-y-1.5">
+                         <DetailItem label="Sistema" value={group.tipo_grupo === 'Frota' ? 'Movimentação' : 'Britagem'} />
+                         <p className="text-sm"><span className="text-muted-foreground">Ativos:</span> <span className="font-medium">{ativosCount} {ativosCount === 1 ? 'ativo' : 'ativos'}</span></p>
+                    </div>
+               </div>
             </CardContent>
-            
-            {group.ativos && group.ativos.length > 0 && (
-                <>
-                    <Separator />
-                    <CardFooter className="flex-col items-start p-4">
-                        <h4 className="text-sm font-semibold mb-2">Ativos ({group.ativos.length})</h4>
-                        <ScrollArea className="h-32 w-full rounded-md border p-2 bg-muted/50">
-                            <div className="text-sm">
-                                {group.ativos.map((ativo) => (
-                                    <div key={ativo} className="truncate p-1">{ativo}</div>
-                                ))}
-                            </div>
-                        </ScrollArea>
-                    </CardFooter>
-                </>
-            )}
         </Card>
     )
 }
