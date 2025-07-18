@@ -13,19 +13,16 @@ import type { Grupo } from "@/components/asset-group-card";
 async function getGruposDeAtivos(filtros: Filtros) {
   let query = supabase
     .from("grupos_de_ativos")
-    // Use a contagem de relacionamento para buscar o número de estratégias ativas
     .select("*, estrategias_count:estrategias(count)")
-    .eq('estrategias.ativa', true) // Filtra para contar apenas as ativas
+    .eq('estrategias.ativa', true) 
     .order("created_at", { ascending: false });
 
-  // Aplica filtros exatos (exceto nome_grupo)
   Object.entries(filtros).forEach(([key, value]) => {
     if (value && key !== 'nome_grupo') {
       query = query.eq(key, value);
     }
   });
 
-  // Aplica filtro de texto para nome_grupo
   if (filtros.nome_grupo) {
     query = query.ilike('nome_grupo', `%${filtros.nome_grupo}%`);
   }
@@ -37,7 +34,6 @@ async function getGruposDeAtivos(filtros: Filtros) {
     return [];
   }
   
-  // O Supabase retorna um array com um objeto de contagem, precisamos extrair o valor.
   return data.map(grupo => ({
     ...grupo,
     estrategias_count: grupo.estrategias_count[0]?.count ?? 0,
@@ -48,12 +44,19 @@ export default function GruposPage() {
   const [grupos, setGrupos] = useState<Grupo[]>([]);
   const [filtros, setFiltros] = useState<Filtros>({});
   const [isPending, startTransition] = useTransition();
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    startTransition(async () => {
-      const data = await getGruposDeAtivos(filtros);
-      setGrupos(data as Grupo[]);
-    });
+    const timer = setTimeout(() => {
+        setIsLoading(true);
+        startTransition(async () => {
+            const data = await getGruposDeAtivos(filtros);
+            setGrupos(data as Grupo[]);
+            setIsLoading(false);
+        });
+    }, 300); // Debounce de 300ms
+    
+    return () => clearTimeout(timer);
   }, [filtros]);
   
   const handleGroupUpdate = (updatedGroup: Grupo) => {
@@ -72,11 +75,11 @@ export default function GruposPage() {
     <MainLayout>
       <div className="flex flex-col h-full">
         <div className="p-4 md:p-6 bg-card border-b">
-           <GroupFilters onFilterChange={setFiltros} />
+           <GroupFilters filters={filtros} onFilterChange={setFiltros} />
         </div>
         <div className="flex-1 p-4 md:p-8 overflow-y-auto">
           <div className="max-w-7xl mx-auto">
-            {isPending ? (
+            {isLoading ? (
                <div className="flex flex-col items-center justify-center h-full text-center py-20">
                     <Loader2 className="w-16 h-16 text-primary animate-spin" />
                     <h2 className="mt-6 text-2xl font-semibold">Buscando Grupos...</h2>

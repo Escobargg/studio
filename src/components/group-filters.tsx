@@ -16,6 +16,7 @@ import type { Filtros } from "@/lib/data";
 import { Loader2, X } from "lucide-react";
 
 interface GroupFiltersProps {
+  filters: Filtros;
   onFilterChange: (filters: Filtros) => void;
 }
 
@@ -25,8 +26,7 @@ type OptionsState = {
   categorias: string[];
 };
 
-export function GroupFilters({ onFilterChange }: GroupFiltersProps) {
-  const [filters, setFilters] = useState<Filtros>({});
+export function GroupFilters({ filters, onFilterChange }: GroupFiltersProps) {
   const [options, setOptions] = useState<OptionsState>({
     centrosLocalizacao: [],
     fases: [],
@@ -35,11 +35,10 @@ export function GroupFilters({ onFilterChange }: GroupFiltersProps) {
   const [loading, setLoading] = useState<Record<string, boolean>>({});
   const [isPending, startTransition] = useTransition();
 
-  // Fetch initial options
+  // Fetch initial options for "centro_de_localizacao"
   useEffect(() => {
     const fetchInitial = async () => {
       setLoading(prev => ({ ...prev, centrosLocalizacao: true }));
-      // Fetch all possible "centro_de_localizacao" initially without filters
       const centros = await getHierarquiaOpcoes("centro_de_localizacao");
       setOptions(prev => ({ ...prev, centrosLocalizacao: centros }));
       setLoading(prev => ({ ...prev, centrosLocalizacao: false }));
@@ -47,58 +46,46 @@ export function GroupFilters({ onFilterChange }: GroupFiltersProps) {
     fetchInitial();
   }, []);
   
-  // Propagate filter changes
+  // Fetch dependent options when "centro_de_localizacao" changes
   useEffect(() => {
-    const handler = setTimeout(() => {
-      onFilterChange(filters);
-    }, 500); // Debounce to avoid excessive re-renders
-    return () => clearTimeout(handler);
-  }, [filters]);
+    const centro = filters.centro_de_localizacao;
+    if (centro) {
+        startTransition(() => {
+            const fetchDependentOptions = async () => {
+                setLoading(prev => ({ ...prev, fases: true, categorias: true }));
+                const [fasesData, categoriasData] = await Promise.all([
+                   getHierarquiaOpcoes('fase', {centro_de_localizacao: centro}),
+                   getHierarquiaOpcoes('categoria', {centro_de_localizacao: centro})
+                ]);
+                setOptions(prev => ({...prev, fases: fasesData, categorias: categoriasData}));
+                setLoading(prev => ({ ...prev, fases: false, categorias: false }));
+            };
+            fetchDependentOptions();
+        });
+    } else {
+        // Clear dependent options if centro_de_localizacao is cleared
+        setOptions(prev => ({...prev, fases: [], categorias: []}));
+    }
+  }, [filters.centro_de_localizacao]);
 
-
+  const handleInputChange = (field: keyof Filtros, value: string) => {
+    onFilterChange({ ...filters, [field]: value });
+  };
+  
   const handleSelectChange = (field: keyof Filtros, value: string) => {
-    const newFilters = { ...filters, [field]: value };
-    let fieldsToReset: (keyof Filtros)[] = [];
+    const newFilters: Filtros = { ...filters, [field]: value };
 
-    // Reset subsequent fields
     if (field === 'centro_de_localizacao') {
-        fieldsToReset = ['fase', 'categoria'];
+      // Reset subsequent fields when the center changes
+      delete newFilters.fase;
+      delete newFilters.categoria;
     }
     
-    fieldsToReset.forEach(f => delete newFilters[f]);
-    setFilters(newFilters);
-    
-    // Clear options for reset fields
-    const newOptions = {...options};
-    if (fieldsToReset.includes('fase')) newOptions.fases = [];
-    if (fieldsToReset.includes('categoria')) newOptions.categorias = [];
-    setOptions(newOptions);
-
-
-    // Fetch new options for the next field
-    startTransition(() => {
-        const fetchNextOptions = async () => {
-            if (field === 'centro_de_localizacao' && value) {
-                 setLoading(prev => ({ ...prev, fases: true, categorias: true }));
-                 const [fasesData, categoriasData] = await Promise.all([
-                    getHierarquiaOpcoes('fase', {centro_de_localizacao: value} as any),
-                    getHierarquiaOpcoes('categoria', {centro_de_localizacao: value} as any)
-                 ]);
-                 setOptions(prev => ({...prev, fases: fasesData, categorias: categoriasData}));
-                 setLoading(prev => ({ ...prev, fases: false, categorias: false }));
-            }
-        };
-        fetchNextOptions();
-    });
+    onFilterChange(newFilters);
   };
 
   const clearFilters = () => {
-    setFilters({});
-    setOptions(prev => ({
-        ...prev,
-        fases: [],
-        categorias: [],
-    }));
+    onFilterChange({});
   };
 
   const renderSelect = (
@@ -114,7 +101,7 @@ export function GroupFilters({ onFilterChange }: GroupFiltersProps) {
             disabled={disabled || loading[name] || isPending}
         >
             <SelectTrigger className="bg-background">
-                {(loading[name] || isPending) ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <SelectValue placeholder={placeholder} />}
+                {(loading[name] || (isPending && !!filters[name])) ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <SelectValue placeholder={placeholder} />}
             </SelectTrigger>
             <SelectContent>
                 {items.map((item) => (
@@ -133,7 +120,7 @@ export function GroupFilters({ onFilterChange }: GroupFiltersProps) {
         <Input
             placeholder="Buscar por nome do grupo..."
             value={filters.nome_grupo || ""}
-            onChange={(e) => setFilters(prev => ({ ...prev, nome_grupo: e.target.value }))}
+            onChange={(e) => handleInputChange('nome_grupo', e.target.value)}
             className="flex-1 min-w-[200px] bg-background"
         />
         {renderSelect(
