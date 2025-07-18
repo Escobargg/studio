@@ -10,12 +10,23 @@ import {
   SidebarMenuItem,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { Building2, MountainIcon, PlusCircle } from "lucide-react";
+import { Building2, LayoutGrid, MountainIcon, PlusCircle } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 export function MainLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+
+  const getPageTitle = () => {
+    switch (pathname) {
+      case "/":
+        return "Criar Novo Grupo de Ativos";
+      case "/grupos":
+        return "Grupos de Ativos";
+      default:
+        return "SmartPCM";
+    }
+  };
 
   return (
     <div className="flex min-h-screen w-full">
@@ -40,6 +51,18 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                isActive={pathname === "/grupos"}
+                tooltip="Exibir Grupos"
+              >
+                <Link href="/grupos">
+                  <LayoutGrid />
+                  <span>Exibir Grupos</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
           </SidebarMenu>
         </SidebarContent>
       </Sidebar>
@@ -48,7 +71,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
           <div className="flex items-center gap-3">
              <SidebarTrigger className="md:hidden" />
              <h1 className="text-lg font-semibold">
-                Criar Novo Grupo de Ativos
+                {getPageTitle()}
             </h1>
           </div>
           <div className="flex items-center gap-4">
