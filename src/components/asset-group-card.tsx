@@ -133,18 +133,18 @@ export function AssetGroupCard({ grupo, onGroupUpdate, onGroupDelete }: AssetGro
                                 <span className="font-medium text-foreground truncate">{grupo.centro_de_localizacao}</span>
                             </div>
                         </div>
-                        <div className="flex items-center gap-2 text-muted-foreground" title={grupo.categoria}>
-                            <Tag className="w-4 h-4 flex-shrink-0" />
-                            <div className="flex flex-col">
-                                <span className="text-xs">Categoria</span>
-                                <span className="font-medium text-foreground truncate">{grupo.categoria}</span>
-                            </div>
-                        </div>
                         <div className="flex items-center gap-2 text-muted-foreground" title={grupo.fase}>
                             <Milestone className="w-4 h-4 flex-shrink-0" />
                              <div className="flex flex-col">
                                 <span className="text-xs">Fase</span>
                                 <span className="font-medium text-foreground truncate">{grupo.fase}</span>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2 text-muted-foreground" title={grupo.categoria}>
+                            <Tag className="w-4 h-4 flex-shrink-0" />
+                            <div className="flex flex-col">
+                                <span className="text-xs">Categoria</span>
+                                <span className="font-medium text-foreground truncate">{grupo.categoria}</span>
                             </div>
                         </div>
                         <div className="flex items-center gap-2 text-muted-foreground">
