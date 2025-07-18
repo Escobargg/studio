@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useTransition } from "react";
@@ -52,7 +53,7 @@ export function GroupFilters({ onFilterChange }: GroupFiltersProps) {
       onFilterChange(filters);
     }, 500); // Debounce to avoid excessive re-renders
     return () => clearTimeout(handler);
-  }, [filters, onFilterChange]);
+  }, [filters]);
 
 
   const handleSelectChange = (field: keyof Filtros, value: string) => {
