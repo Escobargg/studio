@@ -98,7 +98,7 @@ export function NewStrategyDialog({ grupo, children, open, onOpenChange }: NewSt
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
         {children}
-      <DialogContent className="sm:max-w-xl max-h-[80vh] flex flex-col">
+      <DialogContent className="sm:max-w-xl max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Nova Estratégia</DialogTitle>
           <DialogDescription>
@@ -130,7 +130,7 @@ export function NewStrategyDialog({ grupo, children, open, onOpenChange }: NewSt
                           name="prioridade"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Prioridade</FormLabel>
+                              <FormLabel>Prioridade *</FormLabel>
                               <Select onValueChange={field.onChange} defaultValue={field.value}>
                                 <FormControl>
                                   <SelectTrigger>
@@ -175,7 +175,7 @@ export function NewStrategyDialog({ grupo, children, open, onOpenChange }: NewSt
                           name="frequenciaValor"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>A cada quantos</FormLabel>
+                              <FormLabel>A cada quantos *</FormLabel>
                               <FormControl>
                                 <Input type="number" {...field} />
                               </FormControl>
@@ -188,7 +188,7 @@ export function NewStrategyDialog({ grupo, children, open, onOpenChange }: NewSt
                           name="frequenciaUnidade"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Unidade de tempo</FormLabel>
+                              <FormLabel>Unidade *</FormLabel>
                               <Select onValueChange={field.onChange} defaultValue={field.value}>
                                 <FormControl>
                                   <SelectTrigger>
@@ -230,7 +230,7 @@ export function NewStrategyDialog({ grupo, children, open, onOpenChange }: NewSt
                           name="duracaoValor"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Duração</FormLabel>
+                              <FormLabel>Duração *</FormLabel>
                               <FormControl>
                                 <Input type="number" {...field} />
                               </FormControl>
@@ -243,7 +243,7 @@ export function NewStrategyDialog({ grupo, children, open, onOpenChange }: NewSt
                           name="duracaoUnidade"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Unidade</FormLabel>
+                              <FormLabel>Unidade *</FormLabel>
                               <Select onValueChange={field.onChange} defaultValue={field.value}>
                                 <FormControl>
                                   <SelectTrigger>
@@ -369,7 +369,7 @@ export function NewStrategyDialog({ grupo, children, open, onOpenChange }: NewSt
                 </div>
             </ScrollArea>
 
-            <DialogFooter className="pt-4">
+            <DialogFooter className="pt-4 border-t">
               <Button variant="ghost" type="button" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
                 Cancelar
               </Button>
@@ -384,3 +384,5 @@ export function NewStrategyDialog({ grupo, children, open, onOpenChange }: NewSt
     </Dialog>
   );
 }
+
+    
