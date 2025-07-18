@@ -138,12 +138,11 @@ export function AssetRegistrationForm({ initialDiretoriasExecutivas }: AssetRegi
           diretoria: form.getValues("diretoria"),
           unidade: form.getValues("unidade"),
           centro_de_localizacao: form.getValues("centro_de_localizacao"),
-          fase: form.getValues("fase"),
         };
         
         // Busca novas opções para o próximo campo
         if (nextFieldName) {
-            const apiFieldName = nextFieldName === 'centrosLocalizacao' ? 'centro_de_localizacao' : nextFieldName;
+            const apiFieldName = nextFieldName === 'centrosLocalizacao' ? 'centro_de_localizacao' : nextFieldName.slice(0, -1);
             setIsLoading(prev => ({ ...prev, [nextFieldName]: true }));
             getHierarquiaOpcoes(apiFieldName as any, currentFilters)
                 .then(newOptions => {
@@ -255,7 +254,7 @@ export function AssetRegistrationForm({ initialDiretoriasExecutivas }: AssetRegi
                     <FormMessage />
                   </FormItem>
               )}/>
-              {renderSelect("diretoria_executiva", "Diretoria Executiva", "Selecione a diretoria", options.diretoriasExecutivas, isLoading.diretoriasExecutivas, isLoading.diretoriasExecutivas)}
+              {renderSelect("diretoria_executiva", "Diretoria Executiva", "Selecione a diretoria executiva", options.diretoriasExecutivas, isLoading.diretoriasExecutivas, isLoading.diretoriasExecutivas)}
               {renderSelect("diretoria", "Diretoria", "Selecione a diretoria", options.diretorias, !watch("diretoria_executiva"), isLoading.diretorias)}
               {renderSelect("unidade", "Unidade", "Selecione a unidade", options.unidades, !watch("diretoria"), isLoading.unidades)}
               {renderSelect("centro_de_localizacao", "Centro de Localização", "Selecione o centro", options.centrosLocalizacao, !watch("unidade"), isLoading.centrosLocalizacao)}
