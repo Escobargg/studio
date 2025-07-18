@@ -45,7 +45,8 @@ export function AssetGroupCard({ grupo, onGroupUpdate }: AssetGroupCardProps) {
             const { error } = await supabase
                 .from('grupos_de_ativos')
                 .update({ ativos: updatedAssets })
-                .eq('id', grupo.id);
+                .eq('id', grupo.id)
+                .throwOnError();
 
             if (error) {
                 throw error;
