@@ -54,6 +54,12 @@ export default function GruposPage() {
     );
   };
 
+  const handleGroupDelete = (deletedGroupId: string) => {
+    setGrupos(currentGrupos =>
+      currentGrupos.filter(g => g.id !== deletedGroupId)
+    );
+  };
+
   return (
     <MainLayout>
       <div className="flex flex-col h-full">
@@ -75,6 +81,7 @@ export default function GruposPage() {
                     key={grupo.id} 
                     grupo={grupo} 
                     onGroupUpdate={handleGroupUpdate}
+                    onGroupDelete={handleGroupDelete}
                   />
                 ))}
               </div>

@@ -6,11 +6,22 @@ import {
     Card,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Building, MapPin, Tag, Layers, ListChecks, Trash2, ShieldCheck } from "lucide-react";
+import { Building, MapPin, Tag, Layers, ListChecks, Trash2, ShieldCheck, Loader2 } from "lucide-react";
 import { EditAssetsDialog } from "./edit-assets-dialog";
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 import toast from "react-hot-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 
 export type Grupo = {
@@ -28,11 +39,13 @@ export type Grupo = {
 interface AssetGroupCardProps {
   grupo: Grupo;
   onGroupUpdate: (updatedGroup: Grupo) => void;
+  onGroupDelete: (deletedGroupId: string) => void;
 }
 
-export function AssetGroupCard({ grupo, onGroupUpdate }: AssetGroupCardProps) {
+export function AssetGroupCard({ grupo, onGroupUpdate, onGroupDelete }: AssetGroupCardProps) {
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [isUpdating, setIsUpdating] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     const handleUpdate = async (updatedAssets: string[]) => {
         setIsUpdating(true);
@@ -59,6 +72,26 @@ export function AssetGroupCard({ grupo, onGroupUpdate }: AssetGroupCardProps) {
         } finally {
             setIsUpdating(false);
         }
+    };
+    
+    const handleDelete = async () => {
+      setIsDeleting(true);
+      try {
+        const { error } = await supabase
+          .from('grupos_de_ativos')
+          .delete()
+          .eq('id', grupo.id)
+          .throwOnError();
+
+        toast.success("Grupo excluído com sucesso!");
+        onGroupDelete(grupo.id); // Notifica o componente pai
+
+      } catch (error: any) {
+        toast.error("Falha ao excluir o grupo.");
+        console.error("Erro ao excluir grupo:", error.message || error);
+      } finally {
+        setIsDeleting(false);
+      }
     };
 
 
@@ -125,10 +158,35 @@ export function AssetGroupCard({ grupo, onGroupUpdate }: AssetGroupCardProps) {
                         onOpenChange={setIsDialogOpen}
                         isUpdating={isUpdating}
                     />
-                    <Button variant="destructive" size="icon">
-                        <Trash2 className="w-4 h-4" />
-                        <span className="sr-only">Excluir</span>
-                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="destructive" size="icon" disabled={isDeleting}>
+                          {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                          <span className="sr-only">Excluir</span>
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Esta ação não pode ser desfeita. Isso excluirá permanentemente o grupo
+                            <strong className="px-1">{grupo.nome_grupo}</strong>
+                            e removerá seus dados de nossos servidores.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={handleDelete}
+                            disabled={isDeleting}
+                            className="bg-destructive hover:bg-destructive/90"
+                          >
+                            {isDeleting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                            {isDeleting ? "Excluindo..." : "Sim, excluir grupo"}
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                 </div>
             </div>
         </Card>
