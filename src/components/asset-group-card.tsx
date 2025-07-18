@@ -6,7 +6,7 @@ import {
     Card,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Building, MapPin, Tag, Layers, ListChecks, Trash2 } from "lucide-react";
+import { Building, MapPin, Tag, Layers, ListChecks, Trash2, ShieldCheck } from "lucide-react";
 import { EditAssetsDialog } from "./edit-assets-dialog";
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
@@ -114,6 +114,10 @@ export function AssetGroupCard({ grupo, onGroupUpdate }: AssetGroupCardProps) {
                  {/* Actions Section */}
                 <div className="flex items-center gap-2 flex-shrink-0 w-full md:w-auto justify-end">
                     <Badge variant={grupo.fase ? 'outline' : 'secondary'} className="h-8">{grupo.fase || 'N/A'}</Badge>
+                    <Button variant="outline">
+                        <ShieldCheck className="w-4 h-4 mr-2" />
+                        Ver Estratégia
+                    </Button>
                     <EditAssetsDialog 
                         grupo={grupo}
                         onUpdate={handleUpdate}
