@@ -13,7 +13,7 @@ export default async function Home() {
         <div className="flex items-center gap-3">
           <MountainIcon className="w-6 h-6 text-primary" />
           <h1 className="text-lg font-semibold font-headline">
-            Registro de Grupos de Ativos
+            SmartPCM
           </h1>
         </div>
         <div className="flex items-center gap-4">

@@ -6,8 +6,8 @@ import { Inter } from 'next/font/google';
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
 export const metadata: Metadata = {
-  title: 'Registro de Grupos de Ativos',
-  description: 'Sistema para cadastro de grupos de ativos para a mineradora Vale.',
+  title: 'SmartPCM',
+  description: 'Sistema de Planejamento e Controle de Manutenção Inteligente.',
 };
 
 export default function RootLayout({
