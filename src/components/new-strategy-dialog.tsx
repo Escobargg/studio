@@ -51,6 +51,7 @@ const strategyFormSchema = z.object({
   descricao: z.string().optional(),
   frequenciaValor: z.coerce.number().min(1, "O valor deve ser maior que zero."),
   frequenciaUnidade: z.enum(["DIAS", "SEMANAS", "MESES", "ANOS"], { required_error: "Selecione a unidade." }),
+  tolerancia: z.coerce.number().min(0, "A tolerância não pode ser negativa.").optional(),
   duracaoValor: z.coerce.number().min(1, "O valor deve ser maior que zero."),
   duracaoUnidade: z.enum(["HORAS", "DIAS"], { required_error: "Selecione a unidade." }),
   dataInicio: z.date({ required_error: "A data de início é obrigatória." }),
@@ -77,6 +78,7 @@ export function NewStrategyDialog({ grupo, children, open, onOpenChange }: NewSt
       nomeEstrategia: "",
       descricao: "",
       frequenciaValor: 1,
+      tolerancia: 0,
       duracaoValor: 1,
       ativa: true,
     },
@@ -95,7 +97,7 @@ export function NewStrategyDialog({ grupo, children, open, onOpenChange }: NewSt
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
         {children}
-      <DialogContent className="sm:max-w-3xl">
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Nova Estratégia</DialogTitle>
           <DialogDescription>
@@ -164,7 +166,7 @@ export function NewStrategyDialog({ grupo, children, open, onOpenChange }: NewSt
 
             <div className="space-y-4 p-1">
               <h3 className="text-lg font-medium">Frequência da Parada</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                  <FormField
                   control={form.control}
                   name="frequenciaValor"
@@ -197,6 +199,19 @@ export function NewStrategyDialog({ grupo, children, open, onOpenChange }: NewSt
                            <SelectItem value="ANOS">Anos</SelectItem>
                         </SelectContent>
                       </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="tolerancia"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Tolerância (dias)</FormLabel>
+                      <FormControl>
+                        <Input type="number" {...field} placeholder="Ex: 2" />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
