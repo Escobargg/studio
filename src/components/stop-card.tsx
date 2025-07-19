@@ -127,11 +127,10 @@ export function StopCard({ stop, onStopDelete }: StopCardProps) {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
           <div className="flex-1">
-            <h3 className="text-xl font-bold">{stop.id_parada} - {stop.nome_parada}</h3>
+            <h3 className="text-xl font-bold">
+              {stop.id_parada} - {stop.tipo_selecao === 'grupo' ? stop.grupo_de_ativos : stop.ativo_unico} - {stop.nome_parada}
+            </h3>
             <p className="text-sm text-muted-foreground mt-1">{hierarchyStr}</p>
-            <p className="text-sm text-muted-foreground mt-1">
-                {stop.tipo_selecao === 'grupo' ? `Grupo: ${stop.grupo_de_ativos}` : `Ativo: ${stop.ativo_unico}`}
-            </p>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
             <Button variant="ghost" size="icon" asChild>
