@@ -172,6 +172,9 @@ export async function getStops(filters: ParadasFiltros) {
     if (filters.centro_de_localizacao) {
         query = query.eq('centro_de_localizacao', filters.centro_de_localizacao);
     }
+    if (filters.fase) {
+        query = query.eq('fase', filters.fase);
+    }
     
     const { data, error } = await query;
 

@@ -13,7 +13,7 @@ import { getStops } from "@/lib/data";
 
 export type ParadasFiltros = {
   centro_de_localizacao?: string;
-  // Outros filtros podem ser adicionados aqui no futuro
+  fase?: string;
 };
 
 export default function ParadasPage() {
