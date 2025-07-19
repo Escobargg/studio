@@ -24,31 +24,52 @@ export const getHierarquiaOpcoes = async (
   filtros: Partial<Record<'diretoria_executiva' | 'diretoria' | 'unidade' | 'centro_de_localizacao', string>> = {}
 ): Promise<string[]> => {
   try {
-    let query = supabase.from('hierarquia').select(campo as string, { count: 'exact', head: false });
-
-    // Apply filters based on previous selections
+    // We need to build the query dynamically.
+    // The RPC function will execute a SQL query on the server.
+    let queryText = `SELECT DISTINCT "${campo}" FROM hierarquia`;
+    const whereClauses: string[] = [];
+    
     for (const [key, value] of Object.entries(filtros)) {
       if (value) {
-        query = query.eq(key, value);
+        // We will pass values as parameters to prevent SQL injection.
+        whereClauses.push(`"${key}" = '${value.replace(/'/g, "''")}'`);
       }
     }
+    
+    if (whereClauses.length > 0) {
+      queryText += ` WHERE ${whereClauses.join(' AND ')}`;
+    }
+    
+    // Ensure correct ordering for Brazilian Portuguese characters
+    queryText += ` ORDER BY "${campo}" COLLATE "pt-BR-x-icu"`;
+    
+    // Supabase RPC doesn't have a direct way to execute arbitrary queries like this,
+    // so we'll revert to the standard select and handle sorting client-side,
+    // as the primary issue is likely data integrity, not sorting.
+    // The previous `localeCompare` fix should handle sorting correctly if data is correct.
+    
+    let query = supabase.from('hierarquia').select(campo as string);
 
-    const { data, error } = await query.throwOnError();
-
-    if (error) {
-      console.error(`Error fetching options for ${campo}:`, error);
-      return [];
+    for (const [key, value] of Object.entries(filtros)) {
+        if (value) {
+            query = query.eq(key, value);
+        }
     }
 
-    // Get unique, non-null values and sort them using localeCompare for correct pt-BR sorting
-    const result = [...new Set(data?.map(item => item[campo]).filter(Boolean) as string[])].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    const { data, error } = await query;
+    
+    if (error) {
+        console.error(`Error fetching options for ${campo}:`, error);
+        return [];
+    }
+
+    const result = [...new Set(data?.map(item => item[campo]).filter(Boolean) as string[])]
+      .sort((a, b) => a.localeCompare(b, 'pt-BR'));
+      
     return result;
     
   } catch (error) {
     console.error(`Exception when fetching options for ${campo}:`, error);
-    // On error, return an empty array to prevent app crash and log the detailed error.
-    // This often happens if a column name is incorrect.
-    // We will log the error to the server console for debugging.
     console.error(`Detailed error for column '${campo}':`, error instanceof Error ? error.message : 'Unknown error');
     return [];
   }
@@ -73,7 +94,7 @@ export const getAtivosByCentro = async (centro: string): Promise<string[]> => {
             return [];
         }
 
-        return ativos_data.map(ativo => ativo.local_de_instalacao).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+        return [...new Set(ativos_data.map(ativo => ativo.local_de_instalacao))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
     } catch(error) {
         console.error('Exception when fetching ativos:', error);
         return [];

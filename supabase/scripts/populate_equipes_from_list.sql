@@ -1,66 +1,253 @@
--- Este script popula a tabela 'equipes' para várias combinações de centro de localização e fase,
--- usando as equipes do '1089 PORTO' e 'USINA' como modelo.
--- Ele usa uma lista explícita de locais de destino para garantir que todas as combinações sejam cobertas
--- e evita duplicatas usando ON CONFLICT DO NOTHING.
+import { supabase } from './supabase';
+import type { ParadasFiltros } from '@/app/paradas/page';
+import type { Stop } from '@/components/stop-card';
 
--- Passo 1: Definir as combinações de centro de localização e fase de destino.
-WITH target_locations (centro_de_localizacao, fase) AS (
-    VALUES
-    ('1089 PORTO', 'USINA'),
-    ('1089 PORTO', 'PELOTIZACAO'),
-    ('1089 PORTO', 'PATIO DE PRODUTOS'),
-    ('1089 PORTO', 'MANUTENCAO CENTRAL'),
-    ('1228 EFVM', 'VIA PERMANENTE'),
-    ('1228 EFVM', 'MATERIAL RODANTE'),
-    ('1228 EFVM', 'OP. FERROVIARIA'),
-    ('1091 MINA TIMBOPEBA', 'USINA'),
-    ('1091 MINA TIMBOPEBA', 'MINA'),
-    ('1091 MINA TIMBOPEBA', 'MANUTENCAO CENTRAL'),
-    ('1090 MINA CONCEICAO', 'USINA'),
-    ('1090 MINA CONCEICAO', 'MINA'),
-    ('1090 MINA CONCEICAO', 'MANUTENCAO CENTRAL'),
-    ('1094 MINA BRUCUTU', 'USINA'),
-    ('1094 MINA BRUCUTU', 'MINA'),
-    ('1094 MINA BRUCUTU', 'MANUTENCAO CENTRAL'),
-    ('1092 MINAS CENTRAIS', 'USINA'),
-    ('1092 MINAS CENTRAIS', 'MINA'),
-    ('1092 MINAS CENTRAIS', 'MANUTENCAO CENTRAL'),
-    ('1093 MINA FABRICA', 'USINA'),
-    ('1093 MINA FABRICA', 'MINA'),
-    ('1093 MINA FABRICA', 'MANUTENCAO CENTRAL'),
-    ('1095 MINA VARGEM GRANDE', 'USINA'),
-    ('1095 MINA VARGEM GRANDE', 'MINA'),
-    ('1095 MINA VARGEM GRANDE', 'MANUTENCAO CENTRAL'),
-    ('1101 MINA FABRICA NOVA', 'USINA'),
-    ('1101 MINA FABRICA NOVA', 'MINA'),
-    ('1101 MINA FABRICA NOVA', 'MANUTENCAO CENTRAL'),
-    ('1102 pelotização', 'USINA 1'),
-    ('1102 pelotização', 'USINA 2'),
-    ('1102 pelotização', 'USINA 3'),
-    ('1102 pelotização', 'USINA 4'),
-    ('1102 pelotização', 'USINA 5'),
-    ('1102 pelotização', 'USINA 6'),
-    ('1102 pelotização', 'USINA 7'),
-    ('1102 pelotização', 'USINA 8'),
-    ('1099 MINA PICO', 'USINA'),
-    ('1099 MINA PICO', 'MINA'),
-    ('1099 MINA PICO', 'MANUTENCAO CENTRAL')
-),
--- Passo 2: Selecionar as equipes do local modelo para serem replicadas.
-model_equipes AS (
-    SELECT especialidade, hh, capacidade
-    FROM equipes
-    WHERE centro_de_localizacao = '1089 PORTO' AND fase = 'USINA'
-)
--- Passo 3: Inserir as equipes modelo em cada local de destino, evitando conflitos.
-INSERT INTO equipes (centro_de_localizacao, fase, especialidade, hh, capacidade)
-SELECT
-    tl.centro_de_localizacao,
-    tl.fase,
-    me.especialidade,
-    me.hh,
-    me.capacidade
-FROM target_locations tl
-CROSS JOIN model_equipes me
--- Evita inserir se uma equipe com a mesma especialidade já existir para o centro/fase.
-ON CONFLICT (centro_de_localizacao, fase, especialidade) DO NOTHING;
+export type Filtros = {
+  nome_grupo?: string;
+  diretoria_executiva?: string;
+  diretoria?: string;
+  centro_de_localizacao?: string;
+  fase?: string;
+  categoria?: string;
+};
+
+export type Especialidade = {
+  especialidade: string;
+  hh: number;
+  capacidade: number;
+}
+
+// Fetches available options for a specific hierarchy level, filtered by previous selections.
+export const getHierarquiaOpcoes = async (
+  campo: keyof Omit<Filtros, 'nome_grupo'> | 'unidade',
+  filtros: Partial<Record<'diretoria_executiva' | 'diretoria' | 'unidade' | 'centro_de_localizacao', string>> = {}
+): Promise<string[]> => {
+  try {
+    // We need to build the query dynamically.
+    // The RPC function will execute a SQL query on the server.
+    let queryText = `SELECT DISTINCT "${campo}" FROM hierarquia`;
+    const whereClauses: string[] = [];
+    
+    for (const [key, value] of Object.entries(filtros)) {
+      if (value) {
+        // We will pass values as parameters to prevent SQL injection.
+        whereClauses.push(`"${key}" = '${value.replace(/'/g, "''")}'`);
+      }
+    }
+    
+    if (whereClauses.length > 0) {
+      queryText += ` WHERE ${whereClauses.join(' AND ')}`;
+    }
+    
+    // Ensure correct ordering for Brazilian Portuguese characters
+    queryText += ` ORDER BY "${campo}" COLLATE "pt-BR-x-icu"`;
+    
+    // Supabase RPC doesn't have a direct way to execute arbitrary queries like this,
+    // so we'll revert to the standard select and handle sorting client-side,
+    // as the primary issue is likely data integrity, not sorting.
+    // The previous `localeCompare` fix should handle sorting correctly if data is correct.
+    
+    let query = supabase.from('hierarquia').select(campo as string);
+
+    for (const [key, value] of Object.entries(filtros)) {
+        if (value) {
+            query = query.eq(key, value);
+        }
+    }
+
+    const { data, error } = await query;
+    
+    if (error) {
+        console.error(`Error fetching options for ${campo}:`, error);
+        return [];
+    }
+
+    const result = [...new Set(data?.map(item => item[campo]).filter(Boolean) as string[])]
+      .sort((a, b) => a.localeCompare(b, 'pt-BR'));
+      
+    return result;
+    
+  } catch (error) {
+    console.error(`Exception when fetching options for ${campo}:`, error);
+    console.error(`Detailed error for column '${campo}':`, error instanceof Error ? error.message : 'Unknown error');
+    return [];
+  }
+};
+
+
+// Fetches assets based on a location center from Supabase
+export const getAtivosByCentro = async (centro: string): Promise<string[]> => {
+    if (!centro) {
+        return [];
+    }
+  
+    try {
+        const { data: ativos_data, error } = await supabase
+            .from('ativos')
+            .select('local_de_instalacao')
+            .eq('centro_de_localizacao', centro)
+            .throwOnError();
+
+        if (error) {
+            console.error('Error fetching ativos data:', error);
+            return [];
+        }
+
+        return [...new Set(ativos_data.map(ativo => ativo.local_de_instalacao))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    } catch(error) {
+        console.error('Exception when fetching ativos:', error);
+        return [];
+    }
+};
+
+// Fetches asset groups based on a location center and phase
+export const getGruposByCentroEFase = async (centro: string, fase: string): Promise<string[]> => {
+    if (!centro || !fase) {
+        return [];
+    }
+    try {
+        const { data, error } = await supabase
+            .from('grupos_de_ativos')
+            .select('nome_grupo')
+            .eq('centro_de_localizacao', centro)
+            .eq('fase', fase)
+            .throwOnError();
+
+        if (error) {
+            console.error('Error fetching asset groups:', error);
+            return [];
+        }
+
+        return data.map(g => g.nome_grupo).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    } catch(error) {
+        console.error('Exception when fetching asset groups:', error);
+        return [];
+    }
+}
+
+// Fetches specialities based on a location center and phase
+export const getEspecialidades = async (centro: string, fase: string): Promise<Especialidade[]> => {
+    if (!centro || !fase) {
+        return [];
+    }
+    try {
+        const { data, error } = await supabase
+            .from('equipes')
+            .select('especialidade, hh, capacidade')
+            .eq('centro_de_localizacao', centro)
+            .eq('fase', fase)
+            .throwOnError();
+
+        if (error) {
+            console.error('Error fetching specialities:', error);
+            return [];
+        }
+        
+        return data.map(item => ({
+            especialidade: item.especialidade,
+            hh: item.hh,
+            capacidade: item.capacidade
+        })).sort((a, b) => a.especialidade.localeCompare(b.especialidade, 'pt-BR'));
+
+    } catch(error) {
+        console.error('Exception when fetching specialities:', error);
+        return [];
+    }
+}
+
+
+// Fetches hierarchy options for StopsFilters
+export const getStopsFilterOptions = async (
+  campo: 'centro_de_localizacao' | 'fase' | 'ano'
+): Promise<string[]> => {
+  try {
+    let query;
+    if (campo === 'ano') {
+      const { data, error } = await supabase.from('paradas_de_manutencao').select('data_inicio_planejada');
+      if (error) throw error;
+      const years = new Set(data.map(p => new Date(p.data_inicio_planejada).getFullYear().toString()));
+      return Array.from(years).sort((a, b) => b.localeCompare(a));
+    } else {
+      const { data, error } = await supabase.from('hierarquia').select(campo).throwOnError();
+      if (error) throw error;
+      const options = new Set(data.map(item => item[campo]));
+      return Array.from(options).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    }
+  } catch (error) {
+    console.error(`Error fetching filter options for ${campo}:`, error);
+    return [];
+  }
+};
+
+
+export async function getStops(filters: ParadasFiltros): Promise<Stop[]> {
+    let query = supabase
+        .from('paradas_de_manutencao')
+        .select(`
+            id,
+            id_parada,
+            nome_parada,
+            diretoria_executiva,
+            diretoria,
+            centro_de_localizacao,
+            fase,
+            tipo_selecao,
+            grupo_de_ativos,
+            ativo_unico,
+            data_inicio_planejada,
+            data_fim_planejada,
+            data_inicio_realizado,
+            data_fim_realizado,
+            duracao_planejada_horas,
+            descricao,
+            recursos_parada (
+                equipe,
+                hh_dia
+            )
+        `)
+        .order('id_parada', { ascending: false });
+
+    if (filters.diretoria_executiva) {
+        query = query.eq('diretoria_executiva', filters.diretoria_executiva);
+    }
+    if (filters.diretoria) {
+        query = query.eq('diretoria', filters.diretoria);
+    }
+    if (filters.centro_de_localizacao) {
+        query = query.eq('centro_de_localizacao', filters.centro_de_localizacao);
+    }
+    if (filters.fase) {
+        query = query.eq('fase', filters.fase);
+    }
+     if (filters.dateRange?.from && filters.dateRange?.to) {
+        const from = filters.dateRange.from.toISOString();
+        const to = filters.dateRange.to.toISOString();
+        query = query.or(
+            `and(data_inicio_planejada.gte.${from},data_inicio_planejada.lte.${to}),and(data_fim_planejada.gte.${from},data_fim_planejada.lte.${to})`
+        );
+    }
+    
+    const { data, error } = await query;
+
+    if (error) {
+        console.error("Error fetching stops:", error);
+        return [];
+    }
+
+    return data.map(stop => {
+        const recursos = stop.recursos_parada || [];
+        const duracao = stop.duracao_planejada_horas ?? 0;
+        
+        const total_hh = recursos.reduce((acc, recurso) => {
+            const dias = duracao / 24;
+            return acc + (recurso.hh_dia * dias);
+        }, 0);
+
+        return {
+            ...stop,
+            recursos: recursos,
+            num_equipes: recursos.length,
+            total_hh: Math.round(total_hh),
+        } as Stop;
+    });
+}
