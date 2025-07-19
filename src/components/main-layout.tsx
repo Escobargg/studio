@@ -85,7 +85,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
         </SidebarContent>
       </Sidebar>
       <SidebarInset>
-        <header className="flex items-center justify-between h-32 px-4 md:px-6 border-b shrink-0 bg-card shadow-sm w-full">
+        <header className="flex items-center justify-between h-16 px-4 md:px-6 border-b shrink-0 bg-card shadow-sm w-full">
           <div className="flex items-center gap-3">
              <SidebarTrigger className="md:hidden" />
              <h1 className="text-lg font-semibold">
@@ -94,7 +94,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
           </div>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
-              <img src="/logovale.png" alt="Vale Logo" className="h-28" />
+              <img src="/logovale.png" alt="Vale Logo" className="h-14" />
             </div>
           </div>
         </header>
