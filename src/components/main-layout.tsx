@@ -52,8 +52,8 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-screen w-full">
       <Sidebar>
         <SidebarHeader className="p-2">
-          <div className="flex items-center gap-2 p-2">
-            <SmartPcmLogo className="w-36" />
+          <div className="flex items-center justify-center p-2">
+            <SmartPcmLogo />
           </div>
         </SidebarHeader>
         <SidebarContent className="p-2">
