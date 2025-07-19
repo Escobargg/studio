@@ -4,12 +4,15 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { Calendar, Clock, Edit, Trash2 } from "lucide-react";
-import Link from "next/link";
+import { Calendar, Clock, Edit, Trash2, Users, ClipboardCheck } from "lucide-react";
 import { Separator } from "./ui/separator";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+
+type Recurso = {
+  equipe: string;
+  hh_dia: number;
+}
 
 export type Stop = {
   id: string;
@@ -27,22 +30,25 @@ export type Stop = {
   data_fim_realizado?: string;
   duracao_planejada_horas: number;
   descricao?: string;
+  recursos: Recurso[];
+  num_equipes: number;
+  total_hh: number;
 };
 
 interface StopCardProps {
     stop: Stop;
 }
 
-const formatDateRange = (start: string, end: string) => {
-    if (!start || !end) return "N/A";
-    const startDate = format(new Date(start), "dd/MM/yyyy", { locale: ptBR });
-    const endDate = format(new Date(end), "dd/MM/yyyy", { locale: ptBR });
-    return `${startDate} - ${endDate}`;
+const formatDate = (date: string | undefined | null) => {
+    if (!date) return "N/A";
+    return format(new Date(date), "dd/MM/yyyy", { locale: ptBR });
 }
 
 export function StopCard({ stop }: StopCardProps) {
 
   const completion = 0; // Placeholder for now
+
+  const equipesStr = stop.recursos.map(r => r.equipe).join(', ');
 
   return (
     <Card className="w-full shadow-sm hover:shadow-md transition-shadow duration-300 border-border/60">
@@ -52,8 +58,6 @@ export function StopCard({ stop }: StopCardProps) {
           <div className="flex-1">
             <div className="flex items-center gap-2 flex-wrap mb-1">
               <h3 className="text-xl font-bold">{stop.nome_parada}</h3>
-              <Badge variant="outline">{stop.diretoria_executiva}</Badge>
-              <Badge variant="outline">{stop.diretoria}</Badge>
               <Badge variant="secondary">{stop.centro_de_localizacao}</Badge>
               <Badge>{stop.fase}</Badge>
             </div>
@@ -62,10 +66,9 @@ export function StopCard({ stop }: StopCardProps) {
             </p>
           </div>
           <div className="flex items-center gap-4 flex-shrink-0">
-             <div className="w-32 text-right">
+             <div className="text-right">
                 <div className="flex items-center justify-end gap-2">
                     <span className="text-red-500 font-bold">{completion}%</span>
-                    <Progress value={completion} className="h-2 w-20" />
                 </div>
                 <p className="text-xs text-muted-foreground">Conclusão</p>
             </div>
@@ -83,27 +86,37 @@ export function StopCard({ stop }: StopCardProps) {
         <Separator />
         
         {/* Details */}
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:flex lg:flex-wrap items-center gap-x-6 gap-y-3 text-sm text-muted-foreground">
             <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4" />
                 <span className="font-medium text-foreground">Planejada:</span>
-                <span>{formatDateRange(stop.data_inicio_planejada, stop.data_fim_planejada)}</span>
+                <span>{formatDate(stop.data_inicio_planejada)} - {formatDate(stop.data_fim_planejada)}</span>
             </div>
             <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-primary" />
                 <span className="font-medium text-foreground">Realizada:</span>
-                <span>{stop.data_inicio_realizado ? formatDateRange(stop.data_inicio_realizado, stop.data_fim_realizado!) : 'N/A'}</span>
+                <span>{formatDate(stop.data_inicio_realizado)} - {formatDate(stop.data_fim_realizado)}</span>
             </div>
             <div className="flex items-center gap-2">
                 <Clock className="w-4 h-4" />
                 <span>{stop.duracao_planejada_horas}h</span>
             </div>
+             <div className="flex items-center gap-2">
+                <Users className="w-4 h-4" />
+                <span>{stop.num_equipes} equipes</span>
+            </div>
+             <div className="flex items-center gap-2">
+                <ClipboardCheck className="w-4 h-4" />
+                <span>{stop.total_hh} HH total</span>
+            </div>
         </div>
 
         {/* Description */}
-        {stop.descricao && (
+        {(stop.descricao || equipesStr) && (
              <p className="text-sm text-muted-foreground pt-2">
                 {stop.descricao}
+                {stop.descricao && equipesStr ? " - " : ""}
+                {equipesStr && `Equipes: ${equipesStr}`}
             </p>
         )}
       </div>
