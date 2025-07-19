@@ -76,34 +76,39 @@ export function TeamSelector({
   const handleTeamSelectionChange = (team: Team, checked: boolean) => {
     let newSelectedTeams: SelectedTeam[];
     if (checked) {
+      // Adiciona uma nova equipe, garantindo que os valores numéricos sejam strings
       const newTeam: SelectedTeam = { 
         id: team.id, 
         especialidade: team.especialidade,
         capacidade: "1", 
         hh: String(team.hh), 
-        hh_dia: String(team.hh) 
+        hh_dia: String(team.hh) // hh_dia inicial é igual a hh, pois capacidade é 1
       };
       newSelectedTeams = [...selectedTeams, newTeam];
     } else {
+      // Remove a equipe
       newSelectedTeams = selectedTeams.filter((t) => t.id !== team.id);
     }
     onChange(newSelectedTeams);
   };
 
   const handleCapacityChange = (teamId: string, capacityStr: string) => {
+    // Cria uma nova lista atualizada e a passa para o onChange
     const newSelectedTeams = selectedTeams.map(team => {
       if (team.id === teamId) {
         const teamDetails = availableTeams.find(t => t.id === team.id);
         const hh = teamDetails?.hh || 0;
         const capacidade = parseInt(capacityStr, 10) || 0;
         const hh_dia = capacidade * hh;
+        
+        // Retorna o objeto da equipe atualizado com os novos valores como strings
         return { 
           ...team, 
-          capacidade: capacityStr, 
+          capacidade: capacityStr, // O valor do select já é uma string
           hh_dia: String(Math.round(hh_dia))
         };
       }
-      return team;
+      return team; // Retorna as outras equipes sem modificação
     });
     onChange(newSelectedTeams);
   };
@@ -179,7 +184,7 @@ export function TeamSelector({
                 <div className="space-y-1">
                     <Label htmlFor={`capacity-${selectedTeam.id}`}>Capacidade</Label>
                     <Select
-                        value={String(selectedTeam.capacidade || 1)}
+                        value={String(selectedTeam.capacidade)}
                         onValueChange={(val) => handleCapacityChange(selectedTeam.id, val)}
                     >
                         <SelectTrigger id={`capacity-${selectedTeam.id}`}>
@@ -194,11 +199,11 @@ export function TeamSelector({
                 </div>
                  <div className="space-y-1">
                     <Label htmlFor={`hh-${selectedTeam.id}`}>HH</Label>
-                    <Input id={`hh-${selectedTeam.id}`} disabled value={selectedTeam.hh || ''} />
+                    <Input id={`hh-${selectedTeam.id}`} disabled value={selectedTeam.hh} />
                 </div>
                  <div className="space-y-1">
                     <Label htmlFor={`total-hh-${selectedTeam.id}`}>HH/Dia</Label>
-                    <Input id={`total-hh-${selectedTeam.id}`} disabled value={selectedTeam.hh_dia || ''} />
+                    <Input id={`total-hh-${selectedTeam.id}`} disabled value={selectedTeam.hh_dia} />
                 </div>
               </div>
               );
@@ -209,5 +214,3 @@ export function TeamSelector({
     </div>
   );
 }
-
-    
