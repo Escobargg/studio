@@ -259,8 +259,8 @@ export function AssetRegistrationForm({ initialDiretoriasExecutivas, isLoadingIn
   
   return (
      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <div className="flex items-center gap-4 mb-6">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <div className="flex items-center gap-4 mb-4">
                 <Button variant="outline" size="icon" asChild>
                     <Link href="/grupos">
                         <ArrowLeft className="h-4 w-4" />

@@ -16,9 +16,11 @@ import Link from "next/link";
 async function getGruposDeAtivos(filtros: Filtros) {
   let query = supabase
     .from("grupos_de_ativos")
-    .select("*, estrategias_count:estrategias!inner(count)")
-    .eq('estrategias.ativa', true) 
+    .select("*, estrategias_count:estrategias(count)")
     .order("created_at", { ascending: false });
+
+  // Add a filter to count only active strategies
+  query = query.eq('estrategias.ativa', true);
 
   Object.entries(filtros).forEach(([key, value]) => {
     if (value && key !== 'nome_grupo') {
@@ -33,10 +35,7 @@ async function getGruposDeAtivos(filtros: Filtros) {
   const { data, error } = await query;
 
   if (error) {
-    // If the inner join fails (e.g., no active strategies found for any group), 
-    // it might return an error or empty data depending on configuration.
-    // We fall back to a query without the strategy count filter.
-    if (error.code === 'PGRST204') { // PostgREST code for no rows found
+    if (error.code === 'PGRST204') { 
         let fallbackQuery = supabase
             .from("grupos_de_ativos")
             .select("*, estrategias_count:estrategias(count)")
@@ -56,9 +55,10 @@ async function getGruposDeAtivos(filtros: Filtros) {
              console.error("Erro ao buscar grupos de ativos (fallback):", fallbackError);
              return [];
         }
+        // No fallback, we must assume a count of 0 for non-active strategies.
         return fallbackData.map(grupo => ({
             ...grupo,
-            estrategias_count: grupo.estrategias_count[0]?.count ?? 0,
+            estrategias_count: 0,
         }));
     }
     console.error("Erro ao buscar grupos de ativos:", error);
@@ -70,6 +70,7 @@ async function getGruposDeAtivos(filtros: Filtros) {
     estrategias_count: grupo.estrategias_count[0]?.count ?? 0,
   }));
 }
+
 
 export default function GruposPage() {
   const [grupos, setGrupos] = useState<Grupo[]>([]);
@@ -105,7 +106,7 @@ export default function GruposPage() {
 
   return (
     <MainLayout>
-      <div className="flex-1 p-4 md:p-8 overflow-y-auto bg-muted/20 space-y-6">
+      <div className="flex-1 p-4 md:p-6 overflow-y-auto bg-muted/20 space-y-4">
         <Card>
            <CardHeader className="flex flex-row items-start justify-between">
                 <div className="flex items-center gap-3">

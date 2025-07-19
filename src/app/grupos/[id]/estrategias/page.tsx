@@ -114,7 +114,7 @@ export default function EstrategiasPage() {
 
   return (
     <MainLayout>
-      <div className="flex-1 p-4 md:p-8 overflow-y-auto bg-muted/20 space-y-6">
+      <div className="flex-1 p-4 md:p-6 overflow-y-auto bg-muted/20 space-y-4">
         <Card>
            <CardHeader className="flex flex-row items-start justify-between">
                 <div className="flex items-center gap-3">
