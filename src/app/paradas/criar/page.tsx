@@ -63,9 +63,9 @@ const stopFormSchema = z.object({
   dataFimPlanejada: z.date({ required_error: "A data de fim planejada é obrigatória." }),
   horaFimPlanejada: z.string({ required_error: "A hora de fim é obrigatória." }).regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Formato de hora inválido."),
   dataInicioRealizado: z.date().optional().nullable(),
-  horaInicioRealizado: z.string().optional().nullable(),
+  horaInicioRealizado: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Formato de hora inválido.").optional().nullable(),
   dataFimRealizado: z.date().optional().nullable(),
-  horaFimRealizado: z.string().optional().nullable(),
+  horaFimRealizado: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Formato de hora inválido.").optional().nullable(),
   descricao: z.string().optional(),
   equipes: z.array(equipeSchema).optional().default([]),
 }).refine(data => {
@@ -247,6 +247,10 @@ export default function CriarParadaPage() {
 
     if (dataInicioRealizado && horaInicioRealizado && dataFimRealizado && horaFimRealizado) {
         try {
+            if(!dataInicioRealizado || !horaInicioRealizado || !dataFimRealizado || !horaFimRealizado) {
+                 setDuracaoRealizada(null);
+                 return;
+            }
             const start = combineDateTime(dataInicioRealizado, horaInicioRealizado);
             const end = combineDateTime(dataFimRealizado, horaFimRealizado);
             if (end > start) {
