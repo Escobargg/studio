@@ -44,7 +44,7 @@ export function ScheduleView({ data, year }: ScheduleViewProps) {
     const timeIntervals = React.useMemo(() => {
         if (view === 'meses') {
             return Array.from({ length: 12 }, (_, i) => ({
-                label: format(new Date(year, i, 1), "MMM", { locale: ptBR }),
+                label: format(new Date(year, i, 1), "MMM", { locale: ptBR }).toUpperCase(),
                 value: i + 1
             }));
         }
@@ -89,17 +89,17 @@ export function ScheduleView({ data, year }: ScheduleViewProps) {
                     </Select>
                 </div>
                 <div className="overflow-x-auto border rounded-lg">
-                    <table className="min-w-full divide-y divide-gray-200">
+                    <table className="w-full border-collapse table-fixed">
                         <thead className="bg-gray-50">
                             <tr>
-                                <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 z-10 w-64 min-w-64">
+                                <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 z-10 w-64">
                                     Grupo / Ativo
                                 </th>
-                                 <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-64 bg-gray-50 z-10 w-32 min-w-32">
+                                 <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-64 bg-gray-50 z-10 w-32">
                                     Tipo
                                 </th>
                                 {timeIntervals.map(interval => (
-                                    <th key={interval.value} scope="col" className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-10">
+                                    <th key={interval.value} scope="col" className="px-1 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-10">
                                         {interval.label}
                                     </th>
                                 ))}
@@ -109,17 +109,17 @@ export function ScheduleView({ data, year }: ScheduleViewProps) {
                             {processedData.map((group) => (
                                 <React.Fragment key={`${group.groupName}-${group.location}`}>
                                     <tr className="bg-white">
-                                        <td rowSpan={2} className="px-3 py-4 whitespace-nowrap text-sm font-medium text-gray-900 sticky left-0 bg-white z-10 w-64 border-b">
+                                        <td rowSpan={2} className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900 sticky left-0 bg-white z-10 w-64 border-b">
                                             <div className="truncate" title={group.groupName}>
                                                 <p className="font-semibold">{group.groupName}</p>
                                                 <p className="text-xs text-muted-foreground">{group.location}</p>
                                             </div>
                                         </td>
-                                        <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-500 sticky left-64 bg-white z-10 w-32 border-b">
+                                        <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500 sticky left-64 bg-white z-10 w-32 border-b">
                                             Estratégias
                                         </td>
                                         {timeIntervals.map(interval => (
-                                            <td key={interval.value} className="px-1 py-1 text-center border-l border-b">
+                                            <td key={interval.value} className="px-1 py-1 text-center border-l border-b w-10">
                                                 <div className="h-full w-full flex flex-wrap items-center justify-center gap-1">
                                                     {group.strategies.map(item =>
                                                         getPosition(item, interval.value) && (
@@ -127,7 +127,7 @@ export function ScheduleView({ data, year }: ScheduleViewProps) {
                                                                 <TooltipTrigger>
                                                                     <div
                                                                         className={cn(
-                                                                            "h-4 w-4 rounded-sm",
+                                                                            "h-3 w-3 rounded-sm",
                                                                             priorityColors[item.priority || 'BAIXA']
                                                                         )}
                                                                     />
@@ -146,11 +146,11 @@ export function ScheduleView({ data, year }: ScheduleViewProps) {
                                         ))}
                                     </tr>
                                     <tr className="bg-white">
-                                        <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-500 sticky left-64 bg-white z-10 w-32 border-b">
+                                        <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500 sticky left-64 bg-white z-10 w-32 border-b">
                                             Paradas
                                         </td>
                                         {timeIntervals.map(interval => (
-                                            <td key={interval.value} className="px-1 py-1 text-center border-l border-b">
+                                            <td key={interval.value} className="px-1 py-1 text-center border-l border-b w-10">
                                                 <div className="h-full w-full flex flex-wrap items-center justify-center gap-1">
                                                     {group.stops.map(item =>
                                                         getPosition(item, interval.value) && (
@@ -158,7 +158,7 @@ export function ScheduleView({ data, year }: ScheduleViewProps) {
                                                                 <TooltipTrigger>
                                                                     <div
                                                                         className={cn(
-                                                                            "h-4 w-4 rounded-sm",
+                                                                            "h-3 w-3 rounded-sm",
                                                                             stopColor
                                                                         )}
                                                                     />
