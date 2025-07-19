@@ -4,6 +4,7 @@ import type { ParadasFiltros } from '@/app/paradas/page';
 import type { Stop } from '@/components/stop-card';
 import type { ScheduleData } from '@/components/schedule-view';
 import { startOfYear, endOfYear, add } from 'date-fns';
+import type { CronogramaFiltros } from '@/components/schedule-filters';
 
 export type Filtros = {
   nome_grupo?: string;
@@ -242,23 +243,30 @@ const getFrequencyInDays = (value: number, unit: string) => {
 };
 
 
-export async function getScheduleData(year: number): Promise<ScheduleData[]> {
+export async function getScheduleData(filters: CronogramaFiltros): Promise<ScheduleData[]> {
+    const year = parseInt(filters.ano || new Date().getFullYear().toString());
     const yearStart = startOfYear(new Date(year, 0, 1));
     const yearEnd = endOfYear(new Date(year, 0, 1));
     
     const scheduleMap = new Map<string, { groupName: string; location: string; items: any[] }>();
 
-    // 1. Fetch ALL groups first to ensure every group is in the map
-    const { data: allGroups, error: groupsError } = await supabase
+    // 1. Fetch ALL groups first based on filters
+    let groupsQuery = supabase
         .from('grupos_de_ativos')
         .select('id, nome_grupo, centro_de_localizacao, fase');
+    
+    if (filters.diretoria_executiva) groupsQuery = groupsQuery.eq('diretoria_executiva', filters.diretoria_executiva);
+    if (filters.diretoria) groupsQuery = groupsQuery.eq('diretoria', filters.diretoria);
+    if (filters.centro_de_localizacao) groupsQuery = groupsQuery.eq('centro_de_localizacao', filters.centro_de_localizacao);
+    if (filters.fase) groupsQuery = groupsQuery.eq('fase', filters.fase);
+    
+    const { data: allGroups, error: groupsError } = await groupsQuery;
 
     if (groupsError) {
         console.error("Error fetching all groups for schedule:", groupsError);
         return [];
     }
 
-    // Pre-populate the map with all groups
     allGroups.forEach(group => {
         scheduleMap.set(group.id, {
             groupName: group.nome_grupo,
@@ -269,24 +277,27 @@ export async function getScheduleData(year: number): Promise<ScheduleData[]> {
 
     const groupNameToIdMap = new Map(allGroups.map(g => [g.nome_grupo, g.id]));
 
-    // 2. Fetch strategies and add them to the pre-populated map
-    const { data: strategiesData, error: strategiesError } = await supabase
+    // 2. Fetch strategies for the filtered groups
+    let strategiesQuery = supabase
         .from('estrategias')
         .select(`
-            id,
-            nome,
-            prioridade,
-            frequencia_valor,
-            frequencia_unidade,
-            duracao_valor,
-            duracao_unidade,
-            data_inicio,
-            data_fim,
-            grupos_de_ativos ( id )
+            id, nome, prioridade, frequencia_valor, frequencia_unidade,
+            duracao_valor, duracao_unidade, data_inicio, data_fim,
+            grupos_de_ativos ( id, nome_grupo )
         `)
         .eq('ativa', true)
         .lte('data_inicio', yearEnd.toISOString())
         .or(`data_fim.is.null,data_fim.gte.${yearStart.toISOString()}`);
+    
+    const filteredGroupIds = allGroups.map(g => g.id);
+    if (filteredGroupIds.length > 0) {
+        strategiesQuery = strategiesQuery.in('grupo_id', filteredGroupIds);
+    } else {
+        // No groups match filter, so no strategies will be found
+        return [];
+    }
+
+    const { data: strategiesData, error: strategiesError } = await strategiesQuery;
     
     if (strategiesError) {
         console.error("Error fetching strategies for schedule:", strategiesError);
@@ -295,7 +306,7 @@ export async function getScheduleData(year: number): Promise<ScheduleData[]> {
             if (!strategy.grupos_de_ativos) return;
 
             const groupKey = strategy.grupos_de_ativos.id;
-            if (!scheduleMap.has(groupKey)) return; // Should not happen with pre-population, but safe check
+            if (!scheduleMap.has(groupKey)) return;
             
             let currentDate = new Date(strategy.data_inicio);
             const strategyEndDate = strategy.data_fim ? new Date(strategy.data_fim) : yearEnd;
@@ -318,23 +329,21 @@ export async function getScheduleData(year: number): Promise<ScheduleData[]> {
         });
     }
 
-
-    // 3. Fetch stops and add them to the map
-    const { data: stopsData, error: stopsError } = await supabase
+    // 3. Fetch stops based on filters
+    let stopsQuery = supabase
         .from('paradas_de_manutencao')
         .select(`
-            id,
-            nome_parada,
-            data_inicio_planejada,
-            data_fim_planejada,
-            tipo_selecao,
-            grupo_de_ativos,
-            ativo_unico,
-            centro_de_localizacao,
-            fase,
-            status
+            id, nome_parada, data_inicio_planejada, data_fim_planejada, tipo_selecao,
+            grupo_de_ativos, ativo_unico, centro_de_localizacao, fase, status
         `)
         .or(`and(data_inicio_planejada.gte.${yearStart.toISOString()},data_inicio_planejada.lte.${yearEnd.toISOString()}),and(data_fim_planejada.gte.${yearStart.toISOString()},data_fim_planejada.lte.${yearEnd.toISOString()}),and(data_inicio_planejada.lte.${yearStart.toISOString()},data_fim_planejada.gte.${yearEnd.toISOString()})`);
+
+    if (filters.diretoria_executiva) stopsQuery = stopsQuery.eq('diretoria_executiva', filters.diretoria_executiva);
+    if (filters.diretoria) stopsQuery = stopsQuery.eq('diretoria', filters.diretoria);
+    if (filters.centro_de_localizacao) stopsQuery = stopsQuery.eq('centro_de_localizacao', filters.centro_de_localizacao);
+    if (filters.fase) stopsQuery = stopsQuery.eq('fase', filters.fase);
+
+    const { data: stopsData, error: stopsError } = await stopsQuery;
 
     if (stopsError) {
         console.error("Error fetching stops for schedule:", stopsError);
@@ -348,7 +357,7 @@ export async function getScheduleData(year: number): Promise<ScheduleData[]> {
                 groupKey = groupNameToIdMap.get(stop.grupo_de_ativos) || null;
             } else if (stop.tipo_selecao === 'ativo' && stop.ativo_unico) {
                 groupName = stop.ativo_unico;
-                groupKey = `ativo-${groupName}-${location}`; // Unique key for single assets
+                groupKey = `ativo-${groupName}-${location}`;
             }
 
             if (!groupKey) return; 
