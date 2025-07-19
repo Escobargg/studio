@@ -22,9 +22,9 @@ export type Team = {
 export type SelectedTeam = {
   id: string;
   especialidade: string;
-  capacidade: string | number;
-  hh: string | number;
-  hh_dia: string | number;
+  capacidade: number;
+  hh: number;
+  hh_dia: number;
 };
 
 
@@ -76,13 +76,13 @@ export function TeamSelector({
   const handleTeamSelectionChange = (team: Team, checked: boolean) => {
     let newSelectedTeams: SelectedTeam[];
     if (checked) {
-      // Adiciona uma nova equipe, garantindo que os valores numéricos sejam strings
+      // Adiciona uma nova equipe, garantindo que os valores numéricos sejam mantidos
       const newTeam: SelectedTeam = { 
         id: team.id, 
         especialidade: team.especialidade,
-        capacidade: "1", 
-        hh: String(team.hh), 
-        hh_dia: String(team.hh) // hh_dia inicial é igual a hh, pois capacidade é 1
+        capacidade: 1, 
+        hh: team.hh, 
+        hh_dia: team.hh // hh_dia inicial é igual a hh, pois capacidade é 1
       };
       newSelectedTeams = [...selectedTeams, newTeam];
     } else {
@@ -93,7 +93,6 @@ export function TeamSelector({
   };
 
   const handleCapacityChange = (teamId: string, capacityStr: string) => {
-    // Cria uma nova lista atualizada e a passa para o onChange
     const newSelectedTeams = selectedTeams.map(team => {
       if (team.id === teamId) {
         const teamDetails = availableTeams.find(t => t.id === team.id);
@@ -101,14 +100,13 @@ export function TeamSelector({
         const capacidade = parseInt(capacityStr, 10) || 0;
         const hh_dia = capacidade * hh;
         
-        // Retorna o objeto da equipe atualizado com os novos valores como strings
         return { 
           ...team, 
-          capacidade: capacityStr, // O valor do select já é uma string
-          hh_dia: String(Math.round(hh_dia))
+          capacidade: capacidade,
+          hh_dia: Math.round(hh_dia)
         };
       }
-      return team; // Retorna as outras equipes sem modificação
+      return team;
     });
     onChange(newSelectedTeams);
   };
