@@ -3,7 +3,7 @@ import { supabase } from './supabase';
 import type { ParadasFiltros } from '@/app/paradas/page';
 import type { Stop } from '@/components/stop-card';
 import type { ScheduleData } from '@/components/schedule-view';
-import { startOfYear, endOfYear, add, getMonth, getISOWeek, startOfMonth, endOfMonth, startOfWeek, endOfWeek, setISOWeek, startOfISOWeek } from 'date-fns';
+import { startOfYear, endOfYear, add, getMonth, getISOWeek, startOfMonth, endOfMonth, startOfWeek, endOfWeek, setISOWeek, startOfISOWeek, endOfISOWeek } from 'date-fns';
 import type { CronogramaFiltros } from '@/components/schedule-filters';
 
 export type Filtros = {
@@ -255,7 +255,6 @@ export async function getScheduleData(filters: CronogramaFiltros): Promise<Sched
         queryEnd = endOfMonth(new Date(year, monthIndex));
     } else if (filters.semana) {
         const weekIndex = parseInt(filters.semana, 10);
-        // A date guaranteed to be in week 1 to avoid year boundary issues
         const dateForWeek = setISOWeek(new Date(year, 0, 4), weekIndex); 
         queryStart = startOfISOWeek(dateForWeek);
         queryEnd = endOfISOWeek(queryStart);
@@ -266,7 +265,7 @@ export async function getScheduleData(filters: CronogramaFiltros): Promise<Sched
     
     const scheduleMap = new Map<string, { groupName: string; location: string; items: any[] }>();
 
-    // 1. Fetch ALL groups that match the filters
+    // 1. Fetch all groups that match the filters
     let groupsQuery = supabase
         .from('grupos_de_ativos')
         .select('id, nome_grupo, centro_de_localizacao, fase');
@@ -303,7 +302,6 @@ export async function getScheduleData(filters: CronogramaFiltros): Promise<Sched
     let strategiesQuery = supabase
         .from('estrategias')
         .select('id, nome, prioridade, frequencia_valor, frequencia_unidade, duracao_valor, duracao_unidade, data_inicio, data_fim, grupo_id')
-        .in('grupo_id', Array.from(filteredGroupIds))
         .eq('ativa', true)
         .lte('data_inicio', queryEnd.toISOString())
         .or(`data_fim.is.null,data_fim.gte.${queryStart.toISOString()}`);
@@ -315,7 +313,8 @@ export async function getScheduleData(filters: CronogramaFiltros): Promise<Sched
     } else {
         strategiesData.forEach(strategy => {
             const groupKey = strategy.grupo_id;
-            if (groupKey && scheduleMap.has(groupKey)) {
+            // Only process if the strategy belongs to a group that passed the location filters
+            if (groupKey && filteredGroupIds.has(groupKey)) {
                 let currentDate = new Date(strategy.data_inicio);
                 const strategyEndDate = strategy.data_fim ? new Date(strategy.data_fim) : queryEnd;
                 const intervalDays = getFrequencyInDays(strategy.frequencia_valor, strategy.frequencia_unidade);
@@ -365,7 +364,7 @@ export async function getScheduleData(filters: CronogramaFiltros): Promise<Sched
         stopsData.forEach(stop => {
             let groupKey: string | null = null;
             let groupName: string | null = null;
-            let location: string | null = `${stop.centro_de_localizacao} - ${stop.fase}`;
+            let location: string = `${stop.centro_de_localizacao} - ${stop.fase}`;
             
             if (stop.tipo_selecao === 'grupo' && stop.grupo_de_ativos) {
                 groupKey = groupNameToIdMap.get(stop.grupo_de_ativos) || null;
