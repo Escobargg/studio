@@ -162,13 +162,28 @@ export async function getStops(filters: ParadasFiltros): Promise<Stop[]> {
     let query = supabase
         .from('paradas_de_manutencao')
         .select(`
-            *,
+            id,
+            id_parada,
+            nome_parada,
+            diretoria_executiva,
+            diretoria,
+            centro_de_localizacao,
+            fase,
+            tipo_selecao,
+            grupo_de_ativos,
+            ativo_unico,
+            data_inicio_planejada,
+            data_fim_planejada,
+            data_inicio_realizado,
+            data_fim_realizado,
+            duracao_planejada_horas,
+            descricao,
             recursos_parada (
                 equipe,
                 hh_dia
             )
         `)
-        .order('data_inicio_planejada', { ascending: true });
+        .order('id_parada', { ascending: false });
 
     if (filters.diretoria_executiva) {
         query = query.eq('diretoria_executiva', filters.diretoria_executiva);

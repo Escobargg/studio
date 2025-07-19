@@ -81,9 +81,21 @@ export default function ParadasPage() {
                     <h2 className="mt-6 text-2xl font-semibold">Buscando Paradas...</h2>
                     <p className="mt-2 text-muted-foreground">Aguarde um momento.</p>
                 </div>
-             ) : stops.map((stop) => (
-                <StopCard key={stop.id} stop={stop} onStopDelete={handleStopDelete} />
-             ))}
+             ) : stops.length > 0 ? (
+                 stops.map((stop) => (
+                    <StopCard key={stop.id} stop={stop} onStopDelete={handleStopDelete} />
+                 ))
+             ) : (
+                <div className="flex flex-col items-center justify-center text-center py-20">
+                    <Settings className="w-16 h-16 text-muted-foreground" />
+                    <h2 className="mt-6 text-2xl font-semibold">
+                        Nenhuma Parada Encontrada
+                    </h2>
+                    <p className="mt-2 text-muted-foreground">
+                        Ajuste os filtros ou crie uma nova parada para vê-la listada aqui.
+                    </p>
+                </div>
+             )}
         </div>
       </div>
     </MainLayout>
