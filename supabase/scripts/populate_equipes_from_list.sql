@@ -1,94 +1,66 @@
--- Este script insere registros de equipes para várias combinações de centro de localização e fase,
--- usando as equipes do '1089' e 'PORTO' como modelo.
--- Ele evita a inserção de duplicatas se um registro para a mesma equipe,
--- centro de localização e fase já existir.
+-- Este script popula a tabela 'equipes' para várias combinações de centro de localização e fase,
+-- usando as equipes do '1089 PORTO' e 'USINA' como modelo.
+-- Ele usa uma lista explícita de locais de destino para garantir que todas as combinações sejam cobertas
+-- e evita duplicatas usando ON CONFLICT DO NOTHING.
 
-INSERT INTO equipes (centro_de_localizacao, fase, especialidade, hh, capacidade, diretoria_executiva, diretoria, unidade)
-WITH
-  -- 1. Defina explicitamente as combinações de centro de localização e fase de destino.
-  target_locations (centro, fase) AS (
+-- Passo 1: Definir as combinações de centro de localização e fase de destino.
+WITH target_locations (centro_de_localizacao, fase) AS (
     VALUES
-      ('1058', 'USINA'),
-      ('1058', 'MINA'),
-      ('1064', 'FERROVIA'),
-      ('1068', 'PORTO'),
-      ('1070', 'MINA'),
-      ('1070', 'USINA'),
-      ('1072', 'MINA'),
-      ('1072', 'USINA'),
-      ('1074', 'MINA'),
-      ('1074', 'USINA'),
-      ('1076', 'MINA'),
-      ('1077', 'MINA'),
-      ('1077', 'USINA'),
-      ('1079', 'MINA'),
-      ('1079', 'USINA'),
-      ('1081', 'MINA'),
-      ('1081', 'USINA'),
-      ('1083', 'MINA'),
-      ('1083', 'USINA'),
-      ('1089', 'PORTO'),
-      ('1090', 'PELOTIZAÇÃO'),
-      ('1095', 'MINA'),
-      ('1103', 'MINA'),
-      ('1106', 'USINA'),
-      ('1106', 'MINA'),
-      ('1110', 'MINA'),
-      ('1111', 'MINA'),
-      ('1116', 'MINA'),
-      ('1118', 'USINA'),
-      ('1118', 'MINA'),
-      ('1119', 'USINA'),
-      ('1119', 'MINA'),
-      ('1123', 'PORTO'),
-      ('1133', 'PORTO'),
-      ('4050', 'MINA'),
-      ('4050', 'USINA'),
-      ('4052', 'FERROVIA'),
-      ('4056', 'FERROVIA'),
-      ('4057', 'FERROVIA'),
-      ('4058', 'FERROVIA'),
-      ('4059', 'FERROVIA'),
-      ('4064', 'FERROVIA'),
-      ('4065', 'FERROVIA'),
-      ('4069', 'FERROVIA'),
-      ('4131', 'PORTO'),
-      ('4143', 'MINA'),
-      ('4144', 'MINA'),
-      ('4181', 'PORTO'),
-      ('4215', 'FERROVIA'),
-      ('4217', 'FERROVIA'),
-      ('4224', 'MINA'),
-      ('4224', 'USINA'),
-      ('4271', 'PORTO'),
-      ('9041', 'MINA')
-  ),
-  -- 2. Selecione as equipes modelo que serão replicadas.
-  template_teams AS (
-    SELECT
-      especialidade,
-      hh,
-      capacidade,
-      diretoria_executiva,
-      diretoria,
-      unidade
-    FROM
-      equipes
-    WHERE
-      centro_de_localizacao = '1089' AND fase = 'PORTO'
-  )
--- 3. Gere as linhas a serem inseridas combinando os locais de destino e as equipes modelo.
+    ('1089 PORTO', 'USINA'),
+    ('1089 PORTO', 'PELOTIZACAO'),
+    ('1089 PORTO', 'PATIO DE PRODUTOS'),
+    ('1089 PORTO', 'MANUTENCAO CENTRAL'),
+    ('1228 EFVM', 'VIA PERMANENTE'),
+    ('1228 EFVM', 'MATERIAL RODANTE'),
+    ('1228 EFVM', 'OP. FERROVIARIA'),
+    ('1091 MINA TIMBOPEBA', 'USINA'),
+    ('1091 MINA TIMBOPEBA', 'MINA'),
+    ('1091 MINA TIMBOPEBA', 'MANUTENCAO CENTRAL'),
+    ('1090 MINA CONCEICAO', 'USINA'),
+    ('1090 MINA CONCEICAO', 'MINA'),
+    ('1090 MINA CONCEICAO', 'MANUTENCAO CENTRAL'),
+    ('1094 MINA BRUCUTU', 'USINA'),
+    ('1094 MINA BRUCUTU', 'MINA'),
+    ('1094 MINA BRUCUTU', 'MANUTENCAO CENTRAL'),
+    ('1092 MINAS CENTRAIS', 'USINA'),
+    ('1092 MINAS CENTRAIS', 'MINA'),
+    ('1092 MINAS CENTRAIS', 'MANUTENCAO CENTRAL'),
+    ('1093 MINA FABRICA', 'USINA'),
+    ('1093 MINA FABRICA', 'MINA'),
+    ('1093 MINA FABRICA', 'MANUTENCAO CENTRAL'),
+    ('1095 MINA VARGEM GRANDE', 'USINA'),
+    ('1095 MINA VARGEM GRANDE', 'MINA'),
+    ('1095 MINA VARGEM GRANDE', 'MANUTENCAO CENTRAL'),
+    ('1101 MINA FABRICA NOVA', 'USINA'),
+    ('1101 MINA FABRICA NOVA', 'MINA'),
+    ('1101 MINA FABRICA NOVA', 'MANUTENCAO CENTRAL'),
+    ('1102 pelotização', 'USINA 1'),
+    ('1102 pelotização', 'USINA 2'),
+    ('1102 pelotização', 'USINA 3'),
+    ('1102 pelotização', 'USINA 4'),
+    ('1102 pelotização', 'USINA 5'),
+    ('1102 pelotização', 'USINA 6'),
+    ('1102 pelotização', 'USINA 7'),
+    ('1102 pelotização', 'USINA 8'),
+    ('1099 MINA PICO', 'USINA'),
+    ('1099 MINA PICO', 'MINA'),
+    ('1099 MINA PICO', 'MANUTENCAO CENTRAL')
+),
+-- Passo 2: Selecionar as equipes do local modelo para serem replicadas.
+model_equipes AS (
+    SELECT especialidade, hh, capacidade
+    FROM equipes
+    WHERE centro_de_localizacao = '1089 PORTO' AND fase = 'USINA'
+)
+-- Passo 3: Inserir as equipes modelo em cada local de destino, evitando conflitos.
+INSERT INTO equipes (centro_de_localizacao, fase, especialidade, hh, capacidade)
 SELECT
-  l.centro AS centro_de_localizacao,
-  l.fase AS fase,
-  t.especialidade,
-  t.hh,
-  t.capacidade,
-  t.diretoria_executiva,
-  t.diretoria,
-  t.unidade
-FROM
-  target_locations l
-CROSS JOIN
-  template_teams t
+    tl.centro_de_localizacao,
+    tl.fase,
+    me.especialidade,
+    me.hh,
+    me.capacidade
+FROM target_locations tl
+CROSS JOIN model_equipes me
+-- Evita inserir se uma equipe com a mesma especialidade já existir para o centro/fase.
 ON CONFLICT (centro_de_localizacao, fase, especialidade) DO NOTHING;
