@@ -24,7 +24,7 @@ export type SelectedTeam = {
   especialidade: string;
   capacidade: string | number;
   hh: string | number;
-  total_hh: string | number;
+  hh_dia: string | number;
 };
 
 
@@ -76,13 +76,13 @@ export function TeamSelector({
       const teamDetails = allTeams.find(at => at.id === team.id);
       const hh = teamDetails?.hh || 0;
       const capacidade = parseInt(String(team.capacidade), 10) || 0;
-      const total_hh = capacidade * hh;
+      const hh_dia = capacidade * hh;
       
       return {
         ...team,
         especialidade: teamDetails?.especialidade || "Desconhecida",
         hh: String(hh),
-        total_hh: String(Math.round(total_hh))
+        hh_dia: String(Math.round(hh_dia))
       };
   };
 
@@ -94,7 +94,7 @@ export function TeamSelector({
         especialidade: team.especialidade,
         capacidade: "1", 
         hh: String(team.hh), 
-        total_hh: String(team.hh) 
+        hh_dia: String(team.hh) 
       };
       newSelectedTeams = [...selectedTeams, newTeam];
     } else {
@@ -203,7 +203,7 @@ export function TeamSelector({
                 </div>
                  <div className="space-y-1">
                     <Label htmlFor={`total-hh-${selectedTeam.id}`}>HH/Dia</Label>
-                    <Input id={`total-hh-${selectedTeam.id}`} disabled value={selectedTeam.total_hh || ''} />
+                    <Input id={`total-hh-${selectedTeam.id}`} disabled value={selectedTeam.hh_dia || ''} />
                 </div>
               </div>
               );
