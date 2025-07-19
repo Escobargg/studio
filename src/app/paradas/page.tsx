@@ -10,10 +10,12 @@ import { StopCard, type Stop } from "@/components/stop-card";
 import { StopsFilters } from "@/components/stops-filters";
 import { useState, useCallback, useEffect } from "react";
 import { getStops } from "@/lib/data";
+import { type DateRange } from "react-day-picker";
 
 export type ParadasFiltros = {
   centro_de_localizacao?: string;
   fase?: string;
+  dateRange?: DateRange;
 };
 
 export default function ParadasPage() {

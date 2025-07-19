@@ -120,7 +120,6 @@ export const getEspecialidades = async (centro: string, fase: string): Promise<E
             return [];
         }
         
-        // Assuming one entry per especialidade for a given centro/fase
         return data.map(item => ({
             especialidade: item.especialidade,
             hh: item.hh,
@@ -141,11 +140,6 @@ export const getStopsFilterOptions = async (
   try {
     let query;
     if (campo === 'ano') {
-      // Special handling for year if it's derived from a date column, e.g., 'data_inicio'
-      // This is a placeholder; you'll need to adapt it to your actual schema.
-      // For now, let's assume it's a direct column or use a placeholder.
-      // If 'ano' is a column in 'paradas', you would query that.
-      // This is a simplified example.
       const { data, error } = await supabase.from('paradas_de_manutencao').select('data_inicio_planejada');
       if (error) throw error;
       const years = new Set(data.map(p => new Date(p.data_inicio_planejada).getFullYear().toString()));
@@ -174,6 +168,15 @@ export async function getStops(filters: ParadasFiltros) {
     }
     if (filters.fase) {
         query = query.eq('fase', filters.fase);
+    }
+     if (filters.dateRange?.from && filters.dateRange?.to) {
+        const from = filters.dateRange.from.toISOString();
+        const to = filters.dateRange.to.toISOString();
+
+        // Find stops where the planned start OR planned end falls within the date range
+        query = query.or(
+            `and(data_inicio_planejada.gte.${from},data_inicio_planejada.lte.${to}),and(data_fim_planejada.gte.${from},data_fim_planejada.lte.${to})`
+        );
     }
     
     const { data, error } = await query;

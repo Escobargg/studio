@@ -3,7 +3,6 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -11,9 +10,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, X } from "lucide-react";
+import { Loader2, X, Calendar as CalendarIcon } from "lucide-react";
 import type { ParadasFiltros } from "@/app/paradas/page";
 import { getHierarquiaOpcoes } from "@/lib/data";
+import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
+import { Calendar } from "./ui/calendar";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { type DateRange } from "react-day-picker";
 
 
 interface StopsFiltersProps {
@@ -57,18 +62,15 @@ export function StopsFilters({ onFilterChange }: StopsFiltersProps) {
 
   // Propagate changes up
   useEffect(() => {
-    const handler = setTimeout(() => {
-      onFilterChange(filters);
-    }, 300); // Debounce
-    return () => clearTimeout(handler);
+    onFilterChange(filters);
   }, [filters, onFilterChange]);
 
 
-  const handleSelectChange = (name: keyof ParadasFiltros, value: string) => {
+  const handleSelectChange = (name: keyof Omit<ParadasFiltros, 'dateRange'>, value: string) => {
     const newValue = value === "todos" ? undefined : value;
     
     setFilters(prev => {
-        const newFilters = { ...prev, [name]: newValue };
+        const newFilters: ParadasFiltros = { ...prev, [name]: newValue };
         // If centro is changed, reset fase
         if (name === 'centro_de_localizacao') {
             delete newFilters.fase;
@@ -76,6 +78,10 @@ export function StopsFilters({ onFilterChange }: StopsFiltersProps) {
         return newFilters;
     });
   };
+
+  const handleDateChange = (range: DateRange | undefined) => {
+     setFilters(prev => ({ ...prev, dateRange: range }));
+  }
   
   const clearFilters = () => {
     setFilters({});
@@ -118,6 +124,48 @@ export function StopsFilters({ onFilterChange }: StopsFiltersProps) {
           </SelectContent>
         </Select>
       </div>
+      
+      <div className="flex-1 min-w-[280px] space-y-2">
+        <label className="text-sm font-medium">Período</label>
+         <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                id="date"
+                variant={"outline"}
+                className={cn(
+                  "w-full justify-start text-left font-normal",
+                  !filters.dateRange && "text-muted-foreground"
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {filters.dateRange?.from ? (
+                  filters.dateRange.to ? (
+                    <>
+                      {format(filters.dateRange.from, "LLL dd, y", { locale: ptBR })} -{" "}
+                      {format(filters.dateRange.to, "LLL dd, y", { locale: ptBR })}
+                    </>
+                  ) : (
+                    format(filters.dateRange.from, "LLL dd, y", { locale: ptBR })
+                  )
+                ) : (
+                  <span>Selecione um período</span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                initialFocus
+                mode="range"
+                defaultMonth={filters.dateRange?.from}
+                selected={filters.dateRange}
+                onSelect={handleDateChange}
+                numberOfMonths={2}
+                locale={ptBR}
+              />
+            </PopoverContent>
+          </Popover>
+      </div>
+
 
        <Button onClick={clearFilters} variant="ghost" className="h-10">
             <X className="mr-2 h-4 w-4" />
