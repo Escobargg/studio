@@ -3,7 +3,7 @@ import { supabase } from './supabase';
 import type { ParadasFiltros } from '@/app/paradas/page';
 import type { Stop } from '@/components/stop-card';
 import type { ScheduleData } from '@/components/schedule-view';
-import { startOfYear, endOfYear, add, interval } from 'date-fns';
+import { startOfYear, endOfYear, add } from 'date-fns';
 
 export type Filtros = {
   nome_grupo?: string;
@@ -333,8 +333,8 @@ export async function getScheduleData(year: number): Promise<ScheduleData[]> {
             centro_de_localizacao,
             fase
         `)
-        .gte('data_inicio_planejada', yearStart.toISOString())
-        .lte('data_inicio_planejada', yearEnd.toISOString());
+        .or(`and(data_inicio_planejada.gte.${yearStart.toISOString()},data_inicio_planejada.lte.${yearEnd.toISOString()}),and(data_fim_planejada.gte.${yearStart.toISOString()},data_fim_planejada.lte.${yearEnd.toISOString()}),and(data_inicio_planejada.lte.${yearStart.toISOString()},data_fim_planejada.gte.${yearEnd.toISOString()})`);
+
 
     if (stopsError) {
         console.error("Error fetching stops for schedule:", stopsError);
