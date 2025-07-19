@@ -253,35 +253,35 @@ export default function CriarParadaPage() {
   async function onSubmit(data: StopFormValues) {
     setIsSubmitting(true);
     
-    const dataInicioPlanejadaCompleta = combineDateTime(data.dataInicioPlanejada, data.horaInicioPlanejada);
-    const dataFimPlanejadaCompleta = combineDateTime(data.dataFimPlanejada, data.horaFimPlanejada);
-    
-    const dataToInsert = {
-      nome_parada: data.nomeParada,
-      centro_de_localizacao: data.centroLocalizacao,
-      fase: data.fase,
-      tipo_selecao: data.tipoSelecao,
-      grupo_de_ativos: data.grupoAtivos || null,
-      ativo_unico: data.ativo || null,
-      data_inicio_planejada: dataInicioPlanejadaCompleta.toISOString(),
-      data_fim_planejada: dataFimPlanejadaCompleta.toISOString(),
-      duracao_planejada_horas: duracaoPlanejada,
-      data_inicio_realizado: data.dataInicioRealizado && data.horaInicioRealizado 
-          ? combineDateTime(data.dataInicioRealizado, data.horaInicioRealizado).toISOString() 
-          : null,
-      data_fim_realizado: data.dataFimRealizado && data.horaFimRealizado 
-          ? combineDateTime(data.dataFimRealizado, data.horaFimRealizado).toISOString() 
-          : null,
-      duracao_realizada_horas: duracaoRealizada,
-      descricao: data.descricao,
-      status: 'PLANEJADA',
-      equipes_selecionadas: data.equipes,
-    };
-
     try {
+        const dataInicioPlanejadaCompleta = combineDateTime(data.dataInicioPlanejada, data.horaInicioPlanejada);
+        const dataFimPlanejadaCompleta = combineDateTime(data.dataFimPlanejada, data.horaFimPlanejada);
+        
+        const dataToInsert = {
+          nome_parada: data.nomeParada,
+          centro_de_localizacao: data.centroLocalizacao,
+          fase: data.fase,
+          tipo_selecao: data.tipoSelecao,
+          grupo_de_ativos: data.tipoSelecao === 'grupo' ? data.grupoAtivos : null,
+          ativo_unico: data.tipoSelecao === 'ativo' ? data.ativo : null,
+          data_inicio_planejada: dataInicioPlanejadaCompleta.toISOString(),
+          data_fim_planejada: dataFimPlanejadaCompleta.toISOString(),
+          duracao_planejada_horas: duracaoPlanejada,
+          data_inicio_realizado: data.dataInicioRealizado && data.horaInicioRealizado 
+              ? combineDateTime(data.dataInicioRealizado, data.horaInicioRealizado).toISOString() 
+              : null,
+          data_fim_realizado: data.dataFimRealizado && data.horaFimRealizado 
+              ? combineDateTime(data.dataFimRealizado, data.horaFimRealizado).toISOString() 
+              : null,
+          duracao_realizada_horas: duracaoRealizada,
+          descricao: data.descricao,
+          status: 'PLANEJADA',
+          equipes_selecionadas: data.equipes,
+        };
+
         const { error } = await supabase
             .from('paradas_de_manutencao')
-            .insert(dataToInsert)
+            .insert([dataToInsert]) // Enviar como um array de objetos
             .throwOnError();
 
         toast({
@@ -408,7 +408,14 @@ export default function CriarParadaPage() {
                           <FormLabel>Criar parada para:</FormLabel>
                           <FormControl>
                             <RadioGroup
-                              onValueChange={field.onChange}
+                              onValueChange={(value) => {
+                                field.onChange(value);
+                                if (value === 'ativo') {
+                                    setValue('grupoAtivos', '');
+                                } else if (value === 'grupo') {
+                                    setValue('ativo', '');
+                                }
+                              }}
                               defaultValue={field.value}
                               className="flex space-x-4"
                             >
@@ -666,7 +673,6 @@ export default function CriarParadaPage() {
                         <TeamSelector
                           value={field.value || []}
                           onChange={field.onChange}
-                          duracaoHoras={duracaoPlanejada ?? 0}
                           centroLocalizacao={watchedCentro}
                           fase={watchedFase}
                         />
@@ -718,3 +724,4 @@ export default function CriarParadaPage() {
   );
 }
 
+    
