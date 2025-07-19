@@ -27,24 +27,55 @@ interface StopsFiltersProps {
 
 export function StopsFilters({ onFilterChange }: StopsFiltersProps) {
   const [filters, setFilters] = useState<ParadasFiltros>({});
+  
+  const [diretoriaExecutivaOptions, setDiretoriaExecutivaOptions] = useState<string[]>([]);
+  const [diretoriaOptions, setDiretoriaOptions] = useState<string[]>([]);
   const [centroOptions, setCentroOptions] = useState<string[]>([]);
   const [faseOptions, setFaseOptions] = useState<string[]>([]);
   
-  const [loadingCentros, setLoadingCentros] = useState(true);
+  const [loadingDE, setLoadingDE] = useState(true);
+  const [loadingD, setLoadingD] = useState(false);
+  const [loadingCentros, setLoadingCentros] = useState(false);
   const [loadingFases, setLoadingFases] = useState(false);
 
-  // Fetch initial options for centros
   useEffect(() => {
     const fetchOptions = async () => {
-        setLoadingCentros(true);
-        const centros = await getHierarquiaOpcoes("centro_de_localizacao");
-        setCentroOptions(centros);
-        setLoadingCentros(false);
+        setLoadingDE(true);
+        const de = await getHierarquiaOpcoes("diretoria_executiva");
+        setDiretoriaExecutivaOptions(de);
+        setLoadingDE(false);
     };
     fetchOptions();
   }, []);
 
-  // Fetch fases when centro changes
+  useEffect(() => {
+    const fetchDiretorias = async () => {
+      if (filters.diretoria_executiva) {
+        setLoadingD(true);
+        const d = await getHierarquiaOpcoes("diretoria", { diretoria_executiva: filters.diretoria_executiva });
+        setDiretoriaOptions(d);
+        setLoadingD(false);
+      } else {
+        setDiretoriaOptions([]);
+      }
+    }
+    fetchDiretorias();
+  }, [filters.diretoria_executiva]);
+
+  useEffect(() => {
+    const fetchCentros = async () => {
+      if(filters.diretoria) {
+        setLoadingCentros(true);
+        const centros = await getHierarquiaOpcoes("centro_de_localizacao", { diretoria: filters.diretoria });
+        setCentroOptions(centros);
+        setLoadingCentros(false);
+      } else {
+        setCentroOptions([]);
+      }
+    }
+    fetchCentros();
+  }, [filters.diretoria]);
+
   useEffect(() => {
     const fetchFases = async () => {
       if (filters.centro_de_localizacao) {
@@ -53,14 +84,12 @@ export function StopsFilters({ onFilterChange }: StopsFiltersProps) {
         setFaseOptions(fases);
         setLoadingFases(false);
       } else {
-        setFaseOptions([]); // Clear fases if no centro is selected
+        setFaseOptions([]);
       }
     };
     fetchFases();
   }, [filters.centro_de_localizacao]);
 
-
-  // Propagate changes up
   useEffect(() => {
     onFilterChange(filters);
   }, [filters, onFilterChange]);
@@ -71,7 +100,15 @@ export function StopsFilters({ onFilterChange }: StopsFiltersProps) {
     
     setFilters(prev => {
         const newFilters: ParadasFiltros = { ...prev, [name]: newValue };
-        // If centro is changed, reset fase
+        if (name === 'diretoria_executiva') {
+            delete newFilters.diretoria;
+            delete newFilters.centro_de_localizacao;
+            delete newFilters.fase;
+        }
+        if (name === 'diretoria') {
+            delete newFilters.centro_de_localizacao;
+            delete newFilters.fase;
+        }
         if (name === 'centro_de_localizacao') {
             delete newFilters.fase;
         }
@@ -89,13 +126,48 @@ export function StopsFilters({ onFilterChange }: StopsFiltersProps) {
 
   return (
     <div className="flex flex-wrap gap-4 items-end">
+       <div className="flex-1 min-w-[200px] space-y-2">
+        <label className="text-sm font-medium">Diretoria Executiva</label>
+        <Select 
+            name="diretoria_executiva" 
+            value={filters.diretoria_executiva || "todos"} 
+            onValueChange={(v) => handleSelectChange("diretoria_executiva", v)}
+            disabled={loadingDE}
+        >
+          <SelectTrigger>
+            {loadingDE ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <SelectValue placeholder="Todas as diretorias" />}
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="todos">Todas as diretorias</SelectItem>
+            {diretoriaExecutivaOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="flex-1 min-w-[200px] space-y-2">
+        <label className="text-sm font-medium">Diretoria</label>
+        <Select 
+            name="diretoria" 
+            value={filters.diretoria || "todos"} 
+            onValueChange={(v) => handleSelectChange("diretoria", v)}
+            disabled={!filters.diretoria_executiva || loadingD}
+        >
+          <SelectTrigger>
+            {loadingD ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <SelectValue placeholder="Todas as diretorias" />}
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="todos">Todas as diretorias</SelectItem>
+            {diretoriaOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </div>
+
       <div className="flex-1 min-w-[200px] space-y-2">
         <label className="text-sm font-medium">Centro de Localização</label>
         <Select 
             name="centro_de_localizacao" 
             value={filters.centro_de_localizacao || "todos"} 
             onValueChange={(v) => handleSelectChange("centro_de_localizacao", v)}
-            disabled={loadingCentros}
+            disabled={!filters.diretoria || loadingCentros}
         >
           <SelectTrigger>
             {loadingCentros ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <SelectValue placeholder="Todos os centros" />}
