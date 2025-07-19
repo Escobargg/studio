@@ -36,7 +36,7 @@ import { MainLayout } from "@/components/main-layout";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { getHierarquiaOpcoes, getAtivosByCentro, getGruposByCentroEFase } from "@/lib/data";
+import { getHierarquiaOpcoes, getAtivosByCentro, getGruposByCentroEFase, getEspecialidades } from "@/lib/data";
 import { supabase } from "@/lib/supabase";
 
 const equipeSchema = z.object({
@@ -130,11 +130,14 @@ export default function CriarParadaPage() {
   const [fases, setFases] = useState<string[]>([]);
   const [ativos, setAtivos] = useState<string[]>([]);
   const [gruposDeAtivos, setGruposDeAtivos] = useState<string[]>([]);
+  const [especialidades, setEspecialidades] = useState<string[]>([]);
+
 
   const [loadingCentros, setLoadingCentros] = useState(true);
   const [loadingFases, setLoadingFases] = useState(false);
   const [loadingAtivos, setLoadingAtivos] = useState(false);
   const [loadingGrupos, setLoadingGrupos] = useState(false);
+  const [loadingEspecialidades, setLoadingEspecialidades] = useState(false);
   
   const form = useForm<StopFormValues>({
     resolver: zodResolver(stopFormSchema),
@@ -221,6 +224,7 @@ export default function CriarParadaPage() {
         setFases([]);
         setAtivos([]);
         setGruposDeAtivos([]);
+        setEspecialidades([]);
       }
     };
     fetchDataForCentro();
@@ -230,14 +234,21 @@ export default function CriarParadaPage() {
     const fetchDependentData = async () => {
         if (watchedCentro && watchedFase) {
             setLoadingGrupos(true);
+            setLoadingEspecialidades(true);
             setValue("grupoAtivos", "");
 
-            const gruposData = await getGruposByCentroEFase(watchedCentro, watchedFase);
+            const [gruposData, especialidadesData] = await Promise.all([
+                getGruposByCentroEFase(watchedCentro, watchedFase),
+                getEspecialidades(watchedCentro, watchedFase)
+            ]);
             
             setGruposDeAtivos(gruposData);
+            setEspecialidades(especialidadesData);
             setLoadingGrupos(false);
+            setLoadingEspecialidades(false);
         } else {
             setGruposDeAtivos([]);
+            setEspecialidades([]);
         }
     };
     fetchDependentData();
@@ -724,7 +735,7 @@ export default function CriarParadaPage() {
                <Card>
                 <CardHeader>
                     <CardTitle>Recursos (Opcional)</CardTitle>
-                    <CardDescription>Adicione as equipes necessárias para esta parada.</CardDescription>
+                    <CardDescription>Adicione as equipes necessárias para esta parada. As especialidades são carregadas com base no centro e fase selecionados.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <div className="space-y-4">
@@ -736,7 +747,18 @@ export default function CriarParadaPage() {
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>Especialidade</FormLabel>
-                                            <FormControl><Input placeholder="Ex: Mecânica" {...field} /></FormControl>
+                                            <Select onValueChange={field.onChange} value={field.value} disabled={loadingEspecialidades || !watchedCentro || !watchedFase}>
+                                                <FormControl>
+                                                    <SelectTrigger>
+                                                        {loadingEspecialidades ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <SelectValue placeholder="Selecione" />}
+                                                    </SelectTrigger>
+                                                </FormControl>
+                                                <SelectContent>
+                                                {especialidades.map(esp => (
+                                                    <SelectItem key={esp} value={esp}>{esp}</SelectItem>
+                                                ))}
+                                                </SelectContent>
+                                            </Select>
                                             <FormMessage />
                                         </FormItem>
                                     )}
@@ -786,6 +808,7 @@ export default function CriarParadaPage() {
                             size="sm"
                             className="mt-2"
                             onClick={() => append({ especialidade: "", capacidade: 1, hh: 8, hh_dia: 8 })}
+                            disabled={!watchedCentro || !watchedFase}
                         >
                             <PlusCircle className="mr-2 h-4 w-4" />
                             Adicionar Equipe

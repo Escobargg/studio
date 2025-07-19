@@ -95,6 +95,34 @@ export const getGruposByCentroEFase = async (centro: string, fase: string): Prom
     }
 }
 
+// Fetches specialities based on a location center and phase
+export const getEspecialidades = async (centro: string, fase: string): Promise<string[]> => {
+    if (!centro || !fase) {
+        return [];
+    }
+    try {
+        const { data, error } = await supabase
+            .from('equipes')
+            .select('especialidade')
+            .eq('centro_de_localizacao', centro)
+            .eq('fase', fase)
+            .throwOnError();
+
+        if (error) {
+            console.error('Error fetching specialities:', error);
+            return [];
+        }
+
+        const result = [...new Set(data?.map(item => item.especialidade).filter(Boolean) as string[])].sort();
+        return result;
+
+    } catch(error) {
+        console.error('Exception when fetching specialities:', error);
+        return [];
+    }
+}
+
+
 // Fetches hierarchy options for StopsFilters
 export const getStopsFilterOptions = async (
   campo: 'centro_de_localizacao' | 'fase' | 'ano'
