@@ -40,8 +40,8 @@ export const getHierarquiaOpcoes = async (
       return [];
     }
 
-    // Get unique, non-null values and sort them
-    const result = [...new Set(data?.map(item => item[campo]).filter(Boolean) as string[])].sort();
+    // Get unique, non-null values and sort them using localeCompare for correct pt-BR sorting
+    const result = [...new Set(data?.map(item => item[campo]).filter(Boolean) as string[])].sort((a, b) => a.localeCompare(b, 'pt-BR'));
     return result;
     
   } catch (error) {
@@ -73,7 +73,7 @@ export const getAtivosByCentro = async (centro: string): Promise<string[]> => {
             return [];
         }
 
-        return ativos_data.map(ativo => ativo.local_de_instalacao).sort();
+        return ativos_data.map(ativo => ativo.local_de_instalacao).sort((a, b) => a.localeCompare(b, 'pt-BR'));
     } catch(error) {
         console.error('Exception when fetching ativos:', error);
         return [];
@@ -98,7 +98,7 @@ export const getGruposByCentroEFase = async (centro: string, fase: string): Prom
             return [];
         }
 
-        return data.map(g => g.nome_grupo).sort();
+        return data.map(g => g.nome_grupo).sort((a, b) => a.localeCompare(b, 'pt-BR'));
     } catch(error) {
         console.error('Exception when fetching asset groups:', error);
         return [];
@@ -127,7 +127,7 @@ export const getEspecialidades = async (centro: string, fase: string): Promise<E
             especialidade: item.especialidade,
             hh: item.hh,
             capacidade: item.capacidade
-        })).sort((a, b) => a.especialidade.localeCompare(b.especialidade));
+        })).sort((a, b) => a.especialidade.localeCompare(b.especialidade, 'pt-BR'));
 
     } catch(error) {
         console.error('Exception when fetching specialities:', error);
@@ -151,7 +151,7 @@ export const getStopsFilterOptions = async (
       const { data, error } = await supabase.from('hierarquia').select(campo).throwOnError();
       if (error) throw error;
       const options = new Set(data.map(item => item[campo]));
-      return Array.from(options).sort();
+      return Array.from(options).sort((a, b) => a.localeCompare(b, 'pt-BR'));
     }
   } catch (error) {
     console.error(`Error fetching filter options for ${campo}:`, error);
