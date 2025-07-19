@@ -16,7 +16,7 @@ import Link from "next/link";
 async function getGruposDeAtivos(filtros: Filtros) {
   let query = supabase
     .from("grupos_de_ativos")
-    .select("*, estrategias_count:estrategias(count)")
+    .select("*, estrategias_count:estrategias!inner(count)")
     .eq('estrategias.ativa', true) 
     .order("created_at", { ascending: false });
 
@@ -33,6 +33,34 @@ async function getGruposDeAtivos(filtros: Filtros) {
   const { data, error } = await query;
 
   if (error) {
+    // If the inner join fails (e.g., no active strategies found for any group), 
+    // it might return an error or empty data depending on configuration.
+    // We fall back to a query without the strategy count filter.
+    if (error.code === 'PGRST204') { // PostgREST code for no rows found
+        let fallbackQuery = supabase
+            .from("grupos_de_ativos")
+            .select("*, estrategias_count:estrategias(count)")
+            .order("created_at", { ascending: false });
+
+        Object.entries(filtros).forEach(([key, value]) => {
+            if (value && key !== 'nome_grupo') {
+                fallbackQuery = fallbackQuery.eq(key, value);
+            }
+        });
+        if (filtros.nome_grupo) {
+            fallbackQuery = fallbackQuery.ilike('nome_grupo', `%${filtros.nome_grupo}%`);
+        }
+        
+        const { data: fallbackData, error: fallbackError } = await fallbackQuery;
+        if(fallbackError) {
+             console.error("Erro ao buscar grupos de ativos (fallback):", fallbackError);
+             return [];
+        }
+        return fallbackData.map(grupo => ({
+            ...grupo,
+            estrategias_count: grupo.estrategias_count[0]?.count ?? 0,
+        }));
+    }
     console.error("Erro ao buscar grupos de ativos:", error);
     return [];
   }

@@ -115,9 +115,8 @@ export default function EstrategiasPage() {
   return (
     <MainLayout>
       <div className="flex-1 p-4 md:p-8 overflow-y-auto bg-muted/20 space-y-6">
-        <div className="max-w-7xl mx-auto space-y-6">
-          <Card>
-             <CardHeader className="flex flex-row items-start justify-between">
+        <Card>
+           <CardHeader className="flex flex-row items-start justify-between">
                 <div className="flex items-center gap-3">
                     <div className="p-2 bg-primary/10 rounded-md">
                          <ShieldCheck className="w-6 h-6 text-primary" />
@@ -184,7 +183,6 @@ export default function EstrategiasPage() {
                 </div>
             </CardContent>
           </Card>
-        </div>
       </div>
     </MainLayout>
   );
