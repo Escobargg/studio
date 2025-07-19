@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
@@ -21,7 +21,7 @@ export type Team = {
 // A estrutura que o react-hook-form vai gerenciar.
 export type SelectedTeam = {
   id: string;
-  especialidade?: string;
+  especialidade: string;
   capacidade: string | number;
   hh: string | number;
   total_hh: string | number;
@@ -72,44 +72,46 @@ export function TeamSelector({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [centroLocalizacao, fase]);
 
-  const updateTeamData = (teams: SelectedTeam[]): SelectedTeam[] => {
-    return teams.map(st => {
-      const teamDetails = availableTeams.find(at => at.id === st.id);
+  const updateTeamData = (team: SelectedTeam, allTeams: Team[]): SelectedTeam => {
+      const teamDetails = allTeams.find(at => at.id === team.id);
       const hh = teamDetails?.hh || 0;
-      const capacidade = parseInt(String(st.capacidade), 10) || 0;
+      const capacidade = parseInt(String(team.capacidade), 10) || 0;
       const total_hh = capacidade * hh;
       
       return {
-        ...st,
+        ...team,
         especialidade: teamDetails?.especialidade || "Desconhecida",
         hh: String(hh),
         total_hh: String(Math.round(total_hh))
       };
-    });
   };
 
-  const handleTeamSelectionChange = useCallback((team: Team, checked: boolean) => {
+  const handleTeamSelectionChange = (team: Team, checked: boolean) => {
     let newSelectedTeams: SelectedTeam[];
     if (checked) {
-      newSelectedTeams = [...selectedTeams, { 
+      const newTeam: SelectedTeam = { 
         id: team.id, 
         especialidade: team.especialidade,
         capacidade: "1", 
         hh: String(team.hh), 
         total_hh: String(team.hh) 
-      }];
+      };
+      newSelectedTeams = [...selectedTeams, newTeam];
     } else {
       newSelectedTeams = selectedTeams.filter((t) => t.id !== team.id);
     }
-    onChange(updateTeamData(newSelectedTeams));
-  }, [selectedTeams, onChange, updateTeamData]);
+    onChange(newSelectedTeams);
+  };
 
-  const handleCapacityChange = useCallback((teamId: string, capacityStr: string) => {
-    const newSelectedTeams = selectedTeams.map(team =>
-      team.id === teamId ? { ...team, capacidade: capacityStr } : team
-    );
-    onChange(updateTeamData(newSelectedTeams));
-  }, [selectedTeams, onChange, updateTeamData]);
+  const handleCapacityChange = (teamId: string, capacityStr: string) => {
+    const newSelectedTeams = selectedTeams.map(team => {
+      if (team.id === teamId) {
+        return updateTeamData({ ...team, capacidade: capacityStr }, availableTeams);
+      }
+      return team;
+    });
+    onChange(newSelectedTeams);
+  };
   
   if (!centroLocalizacao || !fase) {
       return (
@@ -172,20 +174,20 @@ export function TeamSelector({
         <div>
           <Label className="text-base font-medium">Detalhes por Equipe</Label>
           <div className="mt-2 space-y-4">
-            {updateTeamData(selectedTeams).map((displayTeam) => {
-              const teamDetails = availableTeams.find(t => t.id === displayTeam.id);
+            {selectedTeams.map((selectedTeam) => {
+              const teamDetails = availableTeams.find(t => t.id === selectedTeam.id);
               const maxCapacity = teamDetails?.capacidade || 1;
               
               return (
-              <div key={displayTeam.id} className="grid grid-cols-1 md:grid-cols-4 items-center gap-4 p-2 border rounded-md">
-                <Label className="font-semibold">{displayTeam.especialidade}</Label>
+              <div key={selectedTeam.id} className="grid grid-cols-1 md:grid-cols-4 items-center gap-4 p-2 border rounded-md">
+                <Label className="font-semibold">{selectedTeam.especialidade}</Label>
                 <div className="space-y-1">
-                    <Label htmlFor={`capacity-${displayTeam.id}`}>Capacidade</Label>
+                    <Label htmlFor={`capacity-${selectedTeam.id}`}>Capacidade</Label>
                     <Select
-                        value={String(displayTeam.capacidade || 1)}
-                        onValueChange={(val) => handleCapacityChange(displayTeam.id, val)}
+                        value={String(selectedTeam.capacidade || 1)}
+                        onValueChange={(val) => handleCapacityChange(selectedTeam.id, val)}
                     >
-                        <SelectTrigger id={`capacity-${displayTeam.id}`}>
+                        <SelectTrigger id={`capacity-${selectedTeam.id}`}>
                             <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -196,12 +198,12 @@ export function TeamSelector({
                     </Select>
                 </div>
                  <div className="space-y-1">
-                    <Label htmlFor={`hh-${displayTeam.id}`}>HH</Label>
-                    <Input id={`hh-${displayTeam.id}`} disabled value={displayTeam.hh || ''} />
+                    <Label htmlFor={`hh-${selectedTeam.id}`}>HH</Label>
+                    <Input id={`hh-${selectedTeam.id}`} disabled value={selectedTeam.hh || ''} />
                 </div>
                  <div className="space-y-1">
-                    <Label htmlFor={`total-hh-${displayTeam.id}`}>HH/Dia</Label>
-                    <Input id={`total-hh-${displayTeam.id}`} disabled value={displayTeam.total_hh || ''} />
+                    <Label htmlFor={`total-hh-${selectedTeam.id}`}>HH/Dia</Label>
+                    <Input id={`total-hh-${selectedTeam.id}`} disabled value={selectedTeam.total_hh || ''} />
                 </div>
               </div>
               );

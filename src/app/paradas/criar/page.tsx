@@ -42,7 +42,7 @@ import { TeamSelector, type SelectedTeam } from "@/components/team-selector";
 
 const equipeSchema = z.object({
   id: z.string(),
-  especialidade: z.string().optional(),
+  especialidade: z.string(),
   capacidade: z.union([z.string(), z.number()]),
   hh: z.union([z.string(), z.number()]),
   total_hh: z.union([z.string(), z.number()]),
@@ -308,9 +308,9 @@ export default function CriarParadaPage() {
             const recursosData = data.equipes.map(equipe => ({
                 parada_id: paradaId,
                 equipe: equipe.especialidade,
-                capacidade: equipe.capacidade,
-                hh: equipe.hh,
-                hh_dia: equipe.total_hh,
+                capacidade: Number(equipe.capacidade),
+                hh: Number(equipe.hh),
+                hh_dia: Number(equipe.total_hh),
             }));
 
             const { error: recursosError } = await supabase
