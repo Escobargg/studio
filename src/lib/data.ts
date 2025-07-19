@@ -8,6 +8,12 @@ export type Filtros = {
   categoria?: string;
 };
 
+export type Especialidade = {
+  especialidade: string;
+  hh: number;
+  max_capacidade: number;
+}
+
 // Fetches available options for a specific hierarchy level, filtered by previous selections.
 export const getHierarquiaOpcoes = async (
   campo: keyof Omit<Filtros, 'nome_grupo'> | 'diretoria_executiva' | 'diretoria' | 'unidade',
@@ -96,14 +102,14 @@ export const getGruposByCentroEFase = async (centro: string, fase: string): Prom
 }
 
 // Fetches specialities based on a location center and phase
-export const getEspecialidades = async (centro: string, fase: string): Promise<string[]> => {
+export const getEspecialidades = async (centro: string, fase: string): Promise<Especialidade[]> => {
     if (!centro || !fase) {
         return [];
     }
     try {
         const { data, error } = await supabase
             .from('equipes')
-            .select('especialidade')
+            .select('especialidade, hh, max_capacidade')
             .eq('centro_de_localizacao', centro)
             .eq('fase', fase)
             .throwOnError();
@@ -112,9 +118,13 @@ export const getEspecialidades = async (centro: string, fase: string): Promise<s
             console.error('Error fetching specialities:', error);
             return [];
         }
-
-        const result = [...new Set(data?.map(item => item.especialidade).filter(Boolean) as string[])].sort();
-        return result;
+        
+        // Assuming one entry per especialidade for a given centro/fase
+        return data.map(item => ({
+            especialidade: item.especialidade,
+            hh: item.hh,
+            max_capacidade: item.max_capacidade
+        })).sort((a, b) => a.especialidade.localeCompare(b.especialidade));
 
     } catch(error) {
         console.error('Exception when fetching specialities:', error);

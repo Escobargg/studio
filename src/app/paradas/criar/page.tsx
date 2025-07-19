@@ -36,14 +36,14 @@ import { MainLayout } from "@/components/main-layout";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { getHierarquiaOpcoes, getAtivosByCentro, getGruposByCentroEFase, getEspecialidades } from "@/lib/data";
+import { getHierarquiaOpcoes, getAtivosByCentro, getGruposByCentroEFase, getEspecialidades, type Especialidade } from "@/lib/data";
 import { supabase } from "@/lib/supabase";
 
 const equipeSchema = z.object({
   especialidade: z.string().min(1, "Especialidade é obrigatória."),
   capacidade: z.coerce.number().min(1, "Deve ser > 0."),
-  hh: z.coerce.number().min(1, "Deve ser > 0."),
-  hh_dia: z.coerce.number().min(1, "Deve ser > 0."),
+  hh: z.coerce.number().min(0, "HH deve ser preenchido."),
+  hh_dia: z.coerce.number().min(0, "HH/Dia deve ser preenchido."),
 });
 
 
@@ -130,7 +130,7 @@ export default function CriarParadaPage() {
   const [fases, setFases] = useState<string[]>([]);
   const [ativos, setAtivos] = useState<string[]>([]);
   const [gruposDeAtivos, setGruposDeAtivos] = useState<string[]>([]);
-  const [especialidades, setEspecialidades] = useState<string[]>([]);
+  const [especialidades, setEspecialidades] = useState<Especialidade[]>([]);
 
 
   const [loadingCentros, setLoadingCentros] = useState(true);
@@ -161,7 +161,7 @@ export default function CriarParadaPage() {
     },
   });
 
-  const { watch, control, setValue, getValues } = form;
+  const { watch, control, setValue, getValues, trigger } = form;
 
   const { fields, append, remove } = useFieldArray({
     control,
@@ -178,19 +178,39 @@ export default function CriarParadaPage() {
   const watchedCentro = watch("centroLocalizacao");
   const watchedFase = watch("fase");
   const watchedTipoSelecao = watch("tipoSelecao");
+  const watchedEquipes = watch("equipes");
 
-  const equipesValues = watch("equipes");
+  const handleEspecialidadeChange = (index: number, espNome: string) => {
+    const especialidadeData = especialidades.find(e => e.especialidade === espNome);
+    if (especialidadeData) {
+        setValue(`equipes.${index}.hh`, especialidadeData.hh);
+        // Reset capacity and hh_dia when specialty changes
+        setValue(`equipes.${index}.capacidade`, 0);
+        setValue(`equipes.${index}.hh_dia`, 0);
+        // Trigger validation for the capacity field
+        trigger(`equipes.${index}.capacidade`);
+    }
+  };
 
-  useEffect(() => {
-    equipesValues?.forEach((equipe, index) => {
-      if (equipe && typeof equipe.capacidade === 'number' && typeof equipe.hh === 'number') {
-        const newHHDia = equipe.capacidade * equipe.hh;
-        if (equipe.hh_dia !== newHHDia) {
-          setValue(`equipes.${index}.hh_dia`, newHHDia);
-        }
+  const handleCapacidadeChange = (index: number, capacidadeStr: string) => {
+      const capacidade = parseInt(capacidadeStr, 10);
+      const hh = getValues(`equipes.${index}.hh`) || 0;
+      if (!isNaN(capacidade)) {
+          setValue(`equipes.${index}.hh_dia`, capacidade * hh);
       }
-    });
-  }, [equipesValues, setValue]);
+  };
+
+  const getCapacidadeOptions = (especialidadeNome: string | undefined): number[] => {
+      if (!especialidadeNome) return [];
+      const especialidade = especialidades.find(e => e.especialidade === especialidadeNome);
+      if (!especialidade || !especialidade.max_capacidade) return [];
+      return Array.from({ length: especialidade.max_capacidade }, (_, i) => i + 1);
+  };
+  
+  const availableEspecialidades = especialidades.filter(
+    (esp) => !watchedEquipes?.some((equipe) => equipe.especialidade === esp.especialidade)
+  );
+
 
   useEffect(() => {
     async function fetchCentros() {
@@ -236,6 +256,7 @@ export default function CriarParadaPage() {
             setLoadingGrupos(true);
             setLoadingEspecialidades(true);
             setValue("grupoAtivos", "");
+            setValue("equipes", []); // Reset teams when context changes
 
             const [gruposData, especialidadesData] = await Promise.all([
                 getGruposByCentroEFase(watchedCentro, watchedFase),
@@ -739,80 +760,114 @@ export default function CriarParadaPage() {
                 </CardHeader>
                 <CardContent>
                     <div className="space-y-4">
-                        {fields.map((field, index) => (
-                            <div key={field.id} className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end p-4 border rounded-lg relative">
-                                <FormField
-                                    control={control}
-                                    name={`equipes.${index}.especialidade`}
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Especialidade</FormLabel>
-                                            <Select onValueChange={field.onChange} value={field.value} disabled={loadingEspecialidades || !watchedCentro || !watchedFase}>
-                                                <FormControl>
-                                                    <SelectTrigger>
-                                                        {loadingEspecialidades ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <SelectValue placeholder="Selecione" />}
-                                                    </SelectTrigger>
-                                                </FormControl>
-                                                <SelectContent>
-                                                {especialidades.map(esp => (
-                                                    <SelectItem key={esp} value={esp}>{esp}</SelectItem>
-                                                ))}
-                                                </SelectContent>
-                                            </Select>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={control}
-                                    name={`equipes.${index}.capacidade`}
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Capacidade</FormLabel>
-                                            <FormControl><Input type="number" {...field} /></FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={control}
-                                    name={`equipes.${index}.hh`}
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>HH</FormLabel>
-                                            <FormControl><Input type="number" {...field} /></FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={control}
-                                    name={`equipes.${index}.hh_dia`}
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>HH/Dia</FormLabel>
-                                            <FormControl><Input type="number" disabled {...field} /></FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}>
-                                    <Trash2 className="h-4 w-4 text-destructive" />
-                                    <span className="sr-only">Remover Equipe</span>
-                                </Button>
-                            </div>
-                        ))}
+                        {fields.map((field, index) => {
+                             const selectedEspecialidade = watchedEquipes && watchedEquipes[index]?.especialidade;
+                             const capacidadeOptions = getCapacidadeOptions(selectedEspecialidade);
+
+                             return (
+                                <div key={field.id} className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end p-4 border rounded-lg relative">
+                                    <FormField
+                                        control={control}
+                                        name={`equipes.${index}.especialidade`}
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Especialidade</FormLabel>
+                                                <Select
+                                                    onValueChange={(value) => {
+                                                        field.onChange(value);
+                                                        handleEspecialidadeChange(index, value);
+                                                    }}
+                                                    value={field.value}
+                                                    disabled={loadingEspecialidades || !watchedCentro || !watchedFase}
+                                                >
+                                                    <FormControl>
+                                                        <SelectTrigger>
+                                                            {loadingEspecialidades ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <SelectValue placeholder="Selecione" />}
+                                                        </SelectTrigger>
+                                                    </FormControl>
+                                                    <SelectContent>
+                                                        {selectedEspecialidade && (
+                                                            <SelectItem key={selectedEspecialidade} value={selectedEspecialidade}>
+                                                                {selectedEspecialidade}
+                                                            </SelectItem>
+                                                        )}
+                                                        {availableEspecialidades.map(esp => (
+                                                            <SelectItem key={esp.especialidade} value={esp.especialidade}>{esp.especialidade}</SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={control}
+                                        name={`equipes.${index}.capacidade`}
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Capacidade</FormLabel>
+                                                 <Select
+                                                    onValueChange={(value) => {
+                                                        field.onChange(value);
+                                                        handleCapacidadeChange(index, value);
+                                                    }}
+                                                    value={field.value?.toString() ?? ""}
+                                                    disabled={!selectedEspecialidade}
+                                                >
+                                                    <FormControl><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger></FormControl>
+                                                    <SelectContent>
+                                                        {capacidadeOptions.map(cap => (
+                                                            <SelectItem key={cap} value={cap.toString()}>{cap}</SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={control}
+                                        name={`equipes.${index}.hh`}
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>HH</FormLabel>
+                                                <FormControl><Input type="number" {...field} readOnly disabled className="bg-muted/50" /></FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={control}
+                                        name={`equipes.${index}.hh_dia`}
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>HH/Dia</FormLabel>
+                                                <FormControl><Input type="number" {...field} readOnly disabled className="bg-muted/50"/></FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}>
+                                        <Trash2 className="h-4 w-4 text-destructive" />
+                                        <span className="sr-only">Remover Equipe</span>
+                                    </Button>
+                                </div>
+                             );
+                        })}
                          <Button
                             type="button"
                             variant="outline"
                             size="sm"
                             className="mt-2"
-                            onClick={() => append({ especialidade: "", capacidade: 1, hh: 8, hh_dia: 8 })}
-                            disabled={!watchedCentro || !watchedFase}
+                            onClick={() => append({ especialidade: "", capacidade: 0, hh: 0, hh_dia: 0 })}
+                            disabled={!watchedCentro || !watchedFase || loadingEspecialidades || availableEspecialidades.length === 0}
                         >
                             <PlusCircle className="mr-2 h-4 w-4" />
                             Adicionar Equipe
                         </Button>
+                        {availableEspecialidades.length === 0 && watchedCentro && watchedFase && !loadingEspecialidades && (
+                            <p className="text-sm text-muted-foreground mt-2">Todas as especialidades disponíveis já foram adicionadas.</p>
+                        )}
                     </div>
                 </CardContent>
               </Card>
