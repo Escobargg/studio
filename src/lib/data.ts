@@ -262,7 +262,8 @@ export async function getScheduleData(year: number): Promise<ScheduleData[]> {
             grupos_de_ativos (
                 id,
                 nome_grupo,
-                centro_de_localizacao
+                centro_de_localizacao,
+                fase
             )
         `)
         .eq('ativa', true)
@@ -283,7 +284,7 @@ export async function getScheduleData(year: number): Promise<ScheduleData[]> {
         if (!scheduleMap.has(groupKey)) {
             scheduleMap.set(groupKey, {
                 groupName: strategy.grupos_de_ativos.nome_grupo,
-                location: strategy.grupos_de_ativos.centro_de_localizacao,
+                location: `${strategy.grupos_de_ativos.centro_de_localizacao} - ${strategy.grupos_de_ativos.fase}`,
                 items: []
             });
         }
