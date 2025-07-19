@@ -31,7 +31,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { cn } from "@/lib/utils";
+import { cn, normalizeString } from "@/lib/utils";
 import { MainLayout } from "@/components/main-layout";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
@@ -124,22 +124,33 @@ const splitDateTime = (dateTime: string | null | undefined): { date: Date | null
     }
 }
 
-const calculateCompletion = (start: Date | null | undefined, end: Date | null | undefined): number => {
-    if (!start || !end) return 0;
+const calculateCompletion = (values: Partial<StopFormValues>): number => {
     const now = new Date();
-    const startDate = start;
-    const endDate = end;
 
-    if (now < startDate) return 0;
-    if (now > endDate) return 100;
+    const dataFimRealizado = combineDateTime(values.dataFimRealizado, values.horaFimRealizado);
+    if (dataFimRealizado) {
+        return 100;
+    }
 
-    const totalDuration = endDate.getTime() - startDate.getTime();
-    if (totalDuration <= 0) return 100;
+    const dataInicioRealizado = combineDateTime(values.dataInicioRealizado, values.horaInicioRealizado);
+    if (dataInicioRealizado) {
+        const dataFimPlanejada = combineDateTime(values.dataFimPlanejada, values.horaFimPlanejada);
+        if (!dataFimPlanejada) return 0;
 
-    const elapsedDuration = now.getTime() - startDate.getTime();
-    const percentage = Math.min(100, Math.max(0, (elapsedDuration / totalDuration) * 100));
+        if (now > dataFimPlanejada) {
+            return 99;
+        }
+
+        const totalDuration = dataFimPlanejada.getTime() - dataInicioRealizado.getTime();
+        if (totalDuration <= 0) return 99;
+
+        const elapsedDuration = now.getTime() - dataInicioRealizado.getTime();
+        const percentage = Math.min(99, Math.max(0, (elapsedDuration / totalDuration) * 100));
+        
+        return Math.round(percentage);
+    }
     
-    return Math.round(percentage);
+    return 0;
 };
 
 
@@ -176,6 +187,7 @@ export default function EditarParadaPage() {
       "dataInicioRealizado", "horaInicioRealizado", "dataFimRealizado", "horaFimRealizado"
   ]);
 
+  const allWatchedFields = watch();
   const watchedEquipes = watch("equipes");
   const watchedCentro = watch("centroLocalizacao");
   const watchedFase = watch("fase");
@@ -210,7 +222,7 @@ export default function EditarParadaPage() {
   };
   
   const availableEspecialidades = especialidades.filter(
-    (esp) => !watchedEquipes?.some((equipe) => equipe.especialidade === esp.especialidade)
+    (esp) => !watchedEquipes?.some((equipe) => normalizeString(equipe.especialidade) === normalizeString(esp.especialidade))
   );
 
   useEffect(() => {
@@ -288,11 +300,11 @@ export default function EditarParadaPage() {
 
     if (startPlanejado && endPlanejado && endPlanejado > startPlanejado) {
         setDuracaoPlanejada(differenceInHours(endPlanejado, startPlanejado));
-        setCompletion(calculateCompletion(startPlanejado, endPlanejado));
     } else {
         setDuracaoPlanejada(null);
-        setCompletion(0);
     }
+    
+    setCompletion(calculateCompletion(allWatchedFields));
 
     const startRealizado = combineDateTime(dataInicioRealizado, horaInicioRealizado);
     const endRealizado = combineDateTime(dataFimRealizado, horaFimRealizado);
@@ -303,7 +315,7 @@ export default function EditarParadaPage() {
         setDuracaoRealizada(null);
     }
     
-  }, [watchedFields]);
+  }, [watchedFields, allWatchedFields]);
 
   async function onSubmit(data: StopFormValues) {
     setIsSubmitting(true);
@@ -400,11 +412,11 @@ export default function EditarParadaPage() {
 
   return (
     <MainLayout>
-      <div className="flex-1 p-4 md:p-8 overflow-y-auto">
+      <div className="flex-1 p-4 md:p-6 overflow-y-auto">
         <div className="max-w-4xl mx-auto">
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <div className="flex items-center gap-4 mb-6">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <div className="flex items-center gap-4 mb-4">
                 <Button variant="outline" size="icon" asChild>
                   <Link href="/paradas">
                     <ArrowLeft className="h-4 w-4" />
@@ -424,7 +436,7 @@ export default function EditarParadaPage() {
                   <CardTitle>Informações Gerais</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    <FormField
+                  <FormField
                       control={control}
                       name="nomeParada"
                       render={({ field }) => (

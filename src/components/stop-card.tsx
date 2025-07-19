@@ -62,21 +62,36 @@ const formatDate = (date: string | undefined | null) => {
     return format(new Date(date), "dd/MM/yyyy HH:mm");
 }
 
-const calculateCompletion = (start: string, end: string): number => {
-    const now = new Date();
-    const startDate = new Date(start);
-    const endDate = new Date(end);
+const calculateCompletion = (stop: Stop): number => {
+  const now = new Date();
+  
+  // 1. Se tem data fim realizado, progresso é 100%
+  if (stop.data_fim_realizado) {
+    return 100;
+  }
 
-    if (now < startDate) return 0;
-    if (now > endDate) return 100;
+  // 2. Se tem data início realizado (mas não fim)
+  if (stop.data_inicio_realizado) {
+    const inicioRealizado = new Date(stop.data_inicio_realizado);
+    const fimPlanejado = new Date(stop.data_fim_planejada);
 
-    const totalDuration = endDate.getTime() - startDate.getTime();
-    if (totalDuration <= 0) return 100;
+    // 2.1 Se data atual > data fim planejada, progresso é 99% (atrasado)
+    if (now > fimPlanejado) {
+      return 99;
+    }
 
-    const elapsedDuration = now.getTime() - startDate.getTime();
-    const percentage = Math.min(100, Math.max(0, (elapsedDuration / totalDuration) * 100));
+    // 2.2 Cálculo proporcional em andamento
+    const totalDuration = fimPlanejado.getTime() - inicioRealizado.getTime();
+    if (totalDuration <= 0) return 99; // Evita divisão por zero, considera atrasado
+
+    const elapsedDuration = now.getTime() - inicioRealizado.getTime();
+    const percentage = Math.min(99, Math.max(0, (elapsedDuration / totalDuration) * 100)); // Limita a 99%
     
     return Math.round(percentage);
+  }
+
+  // 3. Se não tem início nem fim realizado, progresso é 0%
+  return 0;
 };
 
 
@@ -86,8 +101,8 @@ export function StopCard({ stop, onStopDelete }: StopCardProps) {
 
   useEffect(() => {
     // Calculate completion on the client-side to avoid hydration mismatch
-    setCompletion(calculateCompletion(stop.data_inicio_planejada, stop.data_fim_planejada));
-  }, [stop.data_inicio_planejada, stop.data_fim_planejada]);
+    setCompletion(calculateCompletion(stop));
+  }, [stop]);
 
 
   const equipesStr = stop.recursos.map(r => r.equipe).join(', ');

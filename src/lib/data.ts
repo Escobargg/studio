@@ -2,9 +2,14 @@
 import { supabase } from './supabase';
 import type { ParadasFiltros } from '@/app/paradas/page';
 import type { Stop } from '@/components/stop-card';
+import type { ScheduleData } from '@/components/schedule-view';
+import { startOfYear, endOfYear, add } from 'date-fns';
+import type { CronogramaFiltros } from '@/components/schedule-filters';
 
 export type Filtros = {
   nome_grupo?: string;
+  diretoria_executiva?: string;
+  diretoria?: string;
   centro_de_localizacao?: string;
   fase?: string;
   categoria?: string;
@@ -18,35 +23,32 @@ export type Especialidade = {
 
 // Fetches available options for a specific hierarchy level, filtered by previous selections.
 export const getHierarquiaOpcoes = async (
-  campo: keyof Omit<Filtros, 'nome_grupo'> | 'diretoria_executiva' | 'diretoria' | 'unidade',
-  filtros: Partial<Record<'diretoria_executiva' | 'diretoria' | 'unidade' | 'centro_de_localizacao', string>> = {}
+  campo: keyof Omit<Filtros, 'nome_grupo' | 'categoria'>,
+  filtros: Partial<Record<'diretoria_executiva' | 'diretoria' | 'centro_de_localizacao', string>> = {}
 ): Promise<string[]> => {
   try {
-    let query = supabase.from('hierarquia').select(campo as string, { count: 'exact', head: false });
+    let query = supabase.from('hierarquia').select(campo as string);
 
-    // Apply filters based on previous selections
     for (const [key, value] of Object.entries(filtros)) {
-      if (value) {
-        query = query.eq(key, value);
-      }
+        if (value) {
+            query = query.eq(key, value);
+        }
     }
 
-    const { data, error } = await query.throwOnError();
-
+    const { data, error } = await query;
+    
     if (error) {
-      console.error(`Error fetching options for ${campo}:`, error);
-      return [];
+        console.error(`Error fetching options for ${campo}:`, error);
+        return [];
     }
 
-    // Get unique, non-null values and sort them
-    const result = [...new Set(data?.map(item => item[campo]).filter(Boolean) as string[])].sort();
+    const result = [...new Set(data?.map(item => item[campo]).filter(Boolean) as string[])]
+      .sort((a, b) => a.localeCompare(b, 'pt-BR'));
+      
     return result;
     
   } catch (error) {
     console.error(`Exception when fetching options for ${campo}:`, error);
-    // On error, return an empty array to prevent app crash and log the detailed error.
-    // This often happens if a column name is incorrect.
-    // We will log the error to the server console for debugging.
     console.error(`Detailed error for column '${campo}':`, error instanceof Error ? error.message : 'Unknown error');
     return [];
   }
@@ -71,7 +73,7 @@ export const getAtivosByCentro = async (centro: string): Promise<string[]> => {
             return [];
         }
 
-        return ativos_data.map(ativo => ativo.local_de_instalacao).sort();
+        return [...new Set(ativos_data.map(ativo => ativo.local_de_instalacao))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
     } catch(error) {
         console.error('Exception when fetching ativos:', error);
         return [];
@@ -96,7 +98,7 @@ export const getGruposByCentroEFase = async (centro: string, fase: string): Prom
             return [];
         }
 
-        return data.map(g => g.nome_grupo).sort();
+        return data.map(g => g.nome_grupo).sort((a, b) => a.localeCompare(b, 'pt-BR'));
     } catch(error) {
         console.error('Exception when fetching asset groups:', error);
         return [];
@@ -125,7 +127,7 @@ export const getEspecialidades = async (centro: string, fase: string): Promise<E
             especialidade: item.especialidade,
             hh: item.hh,
             capacidade: item.capacidade
-        })).sort((a, b) => a.especialidade.localeCompare(b.especialidade));
+        })).sort((a, b) => a.especialidade.localeCompare(b.especialidade, 'pt-BR'));
 
     } catch(error) {
         console.error('Exception when fetching specialities:', error);
@@ -149,7 +151,7 @@ export const getStopsFilterOptions = async (
       const { data, error } = await supabase.from('hierarquia').select(campo).throwOnError();
       if (error) throw error;
       const options = new Set(data.map(item => item[campo]));
-      return Array.from(options).sort();
+      return Array.from(options).sort((a, b) => a.localeCompare(b, 'pt-BR'));
     }
   } catch (error) {
     console.error(`Error fetching filter options for ${campo}:`, error);
@@ -228,4 +230,154 @@ export async function getStops(filters: ParadasFiltros): Promise<Stop[]> {
             total_hh: Math.round(total_hh),
         } as Stop;
     });
+}
+
+const getFrequencyInDays = (value: number, unit: string) => {
+    switch (unit) {
+        case 'DIAS': return value;
+        case 'SEMANAS': return value * 7;
+        case 'MESES': return value * 30; // Approximation
+        case 'ANOS': return value * 365;
+        default: return value;
+    }
+};
+
+
+export async function getScheduleData(filters: CronogramaFiltros): Promise<ScheduleData[]> {
+    const year = parseInt(filters.ano || new Date().getFullYear().toString());
+    const yearStart = startOfYear(new Date(year, 0, 1));
+    const yearEnd = endOfYear(new Date(year, 0, 1));
+    
+    const scheduleMap = new Map<string, { groupName: string; location: string; items: any[] }>();
+
+    // 1. Fetch ALL groups first based on filters
+    let groupsQuery = supabase
+        .from('grupos_de_ativos')
+        .select('id, nome_grupo, centro_de_localizacao, fase');
+    
+    if (filters.diretoria_executiva) groupsQuery = groupsQuery.eq('diretoria_executiva', filters.diretoria_executiva);
+    if (filters.diretoria) groupsQuery = groupsQuery.eq('diretoria', filters.diretoria);
+    if (filters.centro_de_localizacao) groupsQuery = groupsQuery.eq('centro_de_localizacao', filters.centro_de_localizacao);
+    if (filters.fase) groupsQuery = groupsQuery.eq('fase', filters.fase);
+    
+    const { data: allGroups, error: groupsError } = await groupsQuery;
+
+    if (groupsError) {
+        console.error("Error fetching all groups for schedule:", groupsError);
+        return [];
+    }
+
+    allGroups.forEach(group => {
+        scheduleMap.set(group.id, {
+            groupName: group.nome_grupo,
+            location: `${group.centro_de_localizacao} - ${group.fase}`,
+            items: []
+        });
+    });
+
+    const groupNameToIdMap = new Map(allGroups.map(g => [g.nome_grupo, g.id]));
+
+    // 2. Fetch strategies for the filtered groups
+    let strategiesQuery = supabase
+        .from('estrategias')
+        .select(`
+            id, nome, prioridade, frequencia_valor, frequencia_unidade,
+            duracao_valor, duracao_unidade, data_inicio, data_fim,
+            grupos_de_ativos:grupo_id ( id, nome_grupo, fase )
+        `)
+        .eq('ativa', true)
+        .lte('data_inicio', yearEnd.toISOString())
+        .or(`data_fim.is.null,data_fim.gte.${yearStart.toISOString()}`);
+    
+    const filteredGroupIds = allGroups.map(g => g.id);
+    if (filteredGroupIds.length > 0) {
+        strategiesQuery = strategiesQuery.in('grupo_id', filteredGroupIds);
+    } else {
+        // No groups match filter, so no strategies will be found
+        return Array.from(scheduleMap.values()).sort((a,b) => a.groupName.localeCompare(b.groupName));
+    }
+
+    const { data: strategiesData, error: strategiesError } = await strategiesQuery;
+    
+    if (strategiesError) {
+        console.error("Error fetching strategies for schedule:", strategiesError);
+    } else {
+        strategiesData.forEach(strategy => {
+            if (!strategy.grupos_de_ativos) return;
+
+            const groupKey = strategy.grupos_de_ativos.id;
+            if (!scheduleMap.has(groupKey)) return;
+            
+            let currentDate = new Date(strategy.data_inicio);
+            const strategyEndDate = strategy.data_fim ? new Date(strategy.data_fim) : yearEnd;
+            const intervalDays = getFrequencyInDays(strategy.frequencia_valor, strategy.frequencia_unidade);
+            const duration = { [strategy.duracao_unidade.toLowerCase()]: strategy.duracao_valor };
+
+            while (currentDate <= strategyEndDate && currentDate <= yearEnd) {
+                if (currentDate >= yearStart) {
+                    scheduleMap.get(groupKey)?.items.push({
+                        id: `${strategy.id}-${currentDate.toISOString()}`,
+                        name: strategy.nome,
+                        startDate: currentDate,
+                        endDate: add(currentDate, duration),
+                        type: 'strategy',
+                        priority: strategy.prioridade,
+                    });
+                }
+                currentDate = add(currentDate, { days: intervalDays });
+            }
+        });
+    }
+
+    // 3. Fetch stops based on filters
+    let stopsQuery = supabase
+        .from('paradas_de_manutencao')
+        .select(`
+            id, nome_parada, data_inicio_planejada, data_fim_planejada, tipo_selecao,
+            grupo_de_ativos, ativo_unico, centro_de_localizacao, fase, status
+        `)
+        .or(`and(data_inicio_planejada.gte.${yearStart.toISOString()},data_inicio_planejada.lte.${yearEnd.toISOString()}),and(data_fim_planejada.gte.${yearStart.toISOString()},data_fim_planejada.lte.${yearEnd.toISOString()}),and(data_inicio_planejada.lte.${yearStart.toISOString()},data_fim_planejada.gte.${yearEnd.toISOString()})`);
+
+    if (filters.diretoria_executiva) stopsQuery = stopsQuery.eq('diretoria_executiva', filters.diretoria_executiva);
+    if (filters.diretoria) stopsQuery = stopsQuery.eq('diretoria', filters.diretoria);
+    if (filters.centro_de_localizacao) stopsQuery = stopsQuery.eq('centro_de_localizacao', filters.centro_de_localizacao);
+    if (filters.fase) stopsQuery = stopsQuery.eq('fase', filters.fase);
+
+    const { data: stopsData, error: stopsError } = await stopsQuery;
+
+    if (stopsError) {
+        console.error("Error fetching stops for schedule:", stopsError);
+    } else {
+        stopsData.forEach(stop => {
+            let groupKey: string | null = null;
+            let groupName: string | null = null;
+            let location: string | null = `${stop.centro_de_localizacao} - ${stop.fase}`;
+            
+            if (stop.tipo_selecao === 'grupo' && stop.grupo_de_ativos) {
+                groupKey = groupNameToIdMap.get(stop.grupo_de_ativos) || null;
+            } else if (stop.tipo_selecao === 'ativo' && stop.ativo_unico) {
+                groupName = stop.ativo_unico;
+                groupKey = `ativo-${groupName}-${location}`;
+            }
+
+            if (!groupKey) return; 
+
+            if (!scheduleMap.has(groupKey) && groupName && location) {
+                 scheduleMap.set(groupKey, { groupName: groupName, location, items: [] });
+            }
+
+            if(scheduleMap.has(groupKey)) {
+                scheduleMap.get(groupKey)?.items.push({
+                    id: stop.id,
+                    name: stop.nome_parada,
+                    startDate: new Date(stop.data_inicio_planejada),
+                    endDate: new Date(stop.data_fim_planejada),
+                    type: 'stop',
+                    status: stop.status || 'Planejada',
+                });
+            }
+        });
+    }
+
+    return Array.from(scheduleMap.values()).sort((a,b) => a.groupName.localeCompare(b.groupName));
 }

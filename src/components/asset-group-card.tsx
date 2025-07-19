@@ -28,13 +28,12 @@ export type Grupo = {
     id: string;
     nome_grupo: string;
     tipo_grupo: string;
-    unidade: string;
     centro_de_localizacao: string;
-    categoria: string;
     fase: string;
-    ativos: string[];
+    ativos: string[]; // This is now populated from a separate call in the dialog
+    ativos_count?: number;
     estrategias_count?: number;
-    created_at?: string; // Manter os outros campos
+    created_at?: string; 
 };
 
 interface AssetGroupCardProps {
@@ -51,21 +50,32 @@ export function AssetGroupCard({ grupo, onGroupUpdate, onGroupDelete }: AssetGro
     const handleUpdate = async (updatedAssets: string[]) => {
         setIsUpdating(true);
         try {
-            const { data, error } = await supabase
-                .from('grupos_de_ativos')
-                .update({ ativos: updatedAssets })
-                .eq('id', grupo.id)
-                .select('*, estrategias_count:estrategias(count)') // Re-fetch count after update
-                .eq('estrategias.ativa', true)
-                .single();
-
-            if (error) throw error;
+            // 1. Delete all existing relations for this group
+            const { error: deleteError } = await supabase
+                .from('grupo_ativos_relacao')
+                .delete()
+                .eq('grupo_id', grupo.id);
             
-            // Constrói o objeto atualizado localmente para evitar outra chamada ao banco
+            if (deleteError) throw deleteError;
+
+            // 2. Insert the new relations if there are any
+            if (updatedAssets.length > 0) {
+                const newRelations = updatedAssets.map(ativo => ({
+                    grupo_id: grupo.id,
+                    ativo: ativo,
+                }));
+
+                const { error: insertError } = await supabase
+                    .from('grupo_ativos_relacao')
+                    .insert(newRelations);
+
+                if (insertError) throw insertError;
+            }
+            
             const updatedGroup: Grupo = {
                 ...grupo,
                 ativos: updatedAssets,
-                estrategias_count: data.estrategias_count[0]?.count ?? 0,
+                ativos_count: updatedAssets.length,
             };
             
             toast.success("Grupo atualizado com sucesso!");
@@ -119,13 +129,6 @@ export function AssetGroupCard({ grupo, onGroupUpdate, onGroupDelete }: AssetGro
 
                     {/* Details Section */}
                     <div className="grid grid-cols-2 sm:grid-cols-3 sm:flex sm:flex-row gap-4 md:gap-6 text-sm w-full md:w-auto">
-                        <div className="flex items-center gap-2 text-muted-foreground" title={grupo.unidade}>
-                            <Building className="w-4 h-4 flex-shrink-0" />
-                            <div className="flex flex-col">
-                                <span className="text-xs">Unidade</span>
-                                <span className="font-medium text-foreground truncate">{grupo.unidade}</span>
-                            </div>
-                        </div>
                         <div className="flex items-center gap-2 text-muted-foreground" title={grupo.centro_de_localizacao}>
                             <MapPin className="w-4 h-4 flex-shrink-0" />
                             <div className="flex flex-col">
@@ -140,18 +143,11 @@ export function AssetGroupCard({ grupo, onGroupUpdate, onGroupDelete }: AssetGro
                                 <span className="font-medium text-foreground truncate">{grupo.fase}</span>
                             </div>
                         </div>
-                        <div className="flex items-center gap-2 text-muted-foreground" title={grupo.categoria}>
-                            <Tag className="w-4 h-4 flex-shrink-0" />
-                            <div className="flex flex-col">
-                                <span className="text-xs">Categoria</span>
-                                <span className="font-medium text-foreground truncate">{grupo.categoria}</span>
-                            </div>
-                        </div>
                         <div className="flex items-center gap-2 text-muted-foreground">
                             <ListChecks className="w-4 h-4 flex-shrink-0" />
                             <div className="flex flex-col">
                                 <span className="text-xs">Ativos</span>
-                                <span className="font-medium text-foreground">{grupo.ativos.length}</span>
+                                <span className="font-medium text-foreground">{grupo.ativos_count ?? 0}</span>
                             </div>
                         </div>
                          <div className="flex items-center gap-2 text-muted-foreground">
