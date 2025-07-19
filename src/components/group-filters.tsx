@@ -64,6 +64,22 @@ export function GroupFilters({ filters, onFilterChange }: GroupFiltersProps) {
   }, [filters.diretoria_executiva]);
 
   useEffect(() => {
+    const diretoria = filters.diretoria;
+    if (diretoria) {
+      const fetchCentros = async () => {
+        setLoading(prev => ({ ...prev, centrosLocalizacao: true }));
+        const centros = await getHierarquiaOpcoes('centro_de_localizacao', { diretoria: diretoria });
+        setOptions(prev => ({ ...prev, centrosLocalizacao: centros }));
+        setLoading(prev => ({ ...prev, centrosLocalizacao: false }));
+      };
+      fetchCentros();
+    } else {
+       setOptions(prev => ({ ...prev, centrosLocalizacao: [], fases: [], categorias: [] }));
+    }
+  }, [filters.diretoria]);
+
+
+  useEffect(() => {
     const centro = filters.centro_de_localizacao;
     if (centro) {
         const fetchDependentOptions = async () => {
@@ -161,7 +177,8 @@ export function GroupFilters({ filters, onFilterChange }: GroupFiltersProps) {
         {renderSelect(
           "centro_de_localizacao",
           "Centro de Localização",
-          options.centrosLocalizacao
+          options.centrosLocalizacao,
+          !filters.diretoria
         )}
         {renderSelect(
             "fase",
