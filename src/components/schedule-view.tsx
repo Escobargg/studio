@@ -1,12 +1,11 @@
 
-"use client";
-
 import React from "react";
 import { getMonth, getISOWeek, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import type { CronogramaFiltros } from "./schedule-filters";
 
 type ScheduleItem = {
     id: string;
@@ -27,6 +26,7 @@ export type ScheduleData = {
 interface ScheduleViewProps {
     data: ScheduleData[];
     year: number;
+    filters: CronogramaFiltros;
 }
 
 const priorityColors: Record<string, string> = {
@@ -38,8 +38,9 @@ const priorityColors: Record<string, string> = {
 const stopColor = "bg-green-500";
 
 
-export function ScheduleView({ data, year }: ScheduleViewProps) {
+export function ScheduleView({ data, year, filters }: ScheduleViewProps) {
     const [view, setView] = React.useState<"semanas" | "meses">("semanas");
+    const { mes: selectedMonth, semana: selectedWeek } = filters;
 
     const timeIntervals = React.useMemo(() => {
         if (view === 'meses') {
@@ -49,7 +50,7 @@ export function ScheduleView({ data, year }: ScheduleViewProps) {
             }));
         }
         // Semanas
-        return Array.from({ length: 52 }, (_, i) => ({ label: (i + 1).toString(), value: i + 1 }));
+        return Array.from({ length: 52 }, (_, i) => ({ label: `S${i + 1}`, value: i + 1 }));
     }, [view, year]);
 
 
@@ -99,7 +100,11 @@ export function ScheduleView({ data, year }: ScheduleViewProps) {
                                     Tipo
                                 </th>
                                 {timeIntervals.map(interval => (
-                                    <th key={interval.value} scope="col" className="px-1 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-10">
+                                    <th key={interval.value} scope="col" className={cn(
+                                        "px-1 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-10",
+                                        (view === 'meses' && selectedMonth === interval.value.toString()) && "bg-blue-100",
+                                        (view === 'semanas' && selectedWeek === interval.value.toString()) && "bg-blue-100"
+                                    )}>
                                         {interval.label}
                                     </th>
                                 ))}
@@ -119,7 +124,11 @@ export function ScheduleView({ data, year }: ScheduleViewProps) {
                                             Estratégias
                                         </td>
                                         {timeIntervals.map(interval => (
-                                            <td key={interval.value} className="px-1 py-1 text-center border-l border-b w-10">
+                                            <td key={interval.value} className={cn(
+                                                "px-1 py-1 text-center border-l border-b w-10",
+                                                (view === 'meses' && selectedMonth === interval.value.toString()) && "bg-blue-50",
+                                                (view === 'semanas' && selectedWeek === interval.value.toString()) && "bg-blue-50"
+                                            )}>
                                                 <div className="h-full w-full flex flex-wrap items-center justify-center gap-1">
                                                     {group.strategies.map(item =>
                                                         getPosition(item, interval.value) && (
@@ -150,7 +159,11 @@ export function ScheduleView({ data, year }: ScheduleViewProps) {
                                             Paradas
                                         </td>
                                         {timeIntervals.map(interval => (
-                                            <td key={interval.value} className="px-1 py-1 text-center border-l border-b w-10">
+                                            <td key={interval.value} className={cn(
+                                                "px-1 py-1 text-center border-l border-b w-10",
+                                                 (view === 'meses' && selectedMonth === interval.value.toString()) && "bg-blue-50",
+                                                 (view === 'semanas' && selectedWeek === interval.value.toString()) && "bg-blue-50"
+                                            )}>
                                                 <div className="h-full w-full flex flex-wrap items-center justify-center gap-1">
                                                     {group.stops.map(item =>
                                                         getPosition(item, interval.value) && (
