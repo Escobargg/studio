@@ -1,3 +1,4 @@
+
 import { supabase } from './supabase';
 
 export type Filtros = {
@@ -67,4 +68,89 @@ export const getAtivosByCentro = async (centro: string): Promise<string[]> => {
         console.error('Exception when fetching ativos:', error);
         return [];
     }
+};
+
+// Fetches asset groups based on a location center and phase
+export const getGruposByCentroEFase = async (centro: string, fase: string): Promise<string[]> => {
+    if (!centro || !fase) {
+        return [];
+    }
+    try {
+        const { data, error } = await supabase
+            .from('grupos_de_ativos')
+            .select('nome_grupo')
+            .eq('centro_de_localizacao', centro)
+            .eq('fase', fase)
+            .throwOnError();
+
+        if (error) {
+            console.error('Error fetching asset groups:', error);
+            return [];
+        }
+
+        return data.map(g => g.nome_grupo).sort();
+    } catch(error) {
+        console.error('Exception when fetching asset groups:', error);
+        return [];
+    }
+}
+
+// Fetches hierarchy options for StopsFilters
+export const getStopsFilterOptions = async (
+  campo: 'centro_de_localizacao' | 'fase' | 'ano'
+): Promise<string[]> => {
+  try {
+    let query;
+    if (campo === 'ano') {
+      // Special handling for year if it's derived from a date column, e.g., 'data_inicio'
+      // This is a placeholder; you'll need to adapt it to your actual schema.
+      // For now, let's assume it's a direct column or use a placeholder.
+      // If 'ano' is a column in 'paradas', you would query that.
+      // This is a simplified example.
+      const { data, error } = await supabase.from('paradas_de_manutencao').select('data_inicio_planejada');
+      if (error) throw error;
+      const years = new Set(data.map(p => new Date(p.data_inicio_planejada).getFullYear().toString()));
+      return Array.from(years).sort((a, b) => b.localeCompare(a));
+    } else {
+      const { data, error } = await supabase.from('hierarquia').select(campo).throwOnError();
+      if (error) throw error;
+      const options = new Set(data.map(item => item[campo]));
+      return Array.from(options).sort();
+    }
+  } catch (error) {
+    console.error(`Error fetching filter options for ${campo}:`, error);
+    return [];
+  }
+};
+
+type TeamFilters = {
+  centro_de_localizacao?: string;
+  fase?: string;
+}
+
+// Fetches available teams (especialidades) from Supabase, with optional filters
+export const getEquipes = async (filters: TeamFilters = {}): Promise<{ id: string; especialidade: string; hh: number; capacidade: number; }[]> => {
+  try {
+    let query = supabase
+      .from('equipes')
+      .select('id, especialidade, hh, capacidade');
+
+    if (filters.centro_de_localizacao) {
+      query = query.eq('centro_de_localizacao', filters.centro_de_localizacao);
+    }
+    if (filters.fase) {
+      query = query.eq('fase', filters.fase);
+    }
+
+    const { data, error } = await query.throwOnError();
+    
+    if (error) {
+      console.error('Error fetching equipes data:', error);
+      return [];
+    }
+    return data || [];
+  } catch(error) {
+    console.error('Exception when fetching equipes:', error);
+    return [];
+  }
 };
