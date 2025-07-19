@@ -1,6 +1,6 @@
 
 import React from "react";
-import { getMonth, getISOWeek, format } from "date-fns";
+import { getMonth, getISOWeek, format, getDaysInMonth, getDate, startOfISOWeek, setISOWeek, addDays, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -39,32 +39,74 @@ const stopColor = "bg-green-500";
 
 
 export function ScheduleView({ data, year, filters }: ScheduleViewProps) {
-    const [view, setView] = React.useState<"semanas" | "meses">("semanas");
     const { mes: selectedMonth, semana: selectedWeek } = filters;
+    
+    // Default view is weeks. If a month or week is selected, this is ignored.
+    const [view, setView] = React.useState<"semanas" | "meses">("semanas");
 
+    // Determine the current view mode based on filters.
+    const currentViewMode = selectedMonth ? 'dias_mes' : selectedWeek ? 'dias_semana' : view;
+    
     const timeIntervals = React.useMemo(() => {
+        // Daily view for a selected month
+        if (selectedMonth) {
+            const monthIndex = parseInt(selectedMonth, 10) - 1;
+            const daysInMonth = getDaysInMonth(new Date(year, monthIndex));
+            return Array.from({ length: daysInMonth }, (_, i) => ({
+                label: (i + 1).toString(),
+                value: i + 1,
+                date: new Date(year, monthIndex, i + 1),
+            }));
+        }
+        // Daily view for a selected week
+        if (selectedWeek) {
+            const weekIndex = parseInt(selectedWeek, 10);
+            // Use a date guaranteed to be in the first week of the year to avoid issues.
+            const dateForWeek = setISOWeek(new Date(year, 0, 4), weekIndex);
+            const startDay = startOfISOWeek(dateForWeek);
+            return Array.from({ length: 7 }, (_, i) => {
+                const day = addDays(startDay, i);
+                return {
+                    label: format(day, "d/EEE", { locale: ptBR }),
+                    value: getDate(day),
+                    date: day,
+                }
+            });
+        }
         if (view === 'meses') {
             return Array.from({ length: 12 }, (_, i) => ({
                 label: format(new Date(year, i, 1), "MMM", { locale: ptBR }).toUpperCase(),
-                value: i + 1
+                value: i + 1,
+                date: new Date(year, i, 1),
             }));
         }
-        // Semanas
-        return Array.from({ length: 52 }, (_, i) => ({ label: `S${i + 1}`, value: i + 1 }));
-    }, [view, year]);
+        // Default to weeks
+        return Array.from({ length: 52 }, (_, i) => ({ 
+            label: `S${i + 1}`, 
+            value: i + 1,
+            // Date is not needed for weekly view but keeps the object shape consistent
+            date: new Date(year, 0, 1) 
+        }));
+    }, [view, year, selectedMonth, selectedWeek]);
 
 
-    const getPosition = (item: ScheduleItem, intervalValue: number): boolean => {
-        if (view === 'meses') {
-            const itemStartMonth = getMonth(item.startDate) + 1;
-            const itemEndMonth = getMonth(item.endDate) + 1;
-            return intervalValue >= itemStartMonth && intervalValue <= itemEndMonth;
+    const isEventInInterval = (item: ScheduleItem, interval: (typeof timeIntervals)[0]): boolean => {
+         if (currentViewMode === 'dias_mes' || currentViewMode === 'dias_semana') {
+            const intervalDate = interval.date;
+            // Check if intervalDate is between item's start and end date (inclusive)
+            return item.startDate <= intervalDate && item.endDate >= intervalDate;
         }
 
-        // Semanas
+        if (view === 'meses') { // Monthly view
+            const itemStartMonth = getMonth(item.startDate) + 1;
+            const itemEndMonth = getMonth(item.endDate) + 1;
+            return interval.value >= itemStartMonth && interval.value <= itemEndMonth;
+        }
+
+        // Weekly view
         const itemStartWeek = getISOWeek(item.startDate);
         const itemEndWeek = getISOWeek(item.endDate);
-        return intervalValue >= itemStartWeek && intervalValue <= itemEndWeek;
+        return interval.value >= itemStartWeek && interval.value <= itemEndWeek;
     };
     
     const processedData = React.useMemo(() => {
@@ -75,19 +117,26 @@ export function ScheduleView({ data, year, filters }: ScheduleViewProps) {
         }));
     }, [data]);
 
+    const getEventsForInterval = (items: ScheduleItem[], interval: (typeof timeIntervals)[0]) => {
+        return items.filter(item => isEventInInterval(item, interval));
+    };
+
+
     return (
         <TooltipProvider>
             <div className="space-y-4">
                 <div className="flex justify-end">
-                    <Select value={view} onValueChange={(v) => setView(v as "semanas" | "meses")}>
-                        <SelectTrigger className="w-[180px]">
-                            <SelectValue placeholder="Visualizar por" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="semanas">Semanas</SelectItem>
-                            <SelectItem value="meses">Meses</SelectItem>
-                        </SelectContent>
-                    </Select>
+                    {currentViewMode !== 'dias_mes' && currentViewMode !== 'dias_semana' && (
+                         <Select value={view} onValueChange={(v) => setView(v as "semanas" | "meses")}>
+                            <SelectTrigger className="w-[180px]">
+                                <SelectValue placeholder="Visualizar por" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="semanas">Semanas</SelectItem>
+                                <SelectItem value="meses">Meses</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    )}
                 </div>
                 <div className="overflow-x-auto border rounded-lg">
                     <table className="w-full border-collapse table-fixed">
@@ -100,10 +149,10 @@ export function ScheduleView({ data, year, filters }: ScheduleViewProps) {
                                     Tipo
                                 </th>
                                 {timeIntervals.map(interval => (
-                                    <th key={interval.value} scope="col" className={cn(
-                                        "px-1 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-10",
-                                        (view === 'meses' && selectedMonth === interval.value.toString()) && "bg-blue-100",
-                                        (view === 'semanas' && selectedWeek === interval.value.toString()) && "bg-blue-100"
+                                    <th key={interval.label} scope="col" className={cn(
+                                        "p-1 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-10",
+                                        (currentViewMode === 'meses' && selectedMonth === interval.value.toString()) && "bg-blue-100",
+                                        (currentViewMode === 'semanas' && selectedWeek === interval.value.toString()) && "bg-blue-100"
                                     )}>
                                         {interval.label}
                                     </th>
@@ -123,20 +172,24 @@ export function ScheduleView({ data, year, filters }: ScheduleViewProps) {
                                         <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500 sticky left-64 bg-white z-10 w-32 border-b">
                                             Estratégias
                                         </td>
-                                        {timeIntervals.map(interval => (
-                                            <td key={interval.value} className={cn(
-                                                "px-1 py-1 text-center border-l border-b w-10",
-                                                (view === 'meses' && selectedMonth === interval.value.toString()) && "bg-blue-50",
-                                                (view === 'semanas' && selectedWeek === interval.value.toString()) && "bg-blue-50"
-                                            )}>
-                                                <div className="h-full w-full flex flex-wrap items-center justify-center gap-1">
-                                                    {group.strategies.map(item =>
-                                                        getPosition(item, interval.value) && (
+                                        {timeIntervals.map(interval => {
+                                            const strategiesInInterval = getEventsForInterval(group.strategies, interval);
+                                            const totalEvents = strategiesInInterval.length;
+                                            const itemHeight = totalEvents > 0 ? `${100 / totalEvents}%` : '100%';
+
+                                            return (
+                                                <td key={interval.label} className={cn(
+                                                    "p-0 text-center border-l border-b w-10 h-10",
+                                                    (currentViewMode === 'meses' && selectedMonth === interval.value.toString()) && "bg-blue-50",
+                                                    (currentViewMode === 'semanas' && selectedWeek === interval.value.toString()) && "bg-blue-50"
+                                                )}>
+                                                    <div className="h-full w-full flex flex-col items-center justify-start">
+                                                        {strategiesInInterval.map(item => (
                                                             <Tooltip key={item.id}>
-                                                                <TooltipTrigger>
+                                                                <TooltipTrigger className="w-full" style={{ height: itemHeight }}>
                                                                     <div
                                                                         className={cn(
-                                                                            "h-3 w-3 rounded-sm",
+                                                                            "h-full w-full",
                                                                             priorityColors[item.priority || 'BAIXA']
                                                                         )}
                                                                     />
@@ -148,30 +201,34 @@ export function ScheduleView({ data, year, filters }: ScheduleViewProps) {
                                                                     {item.priority && <p>Prioridade: {item.priority}</p>}
                                                                 </TooltipContent>
                                                             </Tooltip>
-                                                        )
-                                                    )}
-                                                </div>
-                                            </td>
-                                        ))}
+                                                        ))}
+                                                    </div>
+                                                </td>
+                                            )
+                                        })}
                                     </tr>
                                     <tr className="bg-white">
                                         <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500 sticky left-64 bg-white z-10 w-32 border-b">
                                             Paradas
                                         </td>
-                                        {timeIntervals.map(interval => (
-                                            <td key={interval.value} className={cn(
-                                                "px-1 py-1 text-center border-l border-b w-10",
-                                                 (view === 'meses' && selectedMonth === interval.value.toString()) && "bg-blue-50",
-                                                 (view === 'semanas' && selectedWeek === interval.value.toString()) && "bg-blue-50"
-                                            )}>
-                                                <div className="h-full w-full flex flex-wrap items-center justify-center gap-1">
-                                                    {group.stops.map(item =>
-                                                        getPosition(item, interval.value) && (
+                                        {timeIntervals.map(interval => {
+                                             const stopsInInterval = getEventsForInterval(group.stops, interval);
+                                             const totalEvents = stopsInInterval.length;
+                                             const itemHeight = totalEvents > 0 ? `${100 / totalEvents}%` : '100%';
+
+                                             return (
+                                                <td key={interval.label} className={cn(
+                                                    "p-0 text-center border-l border-b w-10 h-10",
+                                                    (currentViewMode === 'meses' && selectedMonth === interval.value.toString()) && "bg-blue-50",
+                                                    (currentViewMode === 'semanas' && selectedWeek === interval.value.toString()) && "bg-blue-50"
+                                                )}>
+                                                     <div className="h-full w-full flex flex-col items-center justify-start">
+                                                        {stopsInInterval.map(item => (
                                                             <Tooltip key={item.id}>
-                                                                <TooltipTrigger>
+                                                                <TooltipTrigger className="w-full" style={{ height: itemHeight }}>
                                                                     <div
                                                                         className={cn(
-                                                                            "h-3 w-3 rounded-sm",
+                                                                            "h-full w-full",
                                                                             stopColor
                                                                         )}
                                                                     />
@@ -183,11 +240,11 @@ export function ScheduleView({ data, year, filters }: ScheduleViewProps) {
                                                                     {item.status && <p>Status: {item.status}</p>}
                                                                 </TooltipContent>
                                                             </Tooltip>
-                                                        )
-                                                    )}
-                                                </div>
-                                            </td>
-                                        ))}
+                                                        ))}
+                                                    </div>
+                                                </td>
+                                             )
+                                        })}
                                     </tr>
                                 </React.Fragment>
                             ))}
