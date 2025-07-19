@@ -11,20 +11,20 @@ import {
   SidebarMenuItem,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { LayoutGrid, MountainIcon, PlusCircle, Hand } from "lucide-react";
-import { Building2 } from "lucide-react";
+import { LayoutGrid, Hand, Settings } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { SmartPcmLogo } from "./smart-pcm-logo";
 
 export function MainLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   const getPageTitle = () => {
-    if (pathname === "/") {
-      return "Criar Novo Grupo de Ativos";
-    }
     if (pathname === "/grupos") {
       return "Grupos de Ativos";
+    }
+    if (pathname === "/grupos/novo") {
+      return "Criar Novo Grupo";
     }
     if (pathname.includes("/estrategias/nova")) {
        return "Criar Nova Estratégia";
@@ -41,6 +41,9 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
     if (pathname === "/paradas/criar") {
        return "Criar Nova Parada";
     }
+    if (pathname.includes("/paradas") && pathname.includes("/editar")) {
+       return "Editar Parada";
+    }
     return "SmartPCM";
   };
 
@@ -48,25 +51,12 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-screen w-full">
       <Sidebar>
         <SidebarHeader className="p-2">
-          <div className="flex items-center gap-2 p-2">
-            <MountainIcon className="w-6 h-6 text-primary" />
-            <span className="text-lg font-semibold">SmartPCM</span>
+          <div className="flex items-center justify-center p-2 h-[56px]">
+            <SmartPcmLogo />
           </div>
         </SidebarHeader>
         <SidebarContent className="p-2">
           <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                asChild
-                isActive={pathname === "/"}
-                tooltip="Criar Novo Grupo"
-              >
-                <Link href="/">
-                  <PlusCircle />
-                  <span>Criar Grupo</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton
                 asChild
@@ -75,7 +65,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
               >
                 <Link href="/grupos">
                   <LayoutGrid />
-                  <span>Exibir Grupos</span>
+                  <span>Grupos de Ativos</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -86,7 +76,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
                 tooltip="Paradas de Manutenção"
               >
                 <Link href="/paradas">
-                  <Hand />
+                  <Settings />
                   <span>Paradas</span>
                 </Link>
               </SidebarMenuButton>
@@ -104,10 +94,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
           </div>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
-              <Building2 className="w-5 h-5 text-muted-foreground" />
-              <p className="text-sm font-medium text-muted-foreground">
-                Vale S.A.
-              </p>
+              <img src="/logovale.png" alt="Vale Logo" className="h-14" />
             </div>
           </div>
         </header>

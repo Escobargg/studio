@@ -13,6 +13,8 @@ import { getStops } from "@/lib/data";
 import { type DateRange } from "react-day-picker";
 
 export type ParadasFiltros = {
+  diretoria_executiva?: string;
+  diretoria?: string;
   centro_de_localizacao?: string;
   fase?: string;
   dateRange?: DateRange;
@@ -38,9 +40,15 @@ export default function ParadasPage() {
     setFilters(newFilters);
   }, []);
 
+  const handleStopDelete = (deletedStopId: string) => {
+    setStops(currentStops =>
+      currentStops.filter(s => s.id !== deletedStopId)
+    );
+  };
+
   return (
     <MainLayout>
-      <div className="flex-1 p-4 md:p-8 overflow-y-auto bg-muted/20 space-y-6">
+      <div className="flex-1 p-4 md:p-6 overflow-y-auto bg-muted/20 space-y-4">
         <Card>
            <CardHeader className="flex flex-row items-start justify-between">
                 <div className="flex items-center gap-3">
@@ -73,9 +81,21 @@ export default function ParadasPage() {
                     <h2 className="mt-6 text-2xl font-semibold">Buscando Paradas...</h2>
                     <p className="mt-2 text-muted-foreground">Aguarde um momento.</p>
                 </div>
-             ) : stops.map((stop) => (
-                <StopCard key={stop.id} stop={stop} />
-             ))}
+             ) : stops.length > 0 ? (
+                 stops.map((stop) => (
+                    <StopCard key={stop.id} stop={stop} onStopDelete={handleStopDelete} />
+                 ))
+             ) : (
+                <div className="flex flex-col items-center justify-center text-center py-20">
+                    <Settings className="w-16 h-16 text-muted-foreground" />
+                    <h2 className="mt-6 text-2xl font-semibold">
+                        Nenhuma Parada Encontrada
+                    </h2>
+                    <p className="mt-2 text-muted-foreground">
+                        Ajuste os filtros ou crie uma nova parada para vê-la listada aqui.
+                    </p>
+                </div>
+             )}
         </div>
       </div>
     </MainLayout>
