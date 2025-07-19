@@ -2,10 +2,10 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import { useForm, useFieldArray } from "react-hook-form";
 import * as z from "zod";
 import { useState, useEffect } from "react";
-import { ArrowLeft, CalendarIcon, Loader2 } from "lucide-react";
+import { ArrowLeft, CalendarIcon, Loader2, PlusCircle, Trash2 } from "lucide-react";
 import { format, differenceInHours, set } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -38,14 +38,12 @@ import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { getHierarquiaOpcoes, getAtivosByCentro, getGruposByCentroEFase } from "@/lib/data";
 import { supabase } from "@/lib/supabase";
-import { TeamSelector, type SelectedTeam } from "@/components/team-selector";
 
 const equipeSchema = z.object({
-  id: z.string().optional(),
-  especialidade: z.string().optional(),
-  capacidade: z.number().optional(),
-  hh: z.number().optional(),
-  hh_dia: z.number().optional(),
+  especialidade: z.string().min(1, "Especialidade é obrigatória."),
+  capacidade: z.coerce.number().min(1, "Deve ser > 0."),
+  hh: z.coerce.number().min(1, "Deve ser > 0."),
+  hh_dia: z.coerce.number().min(1, "Deve ser > 0."),
 });
 
 
@@ -73,7 +71,7 @@ const stopFormSchema = z.object({
         message: "Formato de hora inválido.",
     }),
   descricao: z.string().optional(),
-  equipes: z.array(equipeSchema).optional().default([]),
+  equipes: z.array(equipeSchema).optional(),
 }).refine(data => {
     if (data.dataInicioPlanejada && data.horaInicioPlanejada && data.dataFimPlanejada && data.horaFimPlanejada) {
       const start = set(data.dataInicioPlanejada, { hours: parseInt(data.horaInicioPlanejada.split(':')[0]), minutes: parseInt(data.horaInicioPlanejada.split(':')[1]) });
@@ -160,7 +158,12 @@ export default function CriarParadaPage() {
     },
   });
 
-  const { watch, control, setValue, getValues, formState: { errors } } = form;
+  const { watch, control, setValue, getValues } = form;
+
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: "equipes",
+  });
 
   const [duracaoPlanejada, setDuracaoPlanejada] = useState<number | null>(null);
   const [duracaoRealizada, setDuracaoRealizada] = useState<number | null>(null);
@@ -172,6 +175,19 @@ export default function CriarParadaPage() {
   const watchedCentro = watch("centroLocalizacao");
   const watchedFase = watch("fase");
   const watchedTipoSelecao = watch("tipoSelecao");
+
+  const equipesValues = watch("equipes");
+
+  useEffect(() => {
+    equipesValues?.forEach((equipe, index) => {
+      if (equipe && typeof equipe.capacidade === 'number' && typeof equipe.hh === 'number') {
+        const newHHDia = equipe.capacidade * equipe.hh;
+        if (equipe.hh_dia !== newHHDia) {
+          setValue(`equipes.${index}.hh_dia`, newHHDia);
+        }
+      }
+    });
+  }, [equipesValues, setValue]);
 
   useEffect(() => {
     async function fetchCentros() {
@@ -191,7 +207,6 @@ export default function CriarParadaPage() {
         setValue("fase", ""); 
         setValue("grupoAtivos", "");
         setValue("ativo", "");
-        setValue("equipes", []);
 
         const [fasesData, ativosData] = await Promise.all([
           getHierarquiaOpcoes("fase", { centro_de_localizacao: watchedCentro }),
@@ -206,7 +221,6 @@ export default function CriarParadaPage() {
         setFases([]);
         setAtivos([]);
         setGruposDeAtivos([]);
-        setValue("equipes", []);
       }
     };
     fetchDataForCentro();
@@ -217,7 +231,6 @@ export default function CriarParadaPage() {
         if (watchedCentro && watchedFase) {
             setLoadingGrupos(true);
             setValue("grupoAtivos", "");
-            setValue("equipes", []);
 
             const gruposData = await getGruposByCentroEFase(watchedCentro, watchedFase);
             
@@ -225,7 +238,6 @@ export default function CriarParadaPage() {
             setLoadingGrupos(false);
         } else {
             setGruposDeAtivos([]);
-            setValue("equipes", []);
         }
     };
     fetchDependentData();
@@ -712,21 +724,73 @@ export default function CriarParadaPage() {
                <Card>
                 <CardHeader>
                     <CardTitle>Recursos (Opcional)</CardTitle>
-                    <CardDescription>Selecione as equipes e defina a capacidade para esta parada.</CardDescription>
+                    <CardDescription>Adicione as equipes necessárias para esta parada.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <FormField
-                      control={control}
-                      name="equipes"
-                      render={({ field }) => (
-                        <TeamSelector
-                          value={field.value as SelectedTeam[]}
-                          onChange={field.onChange}
-                          centroLocalizacao={watchedCentro}
-                          fase={watchedFase}
-                        />
-                      )}
-                    />
+                    <div className="space-y-4">
+                        {fields.map((field, index) => (
+                            <div key={field.id} className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end p-4 border rounded-lg relative">
+                                <FormField
+                                    control={control}
+                                    name={`equipes.${index}.especialidade`}
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Especialidade</FormLabel>
+                                            <FormControl><Input placeholder="Ex: Mecânica" {...field} /></FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={control}
+                                    name={`equipes.${index}.capacidade`}
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Capacidade</FormLabel>
+                                            <FormControl><Input type="number" {...field} /></FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={control}
+                                    name={`equipes.${index}.hh`}
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>HH</FormLabel>
+                                            <FormControl><Input type="number" {...field} /></FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={control}
+                                    name={`equipes.${index}.hh_dia`}
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>HH/Dia</FormLabel>
+                                            <FormControl><Input type="number" disabled {...field} /></FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}>
+                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                    <span className="sr-only">Remover Equipe</span>
+                                </Button>
+                            </div>
+                        ))}
+                         <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="mt-2"
+                            onClick={() => append({ especialidade: "", capacidade: 1, hh: 8, hh_dia: 8 })}
+                        >
+                            <PlusCircle className="mr-2 h-4 w-4" />
+                            Adicionar Equipe
+                        </Button>
+                    </div>
                 </CardContent>
               </Card>
 

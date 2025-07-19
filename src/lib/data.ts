@@ -122,35 +122,3 @@ export const getStopsFilterOptions = async (
     return [];
   }
 };
-
-type TeamFilters = {
-  centro_de_localizacao?: string;
-  fase?: string;
-}
-
-// Fetches available teams (especialidades) from Supabase, with optional filters
-export const getEquipes = async (filters: TeamFilters = {}): Promise<{ id: string; especialidade: string; hh: number; capacidade: number; }[]> => {
-  try {
-    let query = supabase
-      .from('equipes')
-      .select('id, especialidade, hh, capacidade');
-
-    if (filters.centro_de_localizacao) {
-      query = query.eq('centro_de_localizacao', filters.centro_de_localizacao);
-    }
-    if (filters.fase) {
-      query = query.eq('fase', filters.fase);
-    }
-
-    const { data, error } = await query.throwOnError();
-    
-    if (error) {
-      console.error('Error fetching equipes data:', error);
-      return [];
-    }
-    return data || [];
-  } catch(error) {
-    console.error('Exception when fetching equipes:', error);
-    return [];
-  }
-};
