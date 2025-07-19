@@ -11,7 +11,7 @@ import {
   SidebarMenuItem,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { LayoutGrid, Hand } from "lucide-react";
+import { LayoutGrid, Hand, Settings } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { SmartPcmLogo } from "./smart-pcm-logo";
@@ -76,7 +76,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
                 tooltip="Paradas de Manutenção"
               >
                 <Link href="/paradas">
-                  <Hand />
+                  <Settings />
                   <span>Paradas</span>
                 </Link>
               </SidebarMenuButton>
@@ -94,7 +94,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
           </div>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
-              <img src="/logovale.png" alt="Vale Logo" className="h-6" />
+              <img src="/logovale.png" alt="Vale Logo" className="h-10" />
             </div>
           </div>
         </header>
