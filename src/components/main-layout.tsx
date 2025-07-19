@@ -11,7 +11,7 @@ import {
   SidebarMenuItem,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { LayoutGrid, Hand, Settings } from "lucide-react";
+import { LayoutGrid, Hand, Settings, CalendarRange } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { SmartPcmLogo } from "./smart-pcm-logo";
@@ -43,6 +43,9 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
     }
     if (pathname.includes("/paradas") && pathname.includes("/editar")) {
        return "Editar Parada";
+    }
+     if (pathname.startsWith("/cronograma")) {
+      return "Cronograma";
     }
     return "SmartPCM";
   };
@@ -78,6 +81,18 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
                 <Link href="/paradas">
                   <Settings />
                   <span>Paradas</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+             <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                isActive={pathname.startsWith("/cronograma")}
+                tooltip="Cronograma"
+              >
+                <Link href="/cronograma">
+                  <CalendarRange />
+                  <span>Cronograma</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>

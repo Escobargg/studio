@@ -60,7 +60,7 @@ type StrategyFormValues = z.infer<typeof strategyFormSchema>;
 async function getGroupDetails(groupId: string): Promise<Grupo | null> {
   const { data, error } = await supabase
     .from("grupos_de_ativos")
-    .select("nome_grupo, unidade, centro_de_localizacao")
+    .select("nome_grupo, centro_de_localizacao")
     .eq("id", groupId)
     .single();
 
