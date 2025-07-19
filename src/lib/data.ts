@@ -2,6 +2,8 @@
 import { supabase } from './supabase';
 import type { ParadasFiltros } from '@/app/paradas/page';
 import type { Stop } from '@/components/stop-card';
+import type { ScheduleData } from '@/components/schedule-view';
+import { startOfYear, endOfYear, add, interval } from 'date-fns';
 
 export type Filtros = {
   nome_grupo?: string;
@@ -227,4 +229,128 @@ export async function getStops(filters: ParadasFiltros): Promise<Stop[]> {
             total_hh: Math.round(total_hh),
         } as Stop;
     });
+}
+
+const getFrequencyInDays = (value: number, unit: string) => {
+    switch (unit) {
+        case 'DIAS': return value;
+        case 'SEMANAS': return value * 7;
+        case 'MESES': return value * 30; // Approximation
+        case 'ANOS': return value * 365;
+        default: return value;
+    }
+};
+
+
+export async function getScheduleData(year: number): Promise<ScheduleData[]> {
+    const yearStart = startOfYear(new Date(year, 0, 1));
+    const yearEnd = endOfYear(new Date(year, 0, 1));
+
+    // Fetch strategies and expand them into occurrences
+    const { data: strategiesData, error: strategiesError } = await supabase
+        .from('estrategias')
+        .select(`
+            id,
+            nome,
+            prioridade,
+            frequencia_valor,
+            frequencia_unidade,
+            duracao_valor,
+            duracao_unidade,
+            data_inicio,
+            data_fim,
+            grupos_de_ativos (
+                id,
+                nome_grupo,
+                centro_de_localizacao
+            )
+        `)
+        .eq('ativa', true)
+        .lte('data_inicio', yearEnd.toISOString())
+        .or(`data_fim.is.null,data_fim.gte.${yearStart.toISOString()}`);
+    
+    if (strategiesError) {
+        console.error("Error fetching strategies for schedule:", strategiesError);
+        return [];
+    }
+
+    const scheduleMap = new Map<string, { groupName: string; location: string; items: any[] }>();
+
+    strategiesData.forEach(strategy => {
+        if (!strategy.grupos_de_ativos) return;
+
+        const groupKey = strategy.grupos_de_ativos.id;
+        if (!scheduleMap.has(groupKey)) {
+            scheduleMap.set(groupKey, {
+                groupName: strategy.grupos_de_ativos.nome_grupo,
+                location: strategy.grupos_de_ativos.centro_de_localizacao,
+                items: []
+            });
+        }
+        
+        // Calculate occurrences for the given year
+        let currentDate = new Date(strategy.data_inicio);
+        const strategyEndDate = strategy.data_fim ? new Date(strategy.data_fim) : yearEnd;
+        const intervalDays = getFrequencyInDays(strategy.frequencia_valor, strategy.frequencia_unidade);
+        const duration = { [strategy.duracao_unidade.toLowerCase()]: strategy.duracao_valor };
+
+
+        while (currentDate <= strategyEndDate && currentDate <= yearEnd) {
+            if (currentDate >= yearStart) {
+                scheduleMap.get(groupKey)?.items.push({
+                    id: `${strategy.id}-${currentDate.toISOString()}`,
+                    name: strategy.nome,
+                    startDate: currentDate,
+                    endDate: add(currentDate, duration),
+                    type: 'strategy',
+                    priority: strategy.prioridade,
+                });
+            }
+             currentDate = add(currentDate, { days: intervalDays });
+        }
+    });
+
+    // Fetch stops for the year
+     const { data: stopsData, error: stopsError } = await supabase
+        .from('paradas_de_manutencao')
+        .select(`
+            id,
+            nome_parada,
+            data_inicio_planejada,
+            data_fim_planejada,
+            tipo_selecao,
+            grupo_de_ativos,
+            ativo_unico,
+            centro_de_localizacao,
+            fase
+        `)
+        .gte('data_inicio_planejada', yearStart.toISOString())
+        .lte('data_inicio_planejada', yearEnd.toISOString());
+
+    if (stopsError) {
+        console.error("Error fetching stops for schedule:", stopsError);
+        // Continue with just strategies if stops fail
+    } else {
+        stopsData.forEach(stop => {
+            const groupName = stop.tipo_selecao === 'grupo' ? stop.grupo_de_ativos : stop.ativo_unico;
+            const location = `${stop.centro_de_localizacao} - ${stop.fase}`;
+            const groupKey = `${groupName}-${location}`; // Create a synthetic key
+
+            if (!scheduleMap.has(groupKey)) {
+                 scheduleMap.set(groupKey, { groupName: groupName!, location: location, items: [] });
+            }
+
+            scheduleMap.get(groupKey)?.items.push({
+                id: stop.id,
+                name: stop.nome_parada,
+                startDate: new Date(stop.data_inicio_planejada),
+                endDate: new Date(stop.data_fim_planejada),
+                type: 'stop',
+                status: 'Planejada',
+            });
+        });
+    }
+
+
+    return Array.from(scheduleMap.values());
 }
