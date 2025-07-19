@@ -43,7 +43,7 @@ import { TeamSelector, type SelectedTeam } from "@/components/team-selector";
 const equipeSchema = z.object({
   id: z.string(),
   especialidade: z.string(),
-  capacidade: z.number().optional(),
+  capacidade: z.number().min(1, "Capacidade deve ser no mínimo 1"),
   hh: z.number().optional(),
   total_hh: z.number().optional(),
 });
@@ -281,7 +281,7 @@ export default function CriarParadaPage() {
 
         const { error } = await supabase
             .from('paradas_de_manutencao')
-            .insert([dataToInsert]) // Enviar como um array de objetos
+            .insert([dataToInsert])
             .throwOnError();
 
         toast({
@@ -723,5 +723,3 @@ export default function CriarParadaPage() {
     </MainLayout>
   );
 }
-
-    
