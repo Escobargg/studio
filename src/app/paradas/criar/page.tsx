@@ -42,7 +42,7 @@ import { TeamSelector, type SelectedTeam } from "@/components/team-selector";
 
 const equipeSchema = z.object({
   id: z.string(),
-  especialidade: z.string(),
+  especialidade: z.string().min(1, "Especialidade é obrigatória."),
   capacidade: z.union([z.string(), z.number()]),
   hh: z.union([z.string(), z.number()]),
   total_hh: z.union([z.string(), z.number()]),
