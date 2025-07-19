@@ -245,6 +245,14 @@ const getFrequencyInDays = (value: number, unit: string) => {
 export async function getScheduleData(year: number): Promise<ScheduleData[]> {
     const yearStart = startOfYear(new Date(year, 0, 1));
     const yearEnd = endOfYear(new Date(year, 0, 1));
+    
+    // Create a map of group names to their IDs for easier lookup
+    const { data: allGroups, error: groupsError } = await supabase.from('grupos_de_ativos').select('id, nome_grupo');
+    if (groupsError) {
+        console.error("Error fetching groups for mapping:", groupsError);
+        return [];
+    }
+    const groupNameToIdMap = new Map(allGroups.map(g => [g.nome_grupo, g.id]));
 
     // Fetch strategies and expand them into occurrences
     const { data: strategiesData, error: strategiesError } = await supabase
@@ -320,7 +328,7 @@ export async function getScheduleData(year: number): Promise<ScheduleData[]> {
             data_inicio_planejada,
             data_fim_planejada,
             tipo_selecao,
-            grupo_de_ativos:grupos_de_ativos(id),
+            grupo_de_ativos,
             ativo_unico,
             centro_de_localizacao,
             fase
@@ -333,27 +341,23 @@ export async function getScheduleData(year: number): Promise<ScheduleData[]> {
         // Continue with just strategies if stops fail
     } else {
         stopsData.forEach(stop => {
-            const isGroupType = stop.tipo_selecao === 'grupo';
-            const groupData = stop.grupo_de_ativos as unknown as {id: string} | null; // Type assertion
-
             let groupKey: string | null = null;
             let groupName: string | null = null;
             
-            if (isGroupType && groupData) {
-                groupKey = groupData.id;
-                // We don't have the group name here, it will be picked up if a strategy exists
-            } else if (!isGroupType && stop.ativo_unico) {
-                // For 'ativo' type, create a unique key based on name and location
+            if (stop.tipo_selecao === 'grupo' && stop.grupo_de_ativos) {
+                groupKey = groupNameToIdMap.get(stop.grupo_de_ativos) || null;
+                groupName = stop.grupo_de_ativos;
+            } else if (stop.tipo_selecao === 'ativo' && stop.ativo_unico) {
                 groupName = stop.ativo_unico;
                 groupKey = `${groupName}-${stop.centro_de_localizacao}-${stop.fase}`;
             }
 
-            if (!groupKey) return; // Skip if no key can be determined
+            if (!groupKey) return; 
             
             const location = `${stop.centro_de_localizacao} - ${stop.fase}`;
 
             if (!scheduleMap.has(groupKey)) {
-                 scheduleMap.set(groupKey, { groupName: groupName || "Grupo Desconhecido", location: location, items: [] });
+                 scheduleMap.set(groupKey, { groupName: groupName || "Grupo Desconhecido", location, items: [] });
             }
 
             scheduleMap.get(groupKey)?.items.push({
