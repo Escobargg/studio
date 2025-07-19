@@ -6,65 +6,43 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { PlusCircle, Settings, Loader2 } from "lucide-react";
 import Link from "next/link";
-import { StopCard, StopCardProps } from "@/components/stop-card";
+import { StopCard, type Stop } from "@/components/stop-card";
 import { StopsFilters } from "@/components/stops-filters";
-import { useState, useTransition, useCallback } from "react";
+import { useState, useTransition, useCallback, useEffect } from "react";
+import { supabase } from "@/lib/supabase";
 
-// Mock data based on the image provided
-const mockStops: StopCardProps[] = [
-  {
-    id: "1",
-    title: "Parada Britadores Carajás 1",
-    center: "2001 - Mina Carajás",
-    phase: "MINA",
-    group: "Britadores Carajás",
-    plannedDate: "09/01/2025 - 17/01/2025",
-    actualDate: "09/01/2025 - 17/01/2025",
-    durationHours: 192,
-    description: "Manutenção programada do grupo Britadores Carajás",
-    completion: 0,
-  },
-  {
-    id: "2",
-    title: "Parada Fornos Alto Forno Vitória 3",
-    center: "3050 - Usina Vitória",
-    phase: "USINA",
-    group: "Fornos Alto Forno Vitória",
-    plannedDate: "04/01/2025 - 12/01/2025",
-    actualDate: "04/01/2025 - 12/01/2025",
-    durationHours: 192,
-    description: "Manutenção programada do grupo Fornos Alto Forno Vitória",
-    completion: 0,
-  },
-  {
-    id: "3",
-    title: "Parada Equipamentos Mariana Usina 4",
-    center: "6002 - Mariana",
-    phase: "USINA",
-    group: "Equipamentos Mariana Usina",
-    plannedDate: "27/01/2025 - 29/01/2025",
-    actualDate: "27/01/2025 - 29/01/2025",
-    durationHours: 48,
-    description: "Manutenção programada do grupo Equipamentos Mariana Usina",
-    completion: 0,
-  },
-];
+async function getStops(): Promise<Stop[]> {
+    const { data, error } = await supabase
+        .from('paradas_de_manutencao')
+        .select('*')
+        .order('data_inicio_planejada', { ascending: true });
 
+    if (error) {
+        console.error("Error fetching stops:", error);
+        return [];
+    }
+    return data;
+}
 
 export default function ParadasPage() {
-  const [stops, setStops] = useState<StopCardProps[]>(mockStops);
-  const [isPending, startTransition] = useTransition();
+  const [stops, setStops] = useState<Stop[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchStops = async () => {
+        setIsLoading(true);
+        const data = await getStops();
+        setStops(data);
+        setIsLoading(false);
+    };
+    fetchStops();
+  }, [])
+
 
   const handleFilterChange = useCallback((filters: any) => {
     // Placeholder for filter logic
-    startTransition(() => {
-        console.log("Applying filters:", filters);
-        // In a real app, you would fetch data from the server here based on filters
-        // For now, we'll just simulate a loading state
-        setTimeout(() => {
-            setStops(mockStops);
-        }, 500);
-    });
+    console.log("Applying filters:", filters);
+    // In a real app, you would fetch data from the server here based on filters
   }, []);
 
   return (
@@ -96,17 +74,19 @@ export default function ParadasPage() {
         </Card>
         
         <div className="space-y-4">
-             {isPending ? (
+             {isLoading ? (
                  <div className="flex flex-col items-center justify-center h-full text-center py-20">
                     <Loader2 className="w-16 h-16 text-primary animate-spin" />
                     <h2 className="mt-6 text-2xl font-semibold">Buscando Paradas...</h2>
                     <p className="mt-2 text-muted-foreground">Aguarde um momento.</p>
                 </div>
              ) : stops.map((stop) => (
-                <StopCard key={stop.id} {...stop} />
+                <StopCard key={stop.id} stop={stop} />
              ))}
         </div>
       </div>
     </MainLayout>
   );
 }
+
+    

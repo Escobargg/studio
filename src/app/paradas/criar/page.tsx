@@ -38,6 +38,15 @@ import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { getHierarquiaOpcoes, getAtivosByCentro, getGruposByCentroEFase } from "@/lib/data";
 import { supabase } from "@/lib/supabase";
+import { TeamSelector, type SelectedTeam } from "@/components/team-selector";
+
+const equipeSchema = z.object({
+  id: z.string(),
+  especialidade: z.string(),
+  capacidade: z.number().optional(),
+  hh: z.number().optional(),
+  total_hh: z.number().optional(),
+});
 
 
 const stopFormSchema = z.object({
@@ -56,6 +65,7 @@ const stopFormSchema = z.object({
   dataFimRealizado: z.date().optional().nullable(),
   horaFimRealizado: z.string().optional().nullable(),
   descricao: z.string().optional(),
+  equipes: z.array(equipeSchema).optional(),
 }).refine(data => {
     if (data.dataInicioPlanejada && data.horaInicioPlanejada && data.dataFimPlanejada && data.horaFimPlanejada) {
       const start = set(data.dataInicioPlanejada, { hours: parseInt(data.horaInicioPlanejada.split(':')[0]), minutes: parseInt(data.horaInicioPlanejada.split(':')[1]) });
@@ -136,6 +146,7 @@ export default function CriarParadaPage() {
       dataFimRealizado: null,
       horaFimRealizado: "",
       descricao: "",
+      equipes: [],
     },
   });
 
@@ -262,6 +273,7 @@ export default function CriarParadaPage() {
       duracao_realizada_horas: duracaoRealizada,
       descricao: data.descricao,
       status: 'PLANEJADA',
+      equipes_selecionadas: data.equipes,
     };
 
     try {
@@ -638,6 +650,27 @@ export default function CriarParadaPage() {
                     </FormItem>
                 </CardContent>
               </Card>
+              
+               <Card>
+                <CardHeader>
+                    <CardTitle>Recursos (Opcional)</CardTitle>
+                    <CardDescription>Selecione as equipes e defina a capacidade para esta parada.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <FormField
+                      control={control}
+                      name="equipes"
+                      render={({ field }) => (
+                        <TeamSelector
+                          value={field.value || []}
+                          onChange={field.onChange}
+                          duracaoHoras={duracaoPlanejada ?? 0}
+                        />
+                      )}
+                    />
+                     <FormMessage>{errors.equipes?.message}</FormMessage>
+                </CardContent>
+              </Card>
 
               <Card>
                 <CardHeader>
@@ -681,3 +714,5 @@ export default function CriarParadaPage() {
     </MainLayout>
   );
 }
+
+    

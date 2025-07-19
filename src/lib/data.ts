@@ -1,3 +1,4 @@
+
 import { supabase } from './supabase';
 
 export type Filtros = {
@@ -121,3 +122,24 @@ export const getStopsFilterOptions = async (
     return [];
   }
 };
+
+// Fetches available teams (especialidades) from Supabase
+export const getEquipes = async (): Promise<{ id: string; especialidade: string; hh: number }[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('equipes')
+      .select('id, especialidade, hh')
+      .throwOnError();
+    
+    if (error) {
+      console.error('Error fetching equipes data:', error);
+      return [];
+    }
+    return data;
+  } catch(error) {
+    console.error('Exception when fetching equipes:', error);
+    return [];
+  }
+};
+
+    
