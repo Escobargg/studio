@@ -41,7 +41,7 @@ import { supabase } from "@/lib/supabase";
 
 const equipeSchema = z.object({
   especialidade: z.string().min(1, "Especialidade é obrigatória."),
-  capacidade: z.coerce.number().min(1, "Deve ser > 0."),
+  capacidade: z.coerce.number().min(1, "Deve ser > 0.").default(1),
   hh: z.coerce.number().min(0, "HH deve ser preenchido."),
   hh_dia: z.coerce.number().min(0, "HH/Dia deve ser preenchido."),
 });
@@ -51,6 +51,8 @@ const horaRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
 const stopFormSchema = z.object({
   nomeParada: z.string().min(1, "O nome da parada é obrigatório."),
+  diretoria_executiva: z.string({ required_error: "Selecione a diretoria executiva." }).min(1, "Selecione a diretoria executiva."),
+  diretoria: z.string({ required_error: "Selecione a diretoria." }).min(1, "Selecione a diretoria."),
   centroLocalizacao: z.string({ required_error: "Selecione o centro de localização." }).min(1, "Selecione o centro de localização."),
   fase: z.string({ required_error: "Selecione a fase." }).min(1, "Selecione a fase."),
   tipoSelecao: z.enum(["grupo", "ativo"], { required_error: "Selecione o tipo."}),
@@ -126,6 +128,8 @@ export default function CriarParadaPage() {
   const { toast } = useToast();
   const router = useRouter();
 
+  const [diretoriasExecutivas, setDiretoriasExecutivas] = useState<string[]>([]);
+  const [diretorias, setDiretorias] = useState<string[]>([]);
   const [centrosLocalizacao, setCentrosLocalizacao] = useState<string[]>([]);
   const [fases, setFases] = useState<string[]>([]);
   const [ativos, setAtivos] = useState<string[]>([]);
@@ -133,7 +137,9 @@ export default function CriarParadaPage() {
   const [especialidades, setEspecialidades] = useState<Especialidade[]>([]);
 
 
-  const [loadingCentros, setLoadingCentros] = useState(true);
+  const [loadingDiretoriasExecutivas, setLoadingDiretoriasExecutivas] = useState(true);
+  const [loadingDiretorias, setLoadingDiretorias] = useState(false);
+  const [loadingCentros, setLoadingCentros] = useState(false);
   const [loadingFases, setLoadingFases] = useState(false);
   const [loadingAtivos, setLoadingAtivos] = useState(false);
   const [loadingGrupos, setLoadingGrupos] = useState(false);
@@ -143,6 +149,8 @@ export default function CriarParadaPage() {
     resolver: zodResolver(stopFormSchema),
     defaultValues: {
       nomeParada: "",
+      diretoria_executiva: "",
+      diretoria: "",
       centroLocalizacao: "",
       fase: "",
       tipoSelecao: "grupo",
@@ -175,6 +183,9 @@ export default function CriarParadaPage() {
       "dataInicioPlanejada", "horaInicioPlanejada", "dataFimPlanejada", "horaFimPlanejada",
       "dataInicioRealizado", "horaInicioRealizado", "dataFimRealizado", "horaFimRealizado"
   ]);
+
+  const watchedDiretoriaExecutiva = watch("diretoria_executiva");
+  const watchedDiretoria = watch("diretoria");
   const watchedCentro = watch("centroLocalizacao");
   const watchedFase = watch("fase");
   const watchedTipoSelecao = watch("tipoSelecao");
@@ -184,10 +195,9 @@ export default function CriarParadaPage() {
     const especialidadeData = especialidades.find(e => e.especialidade === espNome);
     if (especialidadeData) {
         setValue(`equipes.${index}.hh`, especialidadeData.hh);
-        // Reset capacity and hh_dia when specialty changes
-        setValue(`equipes.${index}.capacidade`, 0);
-        setValue(`equipes.${index}.hh_dia`, 0);
-        // Trigger validation for the capacity field
+        const newCapacity = 1;
+        setValue(`equipes.${index}.capacidade`, newCapacity);
+        setValue(`equipes.${index}.hh_dia`, newCapacity * especialidadeData.hh);
         trigger(`equipes.${index}.capacidade`);
     }
   };
@@ -213,14 +223,48 @@ export default function CriarParadaPage() {
 
 
   useEffect(() => {
+    async function fetchInitialData() {
+      setLoadingDiretoriasExecutivas(true);
+      const data = await getHierarquiaOpcoes("diretoria_executiva");
+      setDiretoriasExecutivas(data);
+      setLoadingDiretoriasExecutivas(false);
+    }
+    fetchInitialData();
+  }, []);
+
+  useEffect(() => {
+    async function fetchDiretorias() {
+      if (watchedDiretoriaExecutiva) {
+        setLoadingDiretorias(true);
+        setValue("diretoria", "");
+        setValue("centroLocalizacao", "");
+        setValue("fase", "");
+        setDiretorias([]);
+        setCentrosLocalizacao([]);
+        setFases([]);
+        const data = await getHierarquiaOpcoes("diretoria", { diretoria_executiva: watchedDiretoriaExecutiva });
+        setDiretorias(data);
+        setLoadingDiretorias(false);
+      }
+    }
+    fetchDiretorias();
+  }, [watchedDiretoriaExecutiva, setValue]);
+
+  useEffect(() => {
     async function fetchCentros() {
-      setLoadingCentros(true);
-      const data = await getHierarquiaOpcoes("centro_de_localizacao");
-      setCentrosLocalizacao(data);
-      setLoadingCentros(false);
+      if (watchedDiretoria) {
+        setLoadingCentros(true);
+        setValue("centroLocalizacao", "");
+        setValue("fase", "");
+        setCentrosLocalizacao([]);
+        setFases([]);
+        const data = await getHierarquiaOpcoes("centro_de_localizacao", { diretoria: watchedDiretoria });
+        setCentrosLocalizacao(data);
+        setLoadingCentros(false);
+      }
     }
     fetchCentros();
-  }, []);
+  }, [watchedDiretoria, setValue]);
 
   useEffect(() => {
     const fetchDataForCentro = async () => {
@@ -230,6 +274,8 @@ export default function CriarParadaPage() {
         setValue("fase", ""); 
         setValue("grupoAtivos", "");
         setValue("ativo", "");
+        setFases([]);
+        setAtivos([]);
 
         const [fasesData, ativosData] = await Promise.all([
           getHierarquiaOpcoes("fase", { centro_de_localizacao: watchedCentro }),
@@ -324,6 +370,8 @@ export default function CriarParadaPage() {
         
         const paradaData = {
           nome_parada: data.nomeParada,
+          diretoria_executiva: data.diretoria_executiva,
+          diretoria: data.diretoria,
           centro_de_localizacao: data.centroLocalizacao,
           fase: data.fase,
           tipo_selecao: data.tipoSelecao,
@@ -428,10 +476,54 @@ export default function CriarParadaPage() {
                       <FormControl>
                         <Input disabled value="Calculado automaticamente" />
                       </FormControl>
-                       <p className="text-[0.8rem] text-muted-foreground">
-                          Automático para paradas antes de jul/25
-                        </p>
                     </FormItem>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <FormField
+                      control={control}
+                      name="diretoria_executiva"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Diretoria Executiva</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value} disabled={loadingDiretoriasExecutivas}>
+                            <FormControl>
+                                <SelectTrigger>
+                                    {loadingDiretoriasExecutivas ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <SelectValue placeholder="Selecionar Diretoria Executiva" />}
+                                </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {diretoriasExecutivas.map(de => (
+                                <SelectItem key={de} value={de}>{de}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                     <FormField
+                      control={control}
+                      name="diretoria"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Diretoria</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value} disabled={!watchedDiretoriaExecutiva || loadingDiretorias}>
+                            <FormControl>
+                                <SelectTrigger>
+                                    {loadingDiretorias ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <SelectValue placeholder="Selecionar Diretoria" />}
+                                </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {diretorias.map(d => (
+                                <SelectItem key={d} value={d}>{d}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -441,7 +533,7 @@ export default function CriarParadaPage() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Centro de Localização</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value} disabled={loadingCentros}>
+                          <Select onValueChange={field.onChange} value={field.value} disabled={!watchedDiretoria || loadingCentros}>
                             <FormControl>
                                 <SelectTrigger>
                                     {loadingCentros ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <SelectValue placeholder="Selecionar Centro" />}
@@ -550,7 +642,7 @@ export default function CriarParadaPage() {
                             name="ativo"
                             render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Ativo</FormLabel>
+                                <FormLabel>Ativo Único</FormLabel>
                                 <Select onValueChange={field.onChange} value={field.value} disabled={!watchedCentro || loadingAtivos}>
                                 <FormControl>
                                   <SelectTrigger>
@@ -859,7 +951,7 @@ export default function CriarParadaPage() {
                             variant="outline"
                             size="sm"
                             className="mt-2"
-                            onClick={() => append({ especialidade: "", capacidade: 0, hh: 0, hh_dia: 0 })}
+                            onClick={() => append({ especialidade: "", capacidade: 1, hh: 0, hh_dia: 0 })}
                             disabled={!watchedCentro || !watchedFase || loadingEspecialidades || availableEspecialidades.length === 0}
                         >
                             <PlusCircle className="mr-2 h-4 w-4" />
