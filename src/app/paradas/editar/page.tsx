@@ -31,7 +31,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { cn } from "@/lib/utils";
+import { cn, normalizeString } from "@/lib/utils";
 import { MainLayout } from "@/components/main-layout";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
@@ -210,7 +210,7 @@ export default function EditarParadaPage() {
   };
   
   const availableEspecialidades = especialidades.filter(
-    (esp) => !watchedEquipes?.some((equipe) => equipe.especialidade === esp.especialidade)
+    (esp) => !watchedEquipes?.some((equipe) => normalizeString(equipe.especialidade) === normalizeString(esp.especialidade))
   );
 
   useEffect(() => {
