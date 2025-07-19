@@ -246,15 +246,30 @@ export async function getScheduleData(year: number): Promise<ScheduleData[]> {
     const yearStart = startOfYear(new Date(year, 0, 1));
     const yearEnd = endOfYear(new Date(year, 0, 1));
     
-    // Create a map of group names to their IDs for easier lookup
-    const { data: allGroups, error: groupsError } = await supabase.from('grupos_de_ativos').select('id, nome_grupo');
+    const scheduleMap = new Map<string, { groupName: string; location: string; items: any[] }>();
+
+    // 1. Fetch ALL groups first to ensure every group is in the map
+    const { data: allGroups, error: groupsError } = await supabase
+        .from('grupos_de_ativos')
+        .select('id, nome_grupo, centro_de_localizacao, fase');
+
     if (groupsError) {
-        console.error("Error fetching groups for mapping:", groupsError);
+        console.error("Error fetching all groups for schedule:", groupsError);
         return [];
     }
+
+    // Pre-populate the map with all groups
+    allGroups.forEach(group => {
+        scheduleMap.set(group.id, {
+            groupName: group.nome_grupo,
+            location: `${group.centro_de_localizacao} - ${group.fase}`,
+            items: []
+        });
+    });
+
     const groupNameToIdMap = new Map(allGroups.map(g => [g.nome_grupo, g.id]));
 
-    // Fetch strategies and expand them into occurrences
+    // 2. Fetch strategies and add them to the pre-populated map
     const { data: strategiesData, error: strategiesError } = await supabase
         .from('estrategias')
         .select(`
@@ -267,12 +282,7 @@ export async function getScheduleData(year: number): Promise<ScheduleData[]> {
             duracao_unidade,
             data_inicio,
             data_fim,
-            grupos_de_ativos (
-                id,
-                nome_grupo,
-                centro_de_localizacao,
-                fase
-            )
+            grupos_de_ativos ( id )
         `)
         .eq('ativa', true)
         .lte('data_inicio', yearEnd.toISOString())
@@ -280,47 +290,37 @@ export async function getScheduleData(year: number): Promise<ScheduleData[]> {
     
     if (strategiesError) {
         console.error("Error fetching strategies for schedule:", strategiesError);
-        return [];
+    } else {
+        strategiesData.forEach(strategy => {
+            if (!strategy.grupos_de_ativos) return;
+
+            const groupKey = strategy.grupos_de_ativos.id;
+            if (!scheduleMap.has(groupKey)) return; // Should not happen with pre-population, but safe check
+            
+            let currentDate = new Date(strategy.data_inicio);
+            const strategyEndDate = strategy.data_fim ? new Date(strategy.data_fim) : yearEnd;
+            const intervalDays = getFrequencyInDays(strategy.frequencia_valor, strategy.frequencia_unidade);
+            const duration = { [strategy.duracao_unidade.toLowerCase()]: strategy.duracao_valor };
+
+            while (currentDate <= strategyEndDate && currentDate <= yearEnd) {
+                if (currentDate >= yearStart) {
+                    scheduleMap.get(groupKey)?.items.push({
+                        id: `${strategy.id}-${currentDate.toISOString()}`,
+                        name: strategy.nome,
+                        startDate: currentDate,
+                        endDate: add(currentDate, duration),
+                        type: 'strategy',
+                        priority: strategy.prioridade,
+                    });
+                }
+                currentDate = add(currentDate, { days: intervalDays });
+            }
+        });
     }
 
-    const scheduleMap = new Map<string, { groupName: string; location: string; items: any[] }>();
 
-    strategiesData.forEach(strategy => {
-        if (!strategy.grupos_de_ativos) return;
-
-        const groupKey = strategy.grupos_de_ativos.id;
-        if (!scheduleMap.has(groupKey)) {
-            scheduleMap.set(groupKey, {
-                groupName: strategy.grupos_de_ativos.nome_grupo,
-                location: `${strategy.grupos_de_ativos.centro_de_localizacao} - ${strategy.grupos_de_ativos.fase}`,
-                items: []
-            });
-        }
-        
-        // Calculate occurrences for the given year
-        let currentDate = new Date(strategy.data_inicio);
-        const strategyEndDate = strategy.data_fim ? new Date(strategy.data_fim) : yearEnd;
-        const intervalDays = getFrequencyInDays(strategy.frequencia_valor, strategy.frequencia_unidade);
-        const duration = { [strategy.duracao_unidade.toLowerCase()]: strategy.duracao_valor };
-
-
-        while (currentDate <= strategyEndDate && currentDate <= yearEnd) {
-            if (currentDate >= yearStart) {
-                scheduleMap.get(groupKey)?.items.push({
-                    id: `${strategy.id}-${currentDate.toISOString()}`,
-                    name: strategy.nome,
-                    startDate: currentDate,
-                    endDate: add(currentDate, duration),
-                    type: 'strategy',
-                    priority: strategy.prioridade,
-                });
-            }
-             currentDate = add(currentDate, { days: intervalDays });
-        }
-    });
-
-    // Fetch stops for the year
-     const { data: stopsData, error: stopsError } = await supabase
+    // 3. Fetch stops and add them to the map
+    const { data: stopsData, error: stopsError } = await supabase
         .from('paradas_de_manutencao')
         .select(`
             id,
@@ -331,46 +331,44 @@ export async function getScheduleData(year: number): Promise<ScheduleData[]> {
             grupo_de_ativos,
             ativo_unico,
             centro_de_localizacao,
-            fase
+            fase,
+            status
         `)
         .or(`and(data_inicio_planejada.gte.${yearStart.toISOString()},data_inicio_planejada.lte.${yearEnd.toISOString()}),and(data_fim_planejada.gte.${yearStart.toISOString()},data_fim_planejada.lte.${yearEnd.toISOString()}),and(data_inicio_planejada.lte.${yearStart.toISOString()},data_fim_planejada.gte.${yearEnd.toISOString()})`);
 
-
     if (stopsError) {
         console.error("Error fetching stops for schedule:", stopsError);
-        // Continue with just strategies if stops fail
     } else {
         stopsData.forEach(stop => {
             let groupKey: string | null = null;
             let groupName: string | null = null;
+            let location: string | null = `${stop.centro_de_localizacao} - ${stop.fase}`;
             
             if (stop.tipo_selecao === 'grupo' && stop.grupo_de_ativos) {
                 groupKey = groupNameToIdMap.get(stop.grupo_de_ativos) || null;
-                groupName = stop.grupo_de_ativos;
             } else if (stop.tipo_selecao === 'ativo' && stop.ativo_unico) {
                 groupName = stop.ativo_unico;
-                groupKey = `${groupName}-${stop.centro_de_localizacao}-${stop.fase}`;
+                groupKey = `ativo-${groupName}-${location}`; // Unique key for single assets
             }
 
             if (!groupKey) return; 
-            
-            const location = `${stop.centro_de_localizacao} - ${stop.fase}`;
 
-            if (!scheduleMap.has(groupKey)) {
-                 scheduleMap.set(groupKey, { groupName: groupName || "Grupo Desconhecido", location, items: [] });
+            if (!scheduleMap.has(groupKey) && groupName && location) {
+                 scheduleMap.set(groupKey, { groupName: groupName, location, items: [] });
             }
 
-            scheduleMap.get(groupKey)?.items.push({
-                id: stop.id,
-                name: stop.nome_parada,
-                startDate: new Date(stop.data_inicio_planejada),
-                endDate: new Date(stop.data_fim_planejada),
-                type: 'stop',
-                status: 'Planejada',
-            });
+            if(scheduleMap.has(groupKey)) {
+                scheduleMap.get(groupKey)?.items.push({
+                    id: stop.id,
+                    name: stop.nome_parada,
+                    startDate: new Date(stop.data_inicio_planejada),
+                    endDate: new Date(stop.data_fim_planejada),
+                    type: 'stop',
+                    status: stop.status || 'Planejada',
+                });
+            }
         });
     }
 
-
-    return Array.from(scheduleMap.values());
+    return Array.from(scheduleMap.values()).sort((a,b) => a.groupName.localeCompare(b.groupName));
 }
