@@ -72,19 +72,6 @@ export function TeamSelector({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [centroLocalizacao, fase]);
 
-  const updateTeamData = (team: SelectedTeam, allTeams: Team[]): SelectedTeam => {
-      const teamDetails = allTeams.find(at => at.id === team.id);
-      const hh = teamDetails?.hh || 0;
-      const capacidade = parseInt(String(team.capacidade), 10) || 0;
-      const hh_dia = capacidade * hh;
-      
-      return {
-        ...team,
-        especialidade: teamDetails?.especialidade || "Desconhecida",
-        hh: String(hh),
-        hh_dia: String(Math.round(hh_dia))
-      };
-  };
 
   const handleTeamSelectionChange = (team: Team, checked: boolean) => {
     let newSelectedTeams: SelectedTeam[];
@@ -106,7 +93,15 @@ export function TeamSelector({
   const handleCapacityChange = (teamId: string, capacityStr: string) => {
     const newSelectedTeams = selectedTeams.map(team => {
       if (team.id === teamId) {
-        return updateTeamData({ ...team, capacidade: capacityStr }, availableTeams);
+        const teamDetails = availableTeams.find(t => t.id === team.id);
+        const hh = teamDetails?.hh || 0;
+        const capacidade = parseInt(capacityStr, 10) || 0;
+        const hh_dia = capacidade * hh;
+        return { 
+          ...team, 
+          capacidade: capacityStr, 
+          hh_dia: String(Math.round(hh_dia))
+        };
       }
       return team;
     });
@@ -214,3 +209,5 @@ export function TeamSelector({
     </div>
   );
 }
+
+    
