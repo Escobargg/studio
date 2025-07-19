@@ -44,6 +44,7 @@ import { TeamSelector, type SelectedTeam } from "@/components/team-selector";
 // Schema para validação simplificada das equipes.
 const equipeSchema = z.object({
   id: z.string(),
+  especialidade: z.string().optional(),
   capacidade: z.string().or(z.number()),
   hh: z.string().or(z.number()),
   total_hh: z.string().or(z.number()),
@@ -268,7 +269,7 @@ export default function CriarParadaPage() {
         const dataInicioPlanejadaCompleta = combineDateTime(data.dataInicioPlanejada, data.horaInicioPlanejada);
         const dataFimPlanejadaCompleta = combineDateTime(data.dataFimPlanejada, data.horaFimPlanejada);
         
-        const dataToInsert = {
+        const paradaData = {
           nome_parada: data.nomeParada,
           centro_de_localizacao: data.centroLocalizacao,
           fase: data.fase,
@@ -287,17 +288,39 @@ export default function CriarParadaPage() {
           duracao_realizada_horas: duracaoRealizada,
           descricao: data.descricao,
           status: 'PLANEJADA',
-          equipes_selecionadas: data.equipes && data.equipes.length > 0 ? data.equipes : null,
         };
 
-        const { error } = await supabase
+        // 1. Inserir a parada principal e obter o ID
+        const { data: paradaResult, error: paradaError } = await supabase
             .from('paradas_de_manutencao')
-            .insert([dataToInsert])
-            .throwOnError();
+            .insert([paradaData])
+            .select('id')
+            .single();
+
+        if (paradaError) throw paradaError;
+        
+        const paradaId = paradaResult.id;
+
+        // 2. Se houver equipes, inseri-las na tabela 'recursos_parada'
+        if (data.equipes && data.equipes.length > 0) {
+            const recursosData = data.equipes.map(equipe => ({
+                parada_id: paradaId,
+                equipe: equipe.especialidade,
+                capacidade: equipe.capacidade,
+                hh: equipe.hh,
+                hh_dia: equipe.total_hh,
+            }));
+
+            const { error: recursosError } = await supabase
+                .from('recursos_parada')
+                .insert(recursosData);
+
+            if (recursosError) throw recursosError;
+        }
 
         toast({
             title: "Parada Criada!",
-            description: "A nova parada de manutenção foi salva com sucesso.",
+            description: "A nova parada de manutenção e seus recursos foram salvos com sucesso.",
         });
         router.push(`/paradas`);
 
