@@ -63,12 +63,12 @@ const stopFormSchema = z.object({
   horaFimPlanejada: z.string({ required_error: "A hora de fim é obrigatória." }).regex(horaRegex, "Formato de hora inválido."),
   dataInicioRealizado: z.date().optional().nullable(),
   horaInicioRealizado: z.string().optional().nullable()
-    .refine((val) => !val || horaRegex.test(val), {
+    .refine((val) => val === null || val === undefined || val === "" || horaRegex.test(val), {
         message: "Formato de hora inválido.",
     }),
   dataFimRealizado: z.date().optional().nullable(),
   horaFimRealizado: z.string().optional().nullable()
-    .refine((val) => !val || horaRegex.test(val), {
+    .refine((val) => val === null || val === undefined || val === "" || horaRegex.test(val), {
         message: "Formato de hora inválido.",
     }),
   descricao: z.string().optional(),
@@ -115,7 +115,7 @@ const stopFormSchema = z.object({
 
 type StopFormValues = z.infer<typeof stopFormSchema>;
 
-const combineDateTime = (date: Date, time: string): Date | null => {
+const combineDateTime = (date: Date | null | undefined, time: string | null | undefined): Date | null => {
   if (!date || !time || !/^\d{2}:\d{2}$/.test(time)) return null;
   const [hours, minutes] = time.split(':').map(Number);
   return set(date, { hours, minutes, seconds: 0, milliseconds: 0 });
@@ -245,15 +245,11 @@ export default function CriarParadaPage() {
         setDuracaoPlanejada(null);
     }
 
-    if(dataInicioRealizado && dataFimRealizado && horaInicioRealizado && horaFimRealizado) {
-        const startRealizado = combineDateTime(dataInicioRealizado, horaInicioRealizado);
-        const endRealizado = combineDateTime(dataFimRealizado, horaFimRealizado);
+    const startRealizado = combineDateTime(dataInicioRealizado, horaInicioRealizado);
+    const endRealizado = combineDateTime(dataFimRealizado, horaFimRealizado);
 
-        if (startRealizado && endRealizado && endRealizado > startRealizado) {
-            setDuracaoRealizada(differenceInHours(endRealizado, startRealizado));
-        } else {
-            setDuracaoRealizada(null);
-        }
+    if (startRealizado && endRealizado && endRealizado > startRealizado) {
+        setDuracaoRealizada(differenceInHours(endRealizado, startRealizado));
     } else {
         setDuracaoRealizada(null);
     }
@@ -264,21 +260,19 @@ export default function CriarParadaPage() {
     setIsSubmitting(true);
     
     try {
-        const dataInicioPlanejadaCompleta = combineDateTime(data.dataInicioPlanejada, data.horaInicioPlanejada)!;
-        const dataFimPlanejadaCompleta = combineDateTime(data.dataFimPlanejada, data.horaFimPlanejada)!;
+        const dataInicioPlanejadaCompleta = combineDateTime(data.dataInicioPlanejada, data.horaInicioPlanejada);
+        const dataFimPlanejadaCompleta = combineDateTime(data.dataFimPlanejada, data.horaFimPlanejada);
         
+        if (!dataInicioPlanejadaCompleta || !dataFimPlanejadaCompleta) {
+            throw new Error("Datas de planejamento inválidas.");
+        }
+
         const duracaoPlanejadaHoras = differenceInHours(dataFimPlanejadaCompleta, dataInicioPlanejadaCompleta);
         
+        const dataInicioRealizadoCompleta = combineDateTime(data.dataInicioRealizado, data.horaInicioRealizado);
+        const dataFimRealizadoCompleta = combineDateTime(data.dataFimRealizado, data.horaFimRealizado);
+        
         let duracaoRealizadaHoras = null;
-        let dataInicioRealizadoCompleta = null;
-        let dataFimRealizadoCompleta = null;
-
-        if (data.dataInicioRealizado && data.horaInicioRealizado) {
-            dataInicioRealizadoCompleta = combineDateTime(data.dataInicioRealizado, data.horaInicioRealizado);
-        }
-        if (data.dataFimRealizado && data.horaFimRealizado) {
-            dataFimRealizadoCompleta = combineDateTime(data.dataFimRealizado, data.horaFimRealizado);
-        }
         if (dataInicioRealizadoCompleta && dataFimRealizadoCompleta && dataFimRealizadoCompleta > dataInicioRealizadoCompleta) {
             duracaoRealizadaHoras = differenceInHours(dataFimRealizadoCompleta, dataInicioRealizadoCompleta);
         }
@@ -304,8 +298,9 @@ export default function CriarParadaPage() {
             .from('paradas_de_manutencao')
             .insert([paradaData])
             .select('id')
-            .single()
-            .throwOnError();
+            .single();
+        
+        if (paradaError) throw paradaError;
         
         const paradaId = paradaResult.id;
 
@@ -318,10 +313,11 @@ export default function CriarParadaPage() {
                 hh_dia: equipe.total_hh,
             }));
 
-            await supabase
+            const { error: recursosError } = await supabase
                 .from('recursos_parada')
-                .insert(recursosData)
-                .throwOnError();
+                .insert(recursosData);
+
+            if (recursosError) throw recursosError;
         }
 
         toast({
@@ -775,3 +771,5 @@ export default function CriarParadaPage() {
     </MainLayout>
   );
 }
+
+    
