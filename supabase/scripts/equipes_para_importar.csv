@@ -1,0 +1,13 @@
+centro_de_localizacao,fase,especialidade,hh,capacidade
+1025-Ferrovia,Ferrovia,ELETRICISTA,8,30
+1025-Ferrovia,Ferrovia,MECANICO,8,30
+1025-Ferrovia,Ferrovia,SOLDADOR,8,30
+1025-Ferrovia,Ferrovia,VULCANIZADOR,8,30
+1089-Porto,Mina,ELETRICISTA,8,30
+1089-Porto,Mina,MECANICO,8,30
+1089-Porto,Mina,SOLDADOR,8,30
+1089-Porto,Mina,VULCANIZADOR,8,30
+1089-Porto,Planta,ELETRICISTA,8,30
+1089-Porto,Planta,MECANICO,8,30
+1089-Porto,Planta,SOLDADOR,8,30
+1089-Porto,Planta,VULCANIZADOR,8,30
