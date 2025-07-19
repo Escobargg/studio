@@ -15,7 +15,6 @@ import { LayoutGrid, Hand } from "lucide-react";
 import { Building2 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { SmartPcmLogo } from "./smart-pcm-logo";
 
 export function MainLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -52,8 +51,8 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-screen w-full">
       <Sidebar>
         <SidebarHeader className="p-2">
-          <div className="flex items-center justify-center p-2">
-            <SmartPcmLogo />
+          <div className="flex items-center justify-center p-2 h-[56px]">
+             <h1 className="text-xl font-bold text-primary">SmartPCM</h1>
           </div>
         </SidebarHeader>
         <SidebarContent className="p-2">
