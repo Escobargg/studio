@@ -43,7 +43,7 @@ import { TeamSelector, type SelectedTeam } from "@/components/team-selector";
 const equipeSchema = z.object({
   id: z.string(),
   especialidade: z.string(),
-  capacidade: z.number(), // Simplificado para garantir que o tipo seja número
+  capacidade: z.number(),
   hh: z.number().optional(),
   total_hh: z.number().optional(),
 });
@@ -65,7 +65,7 @@ const stopFormSchema = z.object({
   dataFimRealizado: z.date().optional().nullable(),
   horaFimRealizado: z.string().optional().nullable(),
   descricao: z.string().optional(),
-  equipes: z.array(equipeSchema).optional(), // Validação simplificada para o array
+  equipes: z.array(equipeSchema).optional().default([]), // VALIDAÇÃO CORRIGIDA
 }).refine(data => {
     if (data.dataInicioPlanejada && data.horaInicioPlanejada && data.dataFimPlanejada && data.horaFimPlanejada) {
       const start = set(data.dataInicioPlanejada, { hours: parseInt(data.horaInicioPlanejada.split(':')[0]), minutes: parseInt(data.horaInicioPlanejada.split(':')[1]) });
@@ -206,7 +206,7 @@ export default function CriarParadaPage() {
         if (watchedCentro && watchedFase) {
             setLoadingGrupos(true);
             setValue("grupoAtivos", "");
-            setValue("equipes", []);
+            // setValue("equipes", []); // Let TeamSelector handle its own state reset
 
             const gruposData = await getGruposByCentroEFase(watchedCentro, watchedFase);
             
@@ -284,7 +284,7 @@ export default function CriarParadaPage() {
           duracao_realizada_horas: duracaoRealizada,
           descricao: data.descricao,
           status: 'PLANEJADA',
-          equipes_selecionadas: data.equipes || [],
+          equipes_selecionadas: data.equipes && data.equipes.length > 0 ? data.equipes : null,
         };
 
         const { error } = await supabase
@@ -732,3 +732,4 @@ export default function CriarParadaPage() {
   );
 }
  
+    

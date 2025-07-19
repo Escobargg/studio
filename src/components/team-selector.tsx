@@ -22,7 +22,7 @@ export type Team = {
 export type SelectedTeam = {
   id: string;
   especialidade: string;
-  capacidade: number; // Alterado para não ser opcional
+  capacidade: number;
   hh?: number;
   total_hh?: number;
 };
@@ -50,7 +50,7 @@ export function TeamSelector({
         const teams = await getEquipes({ centro_de_localizacao: centroLocalizacao, fase });
         setAvailableTeams(teams);
         
-        // Filter out selected teams that are no longer available
+        // CORREÇÃO: Filtra equipes selecionadas que não estão mais disponíveis e notifica o formulário
         const availableTeamIds = new Set(teams.map(t => t.id));
         const newSelectedTeams = selectedTeams.filter(st => availableTeamIds.has(st.id));
         if (newSelectedTeams.length !== selectedTeams.length) {
@@ -60,7 +60,10 @@ export function TeamSelector({
         setLoading(false);
       } else {
         setAvailableTeams([]);
-        onChange([]); // Clear selection if filters are cleared
+        // CORREÇÃO: Garante que a seleção é limpa no formulário principal se os filtros forem resetados
+        if (selectedTeams.length > 0) {
+            onChange([]);
+        }
       }
     }
     fetchTeams();
@@ -83,6 +86,7 @@ export function TeamSelector({
   }, [selectedTeams, availableTeams]);
 
   useEffect(() => {
+    // Evita loop infinito comparando a fundo os objetos
     const hasChanged = JSON.stringify(calculatedTeams) !== JSON.stringify(selectedTeams);
     if(hasChanged) {
         onChange(calculatedTeams);
@@ -212,3 +216,4 @@ export function TeamSelector({
   );
 }
  
+    
