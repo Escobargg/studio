@@ -49,6 +49,8 @@ export function StopCard({ stop }: StopCardProps) {
   const completion = 0; // Placeholder for now
 
   const equipesStr = stop.recursos.map(r => r.equipe).join(', ');
+  const hierarchyStr = [stop.diretoria_executiva, stop.diretoria, stop.centro_de_localizacao, stop.fase].filter(Boolean).join(' - ');
+
 
   return (
     <Card className="w-full shadow-sm hover:shadow-md transition-shadow duration-300 border-border/60">
@@ -56,14 +58,9 @@ export function StopCard({ stop }: StopCardProps) {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
           <div className="flex-1">
-            <div className="flex items-center gap-2 flex-wrap mb-1">
-              <h3 className="text-xl font-bold">{stop.nome_parada}</h3>
-              <Badge variant="outline">{stop.diretoria_executiva}</Badge>
-              <Badge variant="outline">{stop.diretoria}</Badge>
-              <Badge variant="secondary">{stop.centro_de_localizacao}</Badge>
-              <Badge>{stop.fase}</Badge>
-            </div>
-            <p className="text-sm text-muted-foreground">
+            <h3 className="text-xl font-bold">{stop.nome_parada}</h3>
+            <p className="text-sm text-muted-foreground mt-1">{hierarchyStr}</p>
+            <p className="text-sm text-muted-foreground mt-1">
                 {stop.tipo_selecao === 'grupo' ? `Grupo: ${stop.grupo_de_ativos}` : `Ativo: ${stop.ativo_unico}`}
             </p>
           </div>
