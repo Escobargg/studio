@@ -117,10 +117,8 @@ export function ScheduleView({ data, year, filters }: ScheduleViewProps) {
         }));
     }, [data]);
 
-    const getEventsForInterval = (group: (typeof processedData)[0], interval: (typeof timeIntervals)[0]) => {
-        const strategies = group.strategies.filter(item => isEventInInterval(item, interval));
-        const stops = group.stops.filter(item => isEventInInterval(item, interval));
-        return { strategies, stops };
+    const getEventsForInterval = (items: ScheduleItem[], interval: (typeof timeIntervals)[0]) => {
+        return items.filter(item => isEventInInterval(item, interval));
     };
 
 
@@ -175,8 +173,8 @@ export function ScheduleView({ data, year, filters }: ScheduleViewProps) {
                                             Estratégias
                                         </td>
                                         {timeIntervals.map(interval => {
-                                            const { strategies, stops } = getEventsForInterval(group, interval);
-                                            const totalEvents = strategies.length + stops.length;
+                                            const strategiesInInterval = getEventsForInterval(group.strategies, interval);
+                                            const totalEvents = strategiesInInterval.length;
                                             const itemHeight = totalEvents > 0 ? `${100 / totalEvents}%` : '100%';
 
                                             return (
@@ -186,7 +184,7 @@ export function ScheduleView({ data, year, filters }: ScheduleViewProps) {
                                                     (currentViewMode === 'semanas' && selectedWeek === interval.value.toString()) && "bg-blue-50"
                                                 )}>
                                                     <div className="h-full w-full flex flex-col items-center justify-start">
-                                                        {strategies.map(item => (
+                                                        {strategiesInInterval.map(item => (
                                                             <Tooltip key={item.id}>
                                                                 <TooltipTrigger className="w-full" style={{ height: itemHeight }}>
                                                                     <div
@@ -204,7 +202,28 @@ export function ScheduleView({ data, year, filters }: ScheduleViewProps) {
                                                                 </TooltipContent>
                                                             </Tooltip>
                                                         ))}
-                                                        {stops.map(item => (
+                                                    </div>
+                                                </td>
+                                            )
+                                        })}
+                                    </tr>
+                                    <tr className="bg-white">
+                                        <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500 sticky left-64 bg-white z-10 w-32 border-b">
+                                            Paradas
+                                        </td>
+                                        {timeIntervals.map(interval => {
+                                             const stopsInInterval = getEventsForInterval(group.stops, interval);
+                                             const totalEvents = stopsInInterval.length;
+                                             const itemHeight = totalEvents > 0 ? `${100 / totalEvents}%` : '100%';
+
+                                             return (
+                                                <td key={interval.label} className={cn(
+                                                    "p-0 text-center border-l border-b w-10 h-10",
+                                                    (currentViewMode === 'meses' && selectedMonth === interval.value.toString()) && "bg-blue-50",
+                                                    (currentViewMode === 'semanas' && selectedWeek === interval.value.toString()) && "bg-blue-50"
+                                                )}>
+                                                     <div className="h-full w-full flex flex-col items-center justify-start">
+                                                        {stopsInInterval.map(item => (
                                                             <Tooltip key={item.id}>
                                                                 <TooltipTrigger className="w-full" style={{ height: itemHeight }}>
                                                                     <div
@@ -224,22 +243,8 @@ export function ScheduleView({ data, year, filters }: ScheduleViewProps) {
                                                         ))}
                                                     </div>
                                                 </td>
-                                            )
+                                             )
                                         })}
-                                    </tr>
-                                    <tr className="bg-white">
-                                        <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500 sticky left-64 bg-white z-10 w-32 border-b">
-                                            Paradas
-                                        </td>
-                                        {timeIntervals.map(interval => (
-                                            <td key={interval.label} className={cn(
-                                                "p-0 text-center border-l border-b w-10 h-10",
-                                                (currentViewMode === 'meses' && selectedMonth === interval.value.toString()) && "bg-blue-50",
-                                                (currentViewMode === 'semanas' && selectedWeek === interval.value.toString()) && "bg-blue-50"
-                                            )}>
-                                                {/* This row is now a placeholder, content is merged above */}
-                                            </td>
-                                        ))}
                                     </tr>
                                 </React.Fragment>
                             ))}
