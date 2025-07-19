@@ -304,7 +304,7 @@ export default function CriarParadaPage() {
         ]);
 
         setFases(fasesData);
-        setAtivos(ativosData);
+        setAtivos([...new Set(ativosData)]); // Ensure unique asset keys
         setLoadingFases(false);
         setLoadingAtivos(false);
       } else {
