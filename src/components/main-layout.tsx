@@ -20,11 +20,11 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   const getPageTitle = () => {
-    if (pathname === "/") {
-      return "Criar Novo Grupo de Ativos";
-    }
     if (pathname === "/grupos") {
       return "Grupos de Ativos";
+    }
+    if (pathname === "/grupos/novo") {
+      return "Criar Novo Grupo";
     }
     if (pathname.includes("/estrategias/nova")) {
        return "Criar Nova Estratégia";
@@ -61,24 +61,12 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
             <SidebarMenuItem>
               <SidebarMenuButton
                 asChild
-                isActive={pathname === "/"}
-                tooltip="Criar Novo Grupo"
-              >
-                <Link href="/">
-                  <PlusCircle />
-                  <span>Criar Grupo</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                asChild
-                isActive={pathname.startsWith("/grupos")}
+                isActive={pathname === "/grupos"}
                 tooltip="Exibir Grupos"
               >
                 <Link href="/grupos">
                   <LayoutGrid />
-                  <span>Exibir Grupos</span>
+                  <span>Grupos de Ativos</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>

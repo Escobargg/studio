@@ -3,7 +3,7 @@
 
 import { MainLayout } from "@/components/main-layout";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Loader2 } from "lucide-react";
+import { PlusCircle, Loader2, ShieldCheck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import type { Grupo } from "@/components/asset-group-card";
@@ -47,7 +47,7 @@ async function getGroupStrategies(groupId: string): Promise<Strategy[]> {
         title: s.nome,
         priority: s.prioridade,
         status: s.status as "ATIVA" | "INATIVA",
-        description: s.descricao || 'Sem descrição.',
+        description: s.descricao || '',
         frequency: `A cada ${s.frequencia_valor} ${s.frequencia_unidade.toLowerCase()}`,
         duration: `${s.duracao_valor} ${s.duracao_unidade.toLowerCase()}`,
         startDate: format(new Date(s.data_inicio), "dd/MM/yyyy", { locale: ptBR }),
@@ -114,24 +114,27 @@ export default function EstrategiasPage() {
 
   return (
     <MainLayout>
-      <div className="flex-1 p-4 md:p-8 overflow-y-auto bg-muted/20">
-        <div className="max-w-7xl mx-auto space-y-6">
-          {/* Header */}
-          <Card>
-            <div className="flex flex-col md:flex-row items-start md:items-center justify-between p-6">
-                <div>
-                    <h1 className="text-2xl font-bold">Estratégias - {grupo.nome_grupo}</h1>
-                    <p className="text-muted-foreground mt-1">
-                        {grupo.unidade} | {grupo.centro_de_localizacao} | {grupo.fase} | {grupo.ativos.length} ativos
-                    </p>
+      <div className="flex-1 p-4 md:p-8 overflow-y-auto bg-muted/20 space-y-6">
+        <Card>
+           <CardHeader className="flex flex-row items-start justify-between">
+                <div className="flex items-center gap-3">
+                    <div className="p-2 bg-primary/10 rounded-md">
+                         <ShieldCheck className="w-6 h-6 text-primary" />
+                    </div>
+                    <div>
+                        <CardTitle className="text-2xl">Estratégias - {grupo.nome_grupo}</CardTitle>
+                        <CardDescription>
+                            {grupo.unidade} | {grupo.centro_de_localizacao} | {grupo.fase} | {grupo.ativos.length} ativos
+                        </CardDescription>
+                    </div>
                 </div>
-                <Button asChild className="mt-4 md:mt-0">
+                <Button asChild>
                   <Link href={`/grupos/${groupId}/estrategias/nova`}>
                     <PlusCircle className="mr-2 h-4 w-4" />
                     Nova Estratégia
                   </Link>
                 </Button>
-            </div>
+            </CardHeader>
           </Card>
 
           {/* Strategies List */}
@@ -180,7 +183,6 @@ export default function EstrategiasPage() {
                 </div>
             </CardContent>
           </Card>
-        </div>
       </div>
     </MainLayout>
   );

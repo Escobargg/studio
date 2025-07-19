@@ -201,8 +201,6 @@ export async function getStops(filters: ParadasFiltros): Promise<Stop[]> {
         const recursos = stop.recursos_parada || [];
         const duracao = stop.duracao_planejada_horas ?? 0;
         
-        // Cada HH/Dia é para um turno de 8 horas, então para ter o HH total, 
-        // multiplicamos o HH/Dia pelo número de dias (duração em horas / 24)
         const total_hh = recursos.reduce((acc, recurso) => {
             const dias = duracao / 24;
             return acc + (recurso.hh_dia * dias);
