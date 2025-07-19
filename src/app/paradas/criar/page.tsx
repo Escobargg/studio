@@ -48,6 +48,7 @@ const equipeSchema = z.object({
   total_hh: z.union([z.string(), z.number()]),
 });
 
+const horaRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
 const stopFormSchema = z.object({
   nomeParada: z.string().min(1, "O nome da parada é obrigatório."),
@@ -57,13 +58,19 @@ const stopFormSchema = z.object({
   grupoAtivos: z.string().optional(),
   ativo: z.string().optional(),
   dataInicioPlanejada: z.date({ required_error: "A data de início planejada é obrigatória." }),
-  horaInicioPlanejada: z.string({ required_error: "A hora de início é obrigatória." }).regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Formato de hora inválido."),
+  horaInicioPlanejada: z.string({ required_error: "A hora de início é obrigatória." }).regex(horaRegex, "Formato de hora inválido."),
   dataFimPlanejada: z.date({ required_error: "A data de fim planejada é obrigatória." }),
-  horaFimPlanejada: z.string({ required_error: "A hora de fim é obrigatória." }).regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Formato de hora inválido."),
+  horaFimPlanejada: z.string({ required_error: "A hora de fim é obrigatória." }).regex(horaRegex, "Formato de hora inválido."),
   dataInicioRealizado: z.date().optional().nullable(),
-  horaInicioRealizado: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Formato de hora inválido.").optional().nullable(),
+  horaInicioRealizado: z.string().optional().nullable()
+    .refine((val) => !val || horaRegex.test(val), {
+        message: "Formato de hora inválido.",
+    }),
   dataFimRealizado: z.date().optional().nullable(),
-  horaFimRealizado: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Formato de hora inválido.").optional().nullable(),
+  horaFimRealizado: z.string().optional().nullable()
+    .refine((val) => !val || horaRegex.test(val), {
+        message: "Formato de hora inválido.",
+    }),
   descricao: z.string().optional(),
   equipes: z.array(equipeSchema).optional().default([]),
 }).refine(data => {
@@ -260,10 +267,7 @@ export default function CriarParadaPage() {
         const dataInicioPlanejadaCompleta = combineDateTime(data.dataInicioPlanejada, data.horaInicioPlanejada)!;
         const dataFimPlanejadaCompleta = combineDateTime(data.dataFimPlanejada, data.horaFimPlanejada)!;
         
-        let duracaoPlanejadaHoras = null;
-        if (dataFimPlanejadaCompleta > dataInicioPlanejadaCompleta) {
-            duracaoPlanejadaHoras = differenceInHours(dataFimPlanejadaCompleta, dataInicioPlanejadaCompleta);
-        }
+        const duracaoPlanejadaHoras = differenceInHours(dataFimPlanejadaCompleta, dataInicioPlanejadaCompleta);
         
         let duracaoRealizadaHoras = null;
         let dataInicioRealizadoCompleta = null;
@@ -296,18 +300,15 @@ export default function CriarParadaPage() {
           status: 'PLANEJADA',
         };
 
-        // 1. Inserir a parada principal e obter o ID
         const { data: paradaResult, error: paradaError } = await supabase
             .from('paradas_de_manutencao')
             .insert([paradaData])
             .select('id')
-            .single();
-
-        if (paradaError) throw paradaError;
+            .single()
+            .throwOnError();
         
         const paradaId = paradaResult.id;
 
-        // 2. Se houver equipes, inseri-las na tabela 'recursos_parada'
         if (data.equipes && data.equipes.length > 0) {
             const recursosData = data.equipes.map(equipe => ({
                 parada_id: paradaId,
@@ -317,11 +318,10 @@ export default function CriarParadaPage() {
                 hh_dia: equipe.total_hh,
             }));
 
-            const { error: recursosError } = await supabase
+            await supabase
                 .from('recursos_parada')
-                .insert(recursosData);
-
-            if (recursosError) throw recursosError;
+                .insert(recursosData)
+                .throwOnError();
         }
 
         toast({
@@ -561,13 +561,16 @@ export default function CriarParadaPage() {
                                 control={control}
                                 name="horaInicioPlanejada"
                                 render={({ field }) => (
-                                    <FormControl>
-                                      <Input type="time" {...field} className="w-[120px]"/>
-                                    </FormControl>
+                                    <FormItem className="flex-grow">
+                                      <FormControl>
+                                        <Input type="time" {...field} className="w-full"/>
+                                      </FormControl>
+                                      <FormMessage />
+                                    </FormItem>
                                 )}
                               />
                           </div>
-                          <FormMessage />
+                          <FormMessage className="pt-2"/>
                         </FormItem>
                       )}
                     />
@@ -595,13 +598,16 @@ export default function CriarParadaPage() {
                                 control={control}
                                 name="horaFimPlanejada"
                                 render={({ field }) => (
-                                    <FormControl>
-                                      <Input type="time" {...field} className="w-[120px]"/>
-                                    </FormControl>
+                                    <FormItem className="flex-grow">
+                                      <FormControl>
+                                        <Input type="time" {...field} className="w-full"/>
+                                      </FormControl>
+                                      <FormMessage />
+                                    </FormItem>
                                 )}
                               />
                           </div>
-                          <FormMessage />
+                          <FormMessage className="pt-2" />
                         </FormItem>
                       )}
                     />
@@ -646,13 +652,16 @@ export default function CriarParadaPage() {
                                 control={control}
                                 name="horaInicioRealizado"
                                 render={({ field }) => (
-                                    <FormControl>
-                                      <Input type="time" {...field} value={field.value ?? ''} className="w-[120px]"/>
-                                    </FormControl>
+                                     <FormItem className="flex-grow">
+                                        <FormControl>
+                                            <Input type="time" {...field} value={field.value ?? ''} className="w-full"/>
+                                        </FormControl>
+                                        <FormMessage />
+                                     </FormItem>
                                 )}
                               />
                            </div>
-                           <FormMessage />
+                           <FormMessage className="pt-2" />
                         </FormItem>
                       )}
                     />
@@ -680,13 +689,16 @@ export default function CriarParadaPage() {
                                 control={control}
                                 name="horaFimRealizado"
                                 render={({ field }) => (
-                                    <FormControl>
-                                      <Input type="time" {...field} value={field.value ?? ''} className="w-[120px]"/>
-                                    </FormControl>
+                                    <FormItem className="flex-grow">
+                                        <FormControl>
+                                            <Input type="time" {...field} value={field.value ?? ''} className="w-full"/>
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
                                 )}
                               />
                           </div>
-                          <FormMessage />
+                          <FormMessage className="pt-2" />
                         </FormItem>
                       )}
                     />
@@ -763,5 +775,3 @@ export default function CriarParadaPage() {
     </MainLayout>
   );
 }
-
-    
