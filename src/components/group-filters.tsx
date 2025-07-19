@@ -21,44 +21,74 @@ interface GroupFiltersProps {
 }
 
 type OptionsState = {
+  diretoriasExecutivas: string[];
+  diretorias: string[];
   centrosLocalizacao: string[];
   fases: string[];
-  categorias: string[];
 };
 
 export function GroupFilters({ filters, onFilterChange }: GroupFiltersProps) {
   const [options, setOptions] = useState<OptionsState>({
+    diretoriasExecutivas: [],
+    diretorias: [],
     centrosLocalizacao: [],
     fases: [],
-    categorias: [],
   });
   const [loading, setLoading] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     const fetchInitial = async () => {
-      setLoading(prev => ({ ...prev, centrosLocalizacao: true }));
-      const centros = await getHierarquiaOpcoes("centro_de_localizacao");
-      setOptions(prev => ({ ...prev, centrosLocalizacao: centros }));
-      setLoading(prev => ({ ...prev, centrosLocalizacao: false }));
+      setLoading(prev => ({ ...prev, diretoriasExecutivas: true }));
+      const de = await getHierarquiaOpcoes("diretoria_executiva");
+      setOptions(prev => ({ ...prev, diretoriasExecutivas: de }));
+      setLoading(prev => ({ ...prev, diretoriasExecutivas: false }));
     };
     fetchInitial();
   }, []);
-  
+
+  useEffect(() => {
+    const de = filters.diretoria_executiva;
+    if (de) {
+      const fetchDiretorias = async () => {
+        setLoading(prev => ({ ...prev, diretorias: true }));
+        const diretorias = await getHierarquiaOpcoes('diretoria', { diretoria_executiva: de });
+        setOptions(prev => ({ ...prev, diretorias }));
+        setLoading(prev => ({ ...prev, diretorias: false }));
+      };
+      fetchDiretorias();
+    } else {
+      setOptions(prev => ({ ...prev, diretorias: [], centrosLocalizacao: [], fases: [] }));
+    }
+  }, [filters.diretoria_executiva]);
+
+  useEffect(() => {
+    const diretoria = filters.diretoria;
+    if (diretoria) {
+      const fetchCentros = async () => {
+        setLoading(prev => ({ ...prev, centrosLocalizacao: true }));
+        const centros = await getHierarquiaOpcoes('centro_de_localizacao', { diretoria: diretoria });
+        setOptions(prev => ({ ...prev, centrosLocalizacao: centros }));
+        setLoading(prev => ({ ...prev, centrosLocalizacao: false }));
+      };
+      fetchCentros();
+    } else {
+       setOptions(prev => ({ ...prev, centrosLocalizacao: [], fases: [] }));
+    }
+  }, [filters.diretoria]);
+
+
   useEffect(() => {
     const centro = filters.centro_de_localizacao;
     if (centro) {
         const fetchDependentOptions = async () => {
-            setLoading(prev => ({ ...prev, fases: true, categorias: true }));
-            const [fasesData, categoriasData] = await Promise.all([
-               getHierarquiaOpcoes('fase', {centro_de_localizacao: centro}),
-               getHierarquiaOpcoes('categoria', {centro_de_localizacao: centro})
-            ]);
-            setOptions(prev => ({...prev, fases: fasesData, categorias: categoriasData}));
-            setLoading(prev => ({ ...prev, fases: false, categorias: false }));
+            setLoading(prev => ({ ...prev, fases: true }));
+            const fasesData = await getHierarquiaOpcoes('fase', {centro_de_localizacao: centro});
+            setOptions(prev => ({...prev, fases: fasesData}));
+            setLoading(prev => ({ ...prev, fases: false }));
         };
         fetchDependentOptions();
     } else {
-        setOptions(prev => ({...prev, fases: [], categorias: []}));
+        setOptions(prev => ({...prev, fases: []}));
     }
   }, [filters.centro_de_localizacao]);
 
@@ -69,14 +99,15 @@ export function GroupFilters({ filters, onFilterChange }: GroupFiltersProps) {
   const handleSelectChange = (field: keyof Filtros, value: string) => {
     const newFilters: Filtros = { ...filters, [field]: value };
 
-    if (field === 'centro_de_localizacao' && !value) {
-      // Clear dependent fields if the center is cleared
-      delete newFilters.fase;
-      delete newFilters.categoria;
+    if (field === 'diretoria_executiva') {
+        delete newFilters.diretoria;
+        delete newFilters.centro_de_localizacao;
+        delete newFilters.fase;
+    } else if (field === 'diretoria') {
+        delete newFilters.centro_de_localizacao;
+        delete newFilters.fase;
     } else if (field === 'centro_de_localizacao') {
-      // Reset subsequent fields when the center changes
       delete newFilters.fase;
-      delete newFilters.categoria;
     }
     
     onFilterChange(newFilters);
@@ -122,20 +153,26 @@ export function GroupFilters({ filters, onFilterChange }: GroupFiltersProps) {
             className="flex-1 min-w-[200px] bg-background"
         />
         {renderSelect(
+          "diretoria_executiva",
+          "Diretoria Executiva",
+          options.diretoriasExecutivas
+        )}
+        {renderSelect(
+          "diretoria",
+          "Diretoria",
+          options.diretorias,
+          !filters.diretoria_executiva
+        )}
+        {renderSelect(
           "centro_de_localizacao",
           "Centro de Localização",
-          options.centrosLocalizacao
+          options.centrosLocalizacao,
+          !filters.diretoria
         )}
         {renderSelect(
             "fase",
             "Fase",
             options.fases,
-            !filters.centro_de_localizacao
-        )}
-        {renderSelect(
-            "categoria",
-            "Categoria",
-            options.categorias,
             !filters.centro_de_localizacao
         )}
         <Button onClick={clearFilters} variant="ghost" className="h-10">

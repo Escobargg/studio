@@ -31,7 +31,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { cn } from "@/lib/utils";
+import { cn, normalizeString } from "@/lib/utils";
 import { MainLayout } from "@/components/main-layout";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
@@ -123,22 +123,33 @@ const combineDateTime = (date: Date | null | undefined, time: string | null | un
   return set(date, { hours, minutes, seconds: 0, milliseconds: 0 });
 };
 
-const calculateCompletion = (start: Date | null | undefined, end: Date | null | undefined): number => {
-    if (!start || !end) return 0;
+const calculateCompletion = (values: Partial<StopFormValues>): number => {
     const now = new Date();
-    const startDate = start;
-    const endDate = end;
 
-    if (now < startDate) return 0;
-    if (now > endDate) return 100;
+    const dataFimRealizado = combineDateTime(values.dataFimRealizado, values.horaFimRealizado);
+    if (dataFimRealizado) {
+        return 100;
+    }
 
-    const totalDuration = endDate.getTime() - startDate.getTime();
-    if (totalDuration <= 0) return 100;
+    const dataInicioRealizado = combineDateTime(values.dataInicioRealizado, values.horaInicioRealizado);
+    if (dataInicioRealizado) {
+        const dataFimPlanejada = combineDateTime(values.dataFimPlanejada, values.horaFimPlanejada);
+        if (!dataFimPlanejada) return 0;
 
-    const elapsedDuration = now.getTime() - startDate.getTime();
-    const percentage = Math.min(100, Math.max(0, (elapsedDuration / totalDuration) * 100));
+        if (now > dataFimPlanejada) {
+            return 99;
+        }
+
+        const totalDuration = dataFimPlanejada.getTime() - dataInicioRealizado.getTime();
+        if (totalDuration <= 0) return 99;
+
+        const elapsedDuration = now.getTime() - dataInicioRealizado.getTime();
+        const percentage = Math.min(99, Math.max(0, (elapsedDuration / totalDuration) * 100));
+        
+        return Math.round(percentage);
+    }
     
-    return Math.round(percentage);
+    return 0;
 };
 
 
@@ -204,6 +215,7 @@ export default function CriarParadaPage() {
       "dataInicioPlanejada", "horaInicioPlanejada", "dataFimPlanejada", "horaFimPlanejada",
       "dataInicioRealizado", "horaInicioRealizado", "dataFimRealizado", "horaFimRealizado"
   ]);
+  const allWatchedFields = watch();
 
   const watchedDiretoriaExecutiva = watch("diretoria_executiva");
   const watchedDiretoria = watch("diretoria");
@@ -239,7 +251,7 @@ export default function CriarParadaPage() {
   };
   
   const availableEspecialidades = especialidades.filter(
-    (esp) => !watchedEquipes?.some((equipe) => equipe.especialidade === esp.especialidade)
+    (esp) => !watchedEquipes?.some((equipe) => normalizeString(equipe.especialidade) === normalizeString(esp.especialidade))
   );
 
 
@@ -304,7 +316,7 @@ export default function CriarParadaPage() {
         ]);
 
         setFases(fasesData);
-        setAtivos(ativosData);
+        setAtivos([...new Set(ativosData)]); // Ensure unique asset keys
         setLoadingFases(false);
         setLoadingAtivos(false);
       } else {
@@ -353,11 +365,11 @@ export default function CriarParadaPage() {
 
     if (startPlanejado && endPlanejado && endPlanejado > startPlanejado) {
         setDuracaoPlanejada(differenceInHours(endPlanejado, startPlanejado));
-        setCompletion(calculateCompletion(startPlanejado, endPlanejado));
     } else {
         setDuracaoPlanejada(null);
-        setCompletion(0);
     }
+    
+    setCompletion(calculateCompletion(allWatchedFields));
 
     const startRealizado = combineDateTime(dataInicioRealizado, horaInicioRealizado);
     const endRealizado = combineDateTime(dataFimRealizado, horaFimRealizado);
@@ -368,7 +380,7 @@ export default function CriarParadaPage() {
         setDuracaoRealizada(null);
     }
     
-  }, [watchedFields]);
+  }, [watchedFields, allWatchedFields]);
 
   async function onSubmit(data: StopFormValues) {
     setIsSubmitting(true);
