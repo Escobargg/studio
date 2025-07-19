@@ -1,58 +1,58 @@
--- Apaga a tabela antiga se ela existir
+-- Apaga a tabela existente se ela existir, para garantir um recomeço limpo
 DROP TABLE IF EXISTS public.paradas_de_manutencao;
 
--- Cria a tabela para armazenar as paradas de manutenção
+-- Cria a tabela paradas_de_manutencao
 CREATE TABLE public.paradas_de_manutencao (
     id uuid NOT NULL DEFAULT gen_random_uuid(),
     created_at timestamp with time zone NOT NULL DEFAULT now(),
     nome_parada text NOT NULL,
-    centro_de_localizacao text NOT NULL,
-    fase text NOT NULL,
-    tipo_selecao text NOT NULL,
+    centro_de_localizacao text,
+    fase text,
+    tipo_selecao text,
     grupo_de_ativos text,
     ativo_unico text,
-    data_inicio_planejada timestamp with time zone NOT NULL,
-    data_fim_planejada timestamp with time zone NOT NULL,
+    data_inicio_planejada timestamp with time zone,
+    data_fim_planejada timestamp with time zone,
     duracao_planejada_horas integer,
     data_inicio_realizado timestamp with time zone,
     data_fim_realizado timestamp with time zone,
     duracao_realizada_horas integer,
     descricao text,
-    status text NOT NULL,
-    equipes_selecionadas jsonb,
-    user_id uuid NULL,
-    CONSTRAINT paradas_de_manutencao_pkey PRIMARY KEY (id),
-    CONSTRAINT paradas_de_manutencao_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE SET NULL
+    status text,
+    equipes_selecionadas jsonb, -- Alterado para JSONB para armazenar objetos complexos
+    user_id uuid,
+    CONSTRAINT paradas_de_manutencao_pkey PRIMARY KEY (id)
 );
 
--- Ativa a Segurança em Nível de Linha (RLS)
+-- Habilita a segurança em nível de linha
 ALTER TABLE public.paradas_de_manutencao ENABLE ROW LEVEL SECURITY;
 
--- Permite que usuários autenticados leiam todos os registros
-CREATE POLICY "Allow authenticated users to read all stops"
+-- Concede permissões para todos os usuários autenticados
+-- Permissão para selecionar (ler) todas as paradas
+CREATE POLICY "Allow all authenticated users to read stops"
 ON public.paradas_de_manutencao
 FOR SELECT
 TO authenticated
 USING (true);
 
--- Permite que usuários autenticados criem novos registros
-CREATE POLICY "Allow authenticated users to create stops"
+-- Permissão para inserir (criar) novas paradas
+CREATE POLICY "Allow all authenticated users to create stops"
 ON public.paradas_de_manutencao
 FOR INSERT
 TO authenticated
 WITH CHECK (true);
 
--- Permite que usuários autenticados atualizem qualquer registro (ajuste se necessário)
-CREATE POLICY "Allow authenticated users to update any stop"
+-- Permissão para atualizar (editar) paradas que o usuário criou
+CREATE POLICY "Allow users to update their own stops"
 ON public.paradas_de_manutencao
 FOR UPDATE
 TO authenticated
-USING (true)
-WITH CHECK (true);
+USING (auth.uid() = user_id)
+WITH CHECK (auth.uid() = user_id);
 
--- Permite que usuários autenticados excluam qualquer registro (ajuste se necessário)
-CREATE POLICY "Allow authenticated users to delete any stop"
+-- Permissão para deletar paradas que o usuário criou
+CREATE POLICY "Allow users to delete their own stops"
 ON public.paradas_de_manutencao
 FOR DELETE
 TO authenticated
-USING (true);
+USING (auth.uid() = user_id);
