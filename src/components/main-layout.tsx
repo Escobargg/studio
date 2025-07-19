@@ -94,7 +94,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
           </div>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
-              <img src="/logovale.png" alt="Vale Logo" className="h-10" />
+              <img src="/logovale.png" alt="Vale Logo" className="h-14" />
             </div>
           </div>
         </header>
