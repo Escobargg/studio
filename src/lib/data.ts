@@ -320,7 +320,7 @@ export async function getScheduleData(year: number): Promise<ScheduleData[]> {
             data_inicio_planejada,
             data_fim_planejada,
             tipo_selecao,
-            grupo_de_ativos,
+            grupo_de_ativos:grupos_de_ativos(id),
             ativo_unico,
             centro_de_localizacao,
             fase
@@ -333,12 +333,27 @@ export async function getScheduleData(year: number): Promise<ScheduleData[]> {
         // Continue with just strategies if stops fail
     } else {
         stopsData.forEach(stop => {
-            const groupName = stop.tipo_selecao === 'grupo' ? stop.grupo_de_ativos : stop.ativo_unico;
+            const isGroupType = stop.tipo_selecao === 'grupo';
+            const groupData = stop.grupo_de_ativos as unknown as {id: string} | null; // Type assertion
+
+            let groupKey: string | null = null;
+            let groupName: string | null = null;
+            
+            if (isGroupType && groupData) {
+                groupKey = groupData.id;
+                // We don't have the group name here, it will be picked up if a strategy exists
+            } else if (!isGroupType && stop.ativo_unico) {
+                // For 'ativo' type, create a unique key based on name and location
+                groupName = stop.ativo_unico;
+                groupKey = `${groupName}-${stop.centro_de_localizacao}-${stop.fase}`;
+            }
+
+            if (!groupKey) return; // Skip if no key can be determined
+            
             const location = `${stop.centro_de_localizacao} - ${stop.fase}`;
-            const groupKey = `${groupName}-${location}`; // Create a synthetic key
 
             if (!scheduleMap.has(groupKey)) {
-                 scheduleMap.set(groupKey, { groupName: groupName!, location: location, items: [] });
+                 scheduleMap.set(groupKey, { groupName: groupName || "Grupo Desconhecido", location: location, items: [] });
             }
 
             scheduleMap.get(groupKey)?.items.push({
