@@ -43,7 +43,7 @@ import { TeamSelector, type SelectedTeam } from "@/components/team-selector";
 const equipeSchema = z.object({
   id: z.string(),
   especialidade: z.string(),
-  capacidade: z.number().min(1, "Capacidade deve ser no mínimo 1"),
+  capacidade: z.number(), // Simplificado para garantir que o tipo seja número
   hh: z.number().optional(),
   total_hh: z.number().optional(),
 });
@@ -65,7 +65,7 @@ const stopFormSchema = z.object({
   dataFimRealizado: z.date().optional().nullable(),
   horaFimRealizado: z.string().optional().nullable(),
   descricao: z.string().optional(),
-  equipes: z.array(equipeSchema).optional(),
+  equipes: z.array(equipeSchema).optional(), // Validação simplificada para o array
 }).refine(data => {
     if (data.dataInicioPlanejada && data.horaInicioPlanejada && data.dataFimPlanejada && data.horaFimPlanejada) {
       const start = set(data.dataInicioPlanejada, { hours: parseInt(data.horaInicioPlanejada.split(':')[0]), minutes: parseInt(data.horaInicioPlanejada.split(':')[1]) });
@@ -226,23 +226,31 @@ export default function CriarParadaPage() {
     ] = watchedFields;
 
     if (dataInicioPlanejada && horaInicioPlanejada && dataFimPlanejada && horaFimPlanejada) {
-      const start = combineDateTime(dataInicioPlanejada, horaInicioPlanejada);
-      const end = combineDateTime(dataFimPlanejada, horaFimPlanejada);
-      if (end > start) {
-        setDuracaoPlanejada(differenceInHours(end, start));
-      } else {
-        setDuracaoPlanejada(null);
+      try {
+          const start = combineDateTime(dataInicioPlanejada, horaInicioPlanejada);
+          const end = combineDateTime(dataFimPlanejada, horaFimPlanejada);
+          if (end > start) {
+            setDuracaoPlanejada(differenceInHours(end, start));
+          } else {
+            setDuracaoPlanejada(null);
+          }
+      } catch (e) {
+          setDuracaoPlanejada(null);
       }
     } else {
         setDuracaoPlanejada(null);
     }
 
     if (dataInicioRealizado && horaInicioRealizado && dataFimRealizado && horaFimRealizado) {
-        const start = combineDateTime(dataInicioRealizado, horaInicioRealizado);
-        const end = combineDateTime(dataFimRealizado, horaFimRealizado);
-        if (end > start) {
-            setDuracaoRealizada(differenceInHours(end, start));
-        } else {
+        try {
+            const start = combineDateTime(dataInicioRealizado, horaInicioRealizado);
+            const end = combineDateTime(dataFimRealizado, horaFimRealizado);
+            if (end > start) {
+                setDuracaoRealizada(differenceInHours(end, start));
+            } else {
+                setDuracaoRealizada(null);
+            }
+        } catch(e) {
             setDuracaoRealizada(null);
         }
     } else {
@@ -276,7 +284,7 @@ export default function CriarParadaPage() {
           duracao_realizada_horas: duracaoRealizada,
           descricao: data.descricao,
           status: 'PLANEJADA',
-          equipes_selecionadas: data.equipes,
+          equipes_selecionadas: data.equipes || [],
         };
 
         const { error } = await supabase
@@ -723,3 +731,4 @@ export default function CriarParadaPage() {
     </MainLayout>
   );
 }
+ 

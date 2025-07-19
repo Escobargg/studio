@@ -22,7 +22,7 @@ export type Team = {
 export type SelectedTeam = {
   id: string;
   especialidade: string;
-  capacidade?: number;
+  capacidade: number; // Alterado para não ser opcional
   hh?: number;
   total_hh?: number;
 };
@@ -103,7 +103,7 @@ export function TeamSelector({
   const handleCapacityChange = useCallback((teamId: string, capacityStr: string) => {
     const capacity = parseInt(capacityStr, 10);
     const newSelectedTeams = selectedTeams.map(team =>
-      team.id === teamId ? { ...team, capacidade: capacity } : team
+      team.id === teamId ? { ...team, capacidade: isNaN(capacity) ? 1 : capacity } : team
     );
     onChange(newSelectedTeams);
   }, [selectedTeams, onChange]);
@@ -181,7 +181,7 @@ export function TeamSelector({
                 <div className="space-y-1">
                     <Label htmlFor={`capacity-${selectedTeam.id}`}>Capacidade</Label>
                     <Select
-                        value={String(selectedTeam.capacidade || "1")}
+                        value={String(selectedTeam.capacidade || 1)}
                         onValueChange={(val) => handleCapacityChange(selectedTeam.id, val)}
                     >
                         <SelectTrigger id={`capacity-${selectedTeam.id}`}>
@@ -211,3 +211,4 @@ export function TeamSelector({
     </div>
   );
 }
+ 
