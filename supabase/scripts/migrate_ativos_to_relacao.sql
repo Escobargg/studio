@@ -1,18 +1,18 @@
--- Este script migra os ativos da coluna de array na tabela 'grupos_de_ativos'
--- para linhas individuais na nova tabela 'grupo_ativos_relacao'.
-
--- Ele é projetado para ser idempotente, o que significa que pode ser executado
--- várias vezes sem criar entradas duplicadas, graças à cláusula ON CONFLICT.
+-- Este script migra os dados da coluna array 'ativos' na tabela 'grupos_de_ativos'
+-- para a nova tabela relacional 'grupo_ativos_relacao'.
+-- A função unnest() expande o array em um conjunto de linhas.
 
 INSERT INTO public.grupo_ativos_relacao (grupo_id, ativo)
 SELECT
-    g.id AS grupo_id,
-    unnest(g.ativos) AS ativo
+    id as grupo_id,
+    unnest(ativos) as ativo
 FROM
-    public.grupos_de_ativos g
+    public.grupos_de_ativos
 WHERE
-    g.ativos IS NOT NULL AND array_length(g.ativos, 1) > 0
+    -- Garante que não tentamos desanexar um array nulo ou vazio.
+    cardinality(ativos) > 0
 ON CONFLICT (grupo_id, ativo) DO NOTHING;
 
--- Mensagem de sucesso para o usuário no editor SQL.
-SELECT 'Migração de ativos para a tabela relacional concluída com sucesso.' AS status;
+-- Após executar este script e verificar que os dados foram migrados corretamente,
+-- você pode remover a coluna 'ativos' da tabela 'grupos_de_ativos'
+-- executando o script 'cleanup_old_ativos_column.sql'.
