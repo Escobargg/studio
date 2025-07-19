@@ -296,7 +296,7 @@ export default function CriarParadaPage() {
 
         const { data: paradaResult, error: paradaError } = await supabase
             .from('paradas_de_manutencao')
-            .insert([paradaData])
+            .insert(paradaData)
             .select('id')
             .single();
         
@@ -771,5 +771,3 @@ export default function CriarParadaPage() {
     </MainLayout>
   );
 }
-
-    

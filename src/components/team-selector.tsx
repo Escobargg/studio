@@ -93,6 +93,7 @@ export function TeamSelector({
     if (checked) {
       newSelectedTeams = [...selectedTeams, { 
         id: team.id, 
+        especialidade: team.especialidade,
         capacidade: "1", 
         hh: String(team.hh), 
         total_hh: String(team.hh) 
@@ -101,14 +102,14 @@ export function TeamSelector({
       newSelectedTeams = selectedTeams.filter((t) => t.id !== team.id);
     }
     onChange(updateTeamData(newSelectedTeams));
-  }, [selectedTeams, onChange, availableTeams]);
+  }, [selectedTeams, onChange, updateTeamData]);
 
   const handleCapacityChange = useCallback((teamId: string, capacityStr: string) => {
     const newSelectedTeams = selectedTeams.map(team =>
       team.id === teamId ? { ...team, capacidade: capacityStr } : team
     );
     onChange(updateTeamData(newSelectedTeams));
-  }, [selectedTeams, onChange, availableTeams]);
+  }, [selectedTeams, onChange, updateTeamData]);
   
   if (!centroLocalizacao || !fase) {
       return (
