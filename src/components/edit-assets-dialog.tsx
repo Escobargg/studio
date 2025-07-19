@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -16,12 +17,14 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { getAtivosByCentro } from "@/lib/data";
 import { Edit, Loader2, Save } from "lucide-react";
 import toast from "react-hot-toast";
+import { supabase } from "@/lib/supabase";
 
 type Grupo = {
   id: string;
   nome_grupo: string;
-  ativos: string[];
   centro_de_localizacao: string;
+  // `ativos` here is just for initial state, the source of truth is `grupo_ativos_relacao`
+  ativos: string[]; 
 };
 
 interface EditAssetsDialogProps {
@@ -40,26 +43,39 @@ export function EditAssetsDialog({ grupo, onUpdate, open, onOpenChange, isUpdati
   // Sincroniza o estado de ativos selecionados com as props quando o dialog abre
   useEffect(() => {
     if (open) {
-      setSelectedAssets(grupo.ativos);
-    }
-  }, [open, grupo.ativos]);
-
-
-  useEffect(() => {
-    if (open) {
       setIsLoading(true);
-      getAtivosByCentro(grupo.centro_de_localizacao)
-        .then((assets) => {
-          setAllAssets(assets);
+
+      const fetchCurrentAssets = async () => {
+        const { data, error } = await supabase
+          .from('grupo_ativos_relacao')
+          .select('ativo')
+          .eq('grupo_id', grupo.id);
+
+        if (error) {
+          toast.error("Falha ao carregar ativos do grupo.");
+          console.error(error);
+          return [];
+        }
+        return data.map(item => item.ativo);
+      }
+
+      const fetchAllAvailableAssets = async () => {
+        return await getAtivosByCentro(grupo.centro_de_localizacao);
+      }
+
+      Promise.all([fetchCurrentAssets(), fetchAllAvailableAssets()])
+        .then(([current, all]) => {
+          setSelectedAssets(current);
+          setAllAssets(all);
         })
         .catch(() => {
-          toast.error("Falha ao carregar ativos.");
+          toast.error("Falha ao carregar lista de ativos.");
         })
         .finally(() => {
           setIsLoading(false);
         });
     }
-  }, [open, grupo.centro_de_localizacao]);
+  }, [open, grupo.id, grupo.centro_de_localizacao]);
 
   const handleCheckboxChange = (asset: string, checked: boolean) => {
     setSelectedAssets((prev) =>
@@ -97,7 +113,7 @@ export function EditAssetsDialog({ grupo, onUpdate, open, onOpenChange, isUpdati
                 <div key={asset} className="flex items-center space-x-2">
                   <Checkbox
                     id={`edit-${asset}`}
-                    checked={selectedAssets.includes(asset)}
+                    checked={(selectedAssets || []).includes(asset)}
                     onCheckedChange={(checked) =>
                       handleCheckboxChange(asset, !!checked)
                     }

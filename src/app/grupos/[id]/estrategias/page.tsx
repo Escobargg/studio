@@ -18,7 +18,10 @@ import { useParams } from "next/navigation";
 async function getGroupDetails(groupId: string): Promise<Grupo | null> {
   const { data, error } = await supabase
     .from("grupos_de_ativos")
-    .select("*")
+    .select(`
+      *,
+      grupo_ativos_relacao(count)
+    `)
     .eq("id", groupId)
     .single();
 
@@ -26,7 +29,13 @@ async function getGroupDetails(groupId: string): Promise<Grupo | null> {
     console.error("Error fetching group details:", error);
     return null;
   }
-  return data;
+  
+  const item = data;
+  return {
+      ...item,
+      ativos: [], // Mantido para tipagem, mas o count é usado
+      ativos_count: (item.grupo_ativos_relacao as unknown as [{ count: number }])[0]?.count || 0,
+  } as Grupo;
 }
 
 async function getGroupStrategies(groupId: string): Promise<Strategy[]> {
@@ -91,6 +100,21 @@ export default function EstrategiasPage() {
       currentStrategies.filter(s => s.id !== deletedStrategyId)
     );
   };
+  
+  const [assets, setAssets] = useState<string[]>([]);
+  useEffect(() => {
+    if (!groupId) return;
+    const fetchAssets = async () => {
+      const { data, error } = await supabase
+        .from('grupo_ativos_relacao')
+        .select('ativo')
+        .eq('grupo_id', groupId);
+      if (data) {
+        setAssets(data.map(a => a.ativo));
+      }
+    }
+    fetchAssets();
+  }, [groupId]);
 
   if (loading) {
     return (
@@ -124,7 +148,7 @@ export default function EstrategiasPage() {
                     <div>
                         <CardTitle className="text-2xl">Estratégias - {grupo.nome_grupo}</CardTitle>
                         <CardDescription>
-                            {grupo.unidade} | {grupo.centro_de_localizacao} | {grupo.fase} | {grupo.ativos.length} ativos
+                            {grupo.centro_de_localizacao} | {grupo.fase} | {grupo.ativos_count} ativos
                         </CardDescription>
                     </div>
                 </div>
@@ -171,7 +195,7 @@ export default function EstrategiasPage() {
             </CardHeader>
             <CardContent>
                 <div className="space-y-4">
-                    {grupo.ativos.map((ativo) => (
+                    {assets.map((ativo) => (
                         <div key={ativo} className="flex items-center justify-between p-3 bg-muted/40 rounded-lg">
                             <div>
                                 <p className="font-semibold">{ativo}</p>
