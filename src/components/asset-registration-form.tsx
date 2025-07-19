@@ -266,91 +266,91 @@ export function AssetRegistrationForm({ initialDiretoriasExecutivas }: AssetRegi
   );
   
   return (
-    <Card className="w-full shadow-lg border-2 border-border/60">
-      <Form {...form}>
+     <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
-          <CardHeader>
-            <CardTitle className="font-headline text-2xl">Criar Novo Grupo de Ativos</CardTitle>
-            <CardDescription>Preencha os detalhes abaixo para cadastrar um novo grupo.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                <FormField control={form.control} name="nomeGrupo" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Nome do Grupo</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Ex: Frota de Caminhões - N4" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                )}/>
-                <FormField control={form.control} name="tipoGrupo" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Tipo do Grupo</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value || ""}>
-                        <FormControl><SelectTrigger><SelectValue placeholder="Selecione um tipo" /></SelectTrigger></FormControl>
-                        <SelectContent><SelectItem value="Frota">Frota</SelectItem><SelectItem value="Rota">Rota</SelectItem></SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                )}/>
-                {renderSelect("diretoria_executiva", "Diretoria Executiva", "Selecione a diretoria executiva", options.diretoriasExecutivas, isLoading.diretoriasExecutivas, isLoading.diretoriasExecutivas)}
-                {renderSelect("diretoria", "Diretoria", "Selecione a diretoria", options.diretorias, !watch("diretoria_executiva"), isLoading.diretorias)}
-                {renderSelect("unidade", "Unidade", "Selecione a unidade", options.unidades, !watch("diretoria"), isLoading.unidades)}
-                {renderSelect("centro_de_localizacao", "Centro de Localização", "Selecione o centro", options.centrosLocalizacao, !watch("unidade"), isLoading.centrosLocalizacao)}
-                {renderSelect("fase", "Fase", "Selecione a fase", options.fases, !watch("centro_de_localizacao"), isLoading.fases)}
-                {renderSelect("categoria", "Categoria", "Selecione a categoria", options.categorias, !watch("centro_de_localizacao"), isLoading.categorias)}
-              </div>
-              
-              <Separator className="my-8" />
-              
-              <FormField control={form.control} name="ativos" render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Ativos</FormLabel>
-                    <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button variant="outline" role="combobox" className="w-full justify-between h-10" disabled={!watch("centro_de_localizacao") || isLoading.ativos || isPending}>
-                                <span className="truncate">
-                                  {isLoading.ativos ? 'Carregando...' : field.value?.length > 0 ? `${field.value.length} ativos selecionados` : 'Selecione os ativos'}
-                                </span>
-                                {(isLoading.ativos || isPending) ? <Loader2 className="ml-2 h-4 w-4 animate-spin" /> : <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />}
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                            <ScrollArea className="h-72">
-                                {options.ativos.length > 0 ? options.ativos.map((asset) => (
-                                    <div key={asset} className="flex items-center px-4 py-2 space-x-3 hover:bg-muted/50 transition-colors rounded-md">
-                                        <Checkbox id={asset} checked={field.value?.includes(asset)}
-                                            onCheckedChange={(checked) => {
-                                                const updatedValue = checked ? [...(field.value || []), asset] : (field.value || []).filter((value) => value !== asset);
-                                                field.onChange(updatedValue);
-                                            }}
-                                        />
-                                        <label htmlFor={asset} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex-1 cursor-pointer">{asset}</label>
-                                    </div>
-                                )) : <p className="p-4 text-sm text-center text-muted-foreground">{!watch("centro_de_localizacao") ? 'Selecione um centro de localização primeiro.' : 'Nenhum ativo encontrado.'}</p>}
-                            </ScrollArea>
-                        </PopoverContent>
-                    </Popover>
-                    <FormDescription>Os ativos são carregados com base no Centro de Localização selecionado.</FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-          </CardContent>
-          <CardFooter className="px-6 pt-6 justify-end gap-2">
-            <Button variant="ghost" type="button" asChild>
-                <Link href="/grupos">Cancelar</Link>
-            </Button>
-            <Button type="submit" disabled={isSubmitting || isPending} size="lg">
-              {(isSubmitting || isPending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isSubmitting ? 'Registrando...' : (isPending ? 'Atualizando...' : 'Registrar Grupo')}
-            </Button>
-          </CardFooter>
+            <Card className="w-full shadow-lg">
+                <CardHeader>
+                    <CardTitle className="text-2xl">Criar Novo Grupo de Ativos</CardTitle>
+                    <CardDescription>Preencha os detalhes abaixo para cadastrar um novo grupo.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                        <FormField control={form.control} name="nomeGrupo" render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Nome do Grupo</FormLabel>
+                            <FormControl>
+                                <Input placeholder="Ex: Frota de Caminhões - N4" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}/>
+                        <FormField control={form.control} name="tipoGrupo" render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Tipo do Grupo</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value || ""}>
+                                <FormControl><SelectTrigger><SelectValue placeholder="Selecione um tipo" /></SelectTrigger></FormControl>
+                                <SelectContent><SelectItem value="Frota">Frota</SelectItem><SelectItem value="Rota">Rota</SelectItem></SelectContent>
+                            </Select>
+                            <FormMessage />
+                            </FormItem>
+                        )}/>
+                        {renderSelect("diretoria_executiva", "Diretoria Executiva", "Selecione a diretoria executiva", options.diretoriasExecutivas, isLoading.diretoriasExecutivas, isLoading.diretoriasExecutivas)}
+                        {renderSelect("diretoria", "Diretoria", "Selecione a diretoria", options.diretorias, !watch("diretoria_executiva"), isLoading.diretorias)}
+                        {renderSelect("unidade", "Unidade", "Selecione a unidade", options.unidades, !watch("diretoria"), isLoading.unidades)}
+                        {renderSelect("centro_de_localizacao", "Centro de Localização", "Selecione o centro", options.centrosLocalizacao, !watch("unidade"), isLoading.centrosLocalizacao)}
+                        {renderSelect("fase", "Fase", "Selecione a fase", options.fases, !watch("centro_de_localizacao"), isLoading.fases)}
+                        {renderSelect("categoria", "Categoria", "Selecione a categoria", options.categorias, !watch("centro_de_localizacao"), isLoading.categorias)}
+                    </div>
+                    
+                    <Separator className="my-4" />
+                    
+                    <FormField control={form.control} name="ativos" render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                            <FormLabel>Ativos</FormLabel>
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                <FormControl>
+                                    <Button variant="outline" role="combobox" className="w-full justify-between h-10" disabled={!watch("centro_de_localizacao") || isLoading.ativos || isPending}>
+                                        <span className="truncate">
+                                        {isLoading.ativos ? 'Carregando...' : field.value?.length > 0 ? `${field.value.length} ativos selecionados` : 'Selecione os ativos'}
+                                        </span>
+                                        {(isLoading.ativos || isPending) ? <Loader2 className="ml-2 h-4 w-4 animate-spin" /> : <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />}
+                                    </Button>
+                                </FormControl>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                                    <ScrollArea className="h-72">
+                                        {options.ativos.length > 0 ? options.ativos.map((asset) => (
+                                            <div key={asset} className="flex items-center px-4 py-2 space-x-3 hover:bg-muted/50 transition-colors rounded-md">
+                                                <Checkbox id={asset} checked={field.value?.includes(asset)}
+                                                    onCheckedChange={(checked) => {
+                                                        const updatedValue = checked ? [...(field.value || []), asset] : (field.value || []).filter((value) => value !== asset);
+                                                        field.onChange(updatedValue);
+                                                    }}
+                                                />
+                                                <label htmlFor={asset} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex-1 cursor-pointer">{asset}</label>
+                                            </div>
+                                        )) : <p className="p-4 text-sm text-center text-muted-foreground">{!watch("centro_de_localizacao") ? 'Selecione um centro de localização primeiro.' : 'Nenhum ativo encontrado.'}</p>}
+                                    </ScrollArea>
+                                </PopoverContent>
+                            </Popover>
+                            <FormDescription>Os ativos são carregados com base no Centro de Localização selecionado.</FormDescription>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                </CardContent>
+                <CardFooter className="justify-end gap-2">
+                    <Button variant="ghost" type="button" asChild>
+                        <Link href="/grupos">Cancelar</Link>
+                    </Button>
+                    <Button type="submit" disabled={isSubmitting || isPending}>
+                    {(isSubmitting || isPending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {isSubmitting ? 'Registrando...' : (isPending ? 'Atualizando...' : 'Registrar Grupo')}
+                    </Button>
+                </CardFooter>
+            </Card>
         </form>
-      </Form>
-    </Card>
+    </Form>
   );
 }
