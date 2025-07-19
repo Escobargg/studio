@@ -283,7 +283,7 @@ export async function getScheduleData(filters: CronogramaFiltros): Promise<Sched
         .select(`
             id, nome, prioridade, frequencia_valor, frequencia_unidade,
             duracao_valor, duracao_unidade, data_inicio, data_fim,
-            grupos_de_ativos:grupo_id ( id, nome_grupo, fase )
+            grupo_id
         `)
         .eq('ativa', true)
         .lte('data_inicio', yearEnd.toISOString())
@@ -303,10 +303,8 @@ export async function getScheduleData(filters: CronogramaFiltros): Promise<Sched
         console.error("Error fetching strategies for schedule:", strategiesError);
     } else {
         strategiesData.forEach(strategy => {
-            if (!strategy.grupos_de_ativos) return;
-
-            const groupKey = strategy.grupos_de_ativos.id;
-            if (!scheduleMap.has(groupKey)) return;
+            const groupKey = strategy.grupo_id;
+            if (!groupKey || !scheduleMap.has(groupKey)) return;
             
             let currentDate = new Date(strategy.data_inicio);
             const strategyEndDate = strategy.data_fim ? new Date(strategy.data_fim) : yearEnd;
