@@ -129,11 +129,11 @@ type TeamFilters = {
 }
 
 // Fetches available teams (especialidades) from Supabase, with optional filters
-export const getEquipes = async (filters: TeamFilters = {}): Promise<{ id: string; especialidade: string; hh: number }[]> => {
+export const getEquipes = async (filters: TeamFilters = {}): Promise<{ id: string; especialidade: string; hh: number; capacidade: number; }[]> => {
   try {
     let query = supabase
       .from('equipes')
-      .select('id, especialidade, hh');
+      .select('id, especialidade, hh, capacidade');
 
     if (filters.centro_de_localizacao) {
       query = query.eq('centro_de_localizacao', filters.centro_de_localizacao);

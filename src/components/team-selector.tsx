@@ -16,6 +16,7 @@ export type Team = {
   id: string;
   especialidade: string;
   hh: number;
+  capacidade: number;
 };
 
 export type SelectedTeam = {
@@ -102,9 +103,8 @@ export function TeamSelector({
   }, [selectedTeams, onChange]);
 
   const handleCapacityChange = useCallback((teamId: string, capacityStr: string) => {
-    const capacity = parseInt(capacityStr, 10) || 0;
     const newSelectedTeams = selectedTeams.map(team =>
-      team.id === teamId ? { ...team, capacidade: capacity } : team
+      team.id === teamId ? { ...team, capacidade: parseInt(capacityStr, 10) } : team
     );
     onChange(newSelectedTeams);
   }, [selectedTeams, onChange]);
@@ -172,35 +172,40 @@ export function TeamSelector({
         <div>
           <Label className="text-base font-medium">Detalhes por Equipe</Label>
           <div className="mt-2 space-y-4">
-            {calculatedTeams.map((team) => (
-              <div key={team.id} className="grid grid-cols-1 md:grid-cols-4 items-center gap-4 p-2 border rounded-md">
-                <Label className="font-semibold">{team.especialidade}</Label>
+            {calculatedTeams.map((selectedTeam) => {
+              const teamDetails = availableTeams.find(t => t.id === selectedTeam.id);
+              const maxCapacity = teamDetails?.capacidade || 1;
+              
+              return (
+              <div key={selectedTeam.id} className="grid grid-cols-1 md:grid-cols-4 items-center gap-4 p-2 border rounded-md">
+                <Label className="font-semibold">{selectedTeam.especialidade}</Label>
                 <div className="space-y-1">
-                    <Label htmlFor={`capacity-${team.id}`}>Capacidade</Label>
+                    <Label htmlFor={`capacity-${selectedTeam.id}`}>Capacidade</Label>
                     <Select
-                        value={String(team.capacidade || "1")}
-                        onValueChange={(val) => handleCapacityChange(team.id, val)}
+                        value={String(selectedTeam.capacidade || "1")}
+                        onValueChange={(val) => handleCapacityChange(selectedTeam.id, val)}
                     >
-                        <SelectTrigger id={`capacity-${team.id}`}>
+                        <SelectTrigger id={`capacity-${selectedTeam.id}`}>
                             <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                            {[...Array(10).keys()].map(i => (
+                            {[...Array(maxCapacity).keys()].map(i => (
                                 <SelectItem key={i + 1} value={String(i + 1)}>{i + 1}</SelectItem>
                             ))}
                         </SelectContent>
                     </Select>
                 </div>
                  <div className="space-y-1">
-                    <Label htmlFor={`hh-${team.id}`}>HH</Label>
-                    <Input id={`hh-${team.id}`} disabled value={team.hh || ''} />
+                    <Label htmlFor={`hh-${selectedTeam.id}`}>HH</Label>
+                    <Input id={`hh-${selectedTeam.id}`} disabled value={selectedTeam.hh || ''} />
                 </div>
                  <div className="space-y-1">
-                    <Label htmlFor={`total-hh-${team.id}`}>HH/Parada</Label>
-                    <Input id={`total-hh-${team.id}`} disabled value={team.total_hh || ''} />
+                    <Label htmlFor={`total-hh-${selectedTeam.id}`}>HH/Parada</Label>
+                    <Input id={`total-hh-${selectedTeam.id}`} disabled value={selectedTeam.total_hh || ''} />
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
