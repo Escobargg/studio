@@ -67,29 +67,11 @@ export function ScheduleView({ data, year }: ScheduleViewProps) {
     };
     
     const processedData = useMemo(() => {
-        const result: { groupName: string; location: string; type: 'Estratégias' | 'Paradas'; items: ScheduleItem[] }[] = [];
-        data.forEach(group => {
-            const strategies = group.items.filter(item => item.type === 'strategy');
-            const stops = group.items.filter(item => item.type === 'stop');
-
-            if (strategies.length > 0) {
-                result.push({
-                    groupName: group.groupName,
-                    location: group.location,
-                    type: 'Estratégias',
-                    items: strategies
-                });
-            }
-            if (stops.length > 0) {
-                result.push({
-                    groupName: group.groupName,
-                    location: group.location,
-                    type: 'Paradas',
-                    items: stops
-                });
-            }
-        });
-        return result;
+        return data.map(group => ({
+            ...group,
+            strategies: group.items.filter(item => item.type === 'strategy'),
+            stops: group.items.filter(item => item.type === 'stop'),
+        }));
     }, [data]);
 
     return (
@@ -124,50 +106,77 @@ export function ScheduleView({ data, year }: ScheduleViewProps) {
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
-                            {processedData.map((group, index) => (
-                                <tr key={`${group.groupName}-${group.type}-${index}`}>
-                                    <td className="px-3 py-4 whitespace-nowrap text-sm font-medium text-gray-900 sticky left-0 bg-white z-10 w-64">
-                                       <div className="truncate" title={group.groupName}>
-                                          <p className="font-semibold">{group.groupName}</p>
-                                          <p className="text-xs text-muted-foreground">{group.location}</p>
-                                        </div>
-                                    </td>
-                                    <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-500 sticky left-64 bg-white z-10 w-32">
-                                        <span className={cn(
-                                            "px-2 inline-flex text-xs leading-5 font-semibold rounded-full",
-                                            group.type === 'Estratégias' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
-                                        )}>
-                                            {group.type}
-                                        </span>
-                                    </td>
-                                    {timeIntervals.map(interval => (
-                                        <td key={interval.value} className="px-1 py-1 text-center border-l">
-                                            <div className="h-full w-full flex flex-wrap items-center justify-center gap-1">
-                                                {group.items.map(item =>
-                                                    getPosition(item, interval.value) && (
-                                                        <Tooltip key={item.id}>
-                                                            <TooltipTrigger>
-                                                                <div
-                                                                    className={cn(
-                                                                        "h-4 w-4 rounded-sm",
-                                                                        item.type === 'strategy' ? priorityColors[item.priority || 'BAIXA'] : stopColor
-                                                                    )}
-                                                                />
-                                                            </TooltipTrigger>
-                                                            <TooltipContent>
-                                                                <p className="font-bold">{item.name}</p>
-                                                                <p>Início: {format(item.startDate, "dd/MM/yyyy")}</p>
-                                                                <p>Fim: {format(item.endDate, "dd/MM/yyyy")}</p>
-                                                                {item.type === 'strategy' && item.priority && <p>Prioridade: {item.priority}</p>}
-                                                                {item.type === 'stop' && item.status && <p>Status: {item.status}</p>}
-                                                            </TooltipContent>
-                                                        </Tooltip>
-                                                    )
-                                                )}
+                            {processedData.map((group) => (
+                                <React.Fragment key={group.groupName}>
+                                    <tr className="bg-white">
+                                        <td rowSpan={2} className="px-3 py-4 whitespace-nowrap text-sm font-medium text-gray-900 sticky left-0 bg-white z-10 w-64 border-b">
+                                            <div className="truncate" title={group.groupName}>
+                                                <p className="font-semibold">{group.groupName}</p>
+                                                <p className="text-xs text-muted-foreground">{group.location}</p>
                                             </div>
                                         </td>
-                                    ))}
-                                </tr>
+                                        <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-500 sticky left-64 bg-white z-10 w-32 border-b">
+                                            Estratégias
+                                        </td>
+                                        {timeIntervals.map(interval => (
+                                            <td key={interval.value} className="px-1 py-1 text-center border-l border-b">
+                                                <div className="h-full w-full flex flex-wrap items-center justify-center gap-1">
+                                                    {group.strategies.map(item =>
+                                                        getPosition(item, interval.value) && (
+                                                            <Tooltip key={item.id}>
+                                                                <TooltipTrigger>
+                                                                    <div
+                                                                        className={cn(
+                                                                            "h-4 w-4 rounded-sm",
+                                                                            priorityColors[item.priority || 'BAIXA']
+                                                                        )}
+                                                                    />
+                                                                </TooltipTrigger>
+                                                                <TooltipContent>
+                                                                    <p className="font-bold">{item.name}</p>
+                                                                    <p>Início: {format(item.startDate, "dd/MM/yyyy")}</p>
+                                                                    <p>Fim: {format(item.endDate, "dd/MM/yyyy")}</p>
+                                                                    {item.priority && <p>Prioridade: {item.priority}</p>}
+                                                                </TooltipContent>
+                                                            </Tooltip>
+                                                        )
+                                                    )}
+                                                </div>
+                                            </td>
+                                        ))}
+                                    </tr>
+                                    <tr className="bg-white">
+                                        <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-500 sticky left-64 bg-white z-10 w-32 border-b">
+                                            Paradas
+                                        </td>
+                                        {timeIntervals.map(interval => (
+                                            <td key={interval.value} className="px-1 py-1 text-center border-l border-b">
+                                                <div className="h-full w-full flex flex-wrap items-center justify-center gap-1">
+                                                    {group.stops.map(item =>
+                                                        getPosition(item, interval.value) && (
+                                                            <Tooltip key={item.id}>
+                                                                <TooltipTrigger>
+                                                                    <div
+                                                                        className={cn(
+                                                                            "h-4 w-4 rounded-sm",
+                                                                            stopColor
+                                                                        )}
+                                                                    />
+                                                                </TooltipTrigger>
+                                                                <TooltipContent>
+                                                                    <p className="font-bold">{item.name}</p>
+                                                                    <p>Início: {format(item.startDate, "dd/MM/yyyy")}</p>
+                                                                    <p>Fim: {format(item.endDate, "dd/MM/yyyy")}</p>
+                                                                    {item.status && <p>Status: {item.status}</p>}
+                                                                </TooltipContent>
+                                                            </Tooltip>
+                                                        )
+                                                    )}
+                                                </div>
+                                            </td>
+                                        ))}
+                                    </tr>
+                                </React.Fragment>
                             ))}
                         </tbody>
                     </table>
