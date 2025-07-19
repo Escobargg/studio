@@ -250,7 +250,7 @@ export async function getScheduleData(filters: CronogramaFiltros): Promise<Sched
     
     const scheduleMap = new Map<string, { groupName: string; location: string; items: any[] }>();
 
-    // 1. Fetch ALL groups first based on filters
+    // 1. Fetch ALL groups that match the filters
     let groupsQuery = supabase
         .from('grupos_de_ativos')
         .select('id, nome_grupo, centro_de_localizacao, fase');
@@ -260,14 +260,19 @@ export async function getScheduleData(filters: CronogramaFiltros): Promise<Sched
     if (filters.centro_de_localizacao) groupsQuery = groupsQuery.eq('centro_de_localizacao', filters.centro_de_localizacao);
     if (filters.fase) groupsQuery = groupsQuery.eq('fase', filters.fase);
     
-    const { data: allGroups, error: groupsError } = await groupsQuery;
+    const { data: filteredGroups, error: groupsError } = await groupsQuery;
 
     if (groupsError) {
-        console.error("Error fetching all groups for schedule:", groupsError);
+        console.error("Error fetching filtered groups for schedule:", groupsError);
         return [];
     }
 
-    allGroups.forEach(group => {
+    if (!filteredGroups || filteredGroups.length === 0) {
+        return [];
+    }
+    
+    // Pre-populate the map with filtered groups to show them even if they have no items
+    filteredGroups.forEach(group => {
         scheduleMap.set(group.id, {
             groupName: group.nome_grupo,
             location: `${group.centro_de_localizacao} - ${group.fase}`,
@@ -275,67 +280,55 @@ export async function getScheduleData(filters: CronogramaFiltros): Promise<Sched
         });
     });
 
-    const groupNameToIdMap = new Map(allGroups.map(g => [g.nome_grupo, g.id]));
+    const filteredGroupIds = new Set(filteredGroups.map(g => g.id));
+    const groupNameToIdMap = new Map(filteredGroups.map(g => [g.nome_grupo, g.id]));
 
-    // 2. Fetch strategies for the filtered groups
+    // 2. Fetch all strategies for the year
     let strategiesQuery = supabase
         .from('estrategias')
-        .select(`
-            id, nome, prioridade, frequencia_valor, frequencia_unidade,
-            duracao_valor, duracao_unidade, data_inicio, data_fim,
-            grupo_id
-        `)
+        .select('id, nome, prioridade, frequencia_valor, frequencia_unidade, duracao_valor, duracao_unidade, data_inicio, data_fim, grupo_id')
         .eq('ativa', true)
         .lte('data_inicio', yearEnd.toISOString())
         .or(`data_fim.is.null,data_fim.gte.${yearStart.toISOString()}`);
     
-    const filteredGroupIds = allGroups.map(g => g.id);
-    if (filteredGroupIds.length > 0) {
-        strategiesQuery = strategiesQuery.in('grupo_id', filteredGroupIds);
-    } else {
-        // No groups match filter, so no strategies will be found
-        return Array.from(scheduleMap.values()).sort((a,b) => a.groupName.localeCompare(b.groupName));
-    }
-
     const { data: strategiesData, error: strategiesError } = await strategiesQuery;
     
     if (strategiesError) {
         console.error("Error fetching strategies for schedule:", strategiesError);
     } else {
+        // Filter strategies on the client side based on the fetched groups
         strategiesData.forEach(strategy => {
             const groupKey = strategy.grupo_id;
-            if (!groupKey || !scheduleMap.has(groupKey)) return;
-            
-            let currentDate = new Date(strategy.data_inicio);
-            const strategyEndDate = strategy.data_fim ? new Date(strategy.data_fim) : yearEnd;
-            const intervalDays = getFrequencyInDays(strategy.frequencia_valor, strategy.frequencia_unidade);
-            const duration = { [strategy.duracao_unidade.toLowerCase()]: strategy.duracao_valor };
+            if (groupKey && filteredGroupIds.has(groupKey)) {
+                let currentDate = new Date(strategy.data_inicio);
+                const strategyEndDate = strategy.data_fim ? new Date(strategy.data_fim) : yearEnd;
+                const intervalDays = getFrequencyInDays(strategy.frequencia_valor, strategy.frequencia_unidade);
+                const duration = { [strategy.duracao_unidade.toLowerCase()]: strategy.duracao_valor };
 
-            while (currentDate <= strategyEndDate && currentDate <= yearEnd) {
-                if (currentDate >= yearStart) {
-                    scheduleMap.get(groupKey)?.items.push({
-                        id: `${strategy.id}-${currentDate.toISOString()}`,
-                        name: strategy.nome,
-                        startDate: currentDate,
-                        endDate: add(currentDate, duration),
-                        type: 'strategy',
-                        priority: strategy.prioridade,
-                    });
+                while (currentDate <= strategyEndDate && currentDate <= yearEnd) {
+                    if (currentDate >= yearStart) {
+                        scheduleMap.get(groupKey)?.items.push({
+                            id: `${strategy.id}-${currentDate.toISOString()}`,
+                            name: strategy.nome,
+                            startDate: currentDate,
+                            endDate: add(currentDate, duration),
+                            type: 'strategy',
+                            priority: strategy.prioridade,
+                        });
+                    }
+                    currentDate = add(currentDate, { days: intervalDays });
                 }
-                currentDate = add(currentDate, { days: intervalDays });
             }
         });
     }
 
-    // 3. Fetch stops based on filters
+    // 3. Fetch all stops for the year
     let stopsQuery = supabase
         .from('paradas_de_manutencao')
-        .select(`
-            id, nome_parada, data_inicio_planejada, data_fim_planejada, tipo_selecao,
-            grupo_de_ativos, ativo_unico, centro_de_localizacao, fase, status
-        `)
+        .select('id, nome_parada, data_inicio_planejada, data_fim_planejada, tipo_selecao, grupo_de_ativos, ativo_unico, centro_de_localizacao, fase, status')
         .or(`and(data_inicio_planejada.gte.${yearStart.toISOString()},data_inicio_planejada.lte.${yearEnd.toISOString()}),and(data_fim_planejada.gte.${yearStart.toISOString()},data_fim_planejada.lte.${yearEnd.toISOString()}),and(data_inicio_planejada.lte.${yearStart.toISOString()},data_fim_planejada.gte.${yearEnd.toISOString()})`);
-
+    
+    // Apply the same hierarchy filters to stops
     if (filters.diretoria_executiva) stopsQuery = stopsQuery.eq('diretoria_executiva', filters.diretoria_executiva);
     if (filters.diretoria) stopsQuery = stopsQuery.eq('diretoria', filters.diretoria);
     if (filters.centro_de_localizacao) stopsQuery = stopsQuery.eq('centro_de_localizacao', filters.centro_de_localizacao);
@@ -354,17 +347,15 @@ export async function getScheduleData(filters: CronogramaFiltros): Promise<Sched
             if (stop.tipo_selecao === 'grupo' && stop.grupo_de_ativos) {
                 groupKey = groupNameToIdMap.get(stop.grupo_de_ativos) || null;
             } else if (stop.tipo_selecao === 'ativo' && stop.ativo_unico) {
+                // For single assets, create a unique key and add to map if it matches filters
                 groupName = stop.ativo_unico;
                 groupKey = `ativo-${groupName}-${location}`;
+                 if (!scheduleMap.has(groupKey)) {
+                     scheduleMap.set(groupKey, { groupName: groupName, location, items: [] });
+                 }
             }
 
-            if (!groupKey) return; 
-
-            if (!scheduleMap.has(groupKey) && groupName && location) {
-                 scheduleMap.set(groupKey, { groupName: groupName, location, items: [] });
-            }
-
-            if(scheduleMap.has(groupKey)) {
+            if(groupKey && scheduleMap.has(groupKey)) {
                 scheduleMap.get(groupKey)?.items.push({
                     id: stop.id,
                     name: stop.nome_parada,
