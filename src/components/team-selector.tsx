@@ -66,6 +66,7 @@ export function TeamSelector({
       }
     }
     fetchTeams();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [centroLocalizacao, fase]);
 
   const calculatedTeams = useMemo(() => {
@@ -189,8 +190,8 @@ export function TeamSelector({
                             <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                            {[...Array(maxCapacity).keys()].map(i => (
-                                <SelectItem key={i + 1} value={String(i + 1)}>{i + 1}</SelectItem>
+                            {Array.from({ length: maxCapacity }, (_, i) => i + 1).map(i => (
+                                <SelectItem key={i} value={String(i)}>{i}</SelectItem>
                             ))}
                         </SelectContent>
                     </Select>
