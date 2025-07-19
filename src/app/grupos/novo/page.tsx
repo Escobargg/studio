@@ -24,7 +24,7 @@ export default function NovoGrupoPage() {
 
   return (
     <MainLayout>
-      <div className="flex-1 p-4 md:p-8 overflow-y-auto">
+      <div className="flex-1 p-4 md:p-6 overflow-y-auto">
         <div className="max-w-4xl mx-auto">
            <AssetRegistrationForm initialDiretoriasExecutivas={diretoriasExecutivas} isLoadingInitial={loading} />
         </div>

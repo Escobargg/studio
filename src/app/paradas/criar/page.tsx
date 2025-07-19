@@ -455,11 +455,11 @@ export default function CriarParadaPage() {
 
   return (
     <MainLayout>
-      <div className="flex-1 p-4 md:p-8 overflow-y-auto">
+      <div className="flex-1 p-4 md:p-6 overflow-y-auto">
         <div className="max-w-4xl mx-auto">
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <div className="flex items-center gap-4 mb-6">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <div className="flex items-center gap-4 mb-4">
                 <Button variant="outline" size="icon" asChild>
                   <Link href="/paradas">
                     <ArrowLeft className="h-4 w-4" />
