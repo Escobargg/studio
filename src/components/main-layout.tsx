@@ -12,7 +12,6 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { LayoutGrid, Hand } from "lucide-react";
-import { Building2 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { SmartPcmLogo } from "./smart-pcm-logo";
@@ -95,10 +94,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
           </div>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
-              <Building2 className="w-5 h-5 text-muted-foreground" />
-              <p className="text-sm font-medium text-muted-foreground">
-                Vale S.A.
-              </p>
+              <img src="/logovale.png" alt="Vale Logo" className="h-6" />
             </div>
           </div>
         </header>
