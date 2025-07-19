@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -40,7 +41,7 @@ export function EditAssetsDialog({ grupo, onUpdate, open, onOpenChange, isUpdati
   // Sincroniza o estado de ativos selecionados com as props quando o dialog abre
   useEffect(() => {
     if (open) {
-      setSelectedAssets(grupo.ativos);
+      setSelectedAssets(grupo.ativos || []);
     }
   }, [open, grupo.ativos]);
 

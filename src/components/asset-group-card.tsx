@@ -60,18 +60,9 @@ export function AssetGroupCard({ grupo, onGroupUpdate, onGroupDelete }: AssetGro
 
             if (error) throw error;
             
-            const { data: strategiesData, error: strategiesError } = await supabase
-              .from('estrategias')
-              .select('id', { count: 'exact' })
-              .eq('grupo_id', grupo.id)
-              .eq('ativa', true);
-
-            if (strategiesError) throw strategiesError;
-
             const updatedGroup: Grupo = {
                 ...grupo,
                 ativos: updatedAssets,
-                estrategias_count: strategiesData?.length ?? 0,
             };
             
             toast.success("Grupo atualizado com sucesso!");
