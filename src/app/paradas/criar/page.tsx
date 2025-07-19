@@ -203,8 +203,8 @@ export default function CriarParadaPage() {
   const getCapacidadeOptions = (especialidadeNome: string | undefined): number[] => {
       if (!especialidadeNome) return [];
       const especialidade = especialidades.find(e => e.especialidade === especialidadeNome);
-      if (!especialidade || !especialidade.max_capacidade) return [];
-      return Array.from({ length: especialidade.max_capacidade }, (_, i) => i + 1);
+      if (!especialidade || !especialidade.capacidade) return [];
+      return Array.from({ length: especialidade.capacidade }, (_, i) => i + 1);
   };
   
   const availableEspecialidades = especialidades.filter(

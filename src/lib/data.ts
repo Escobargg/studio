@@ -11,7 +11,7 @@ export type Filtros = {
 export type Especialidade = {
   especialidade: string;
   hh: number;
-  max_capacidade: number;
+  capacidade: number;
 }
 
 // Fetches available options for a specific hierarchy level, filtered by previous selections.
@@ -109,7 +109,7 @@ export const getEspecialidades = async (centro: string, fase: string): Promise<E
     try {
         const { data, error } = await supabase
             .from('equipes')
-            .select('especialidade, hh, max_capacidade')
+            .select('especialidade, hh, capacidade')
             .eq('centro_de_localizacao', centro)
             .eq('fase', fase)
             .throwOnError();
@@ -123,7 +123,7 @@ export const getEspecialidades = async (centro: string, fase: string): Promise<E
         return data.map(item => ({
             especialidade: item.especialidade,
             hh: item.hh,
-            max_capacidade: item.max_capacidade
+            capacidade: item.capacidade
         })).sort((a, b) => a.especialidade.localeCompare(b.especialidade));
 
     } catch(error) {
