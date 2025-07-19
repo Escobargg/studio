@@ -5,6 +5,8 @@ import type { Stop } from '@/components/stop-card';
 
 export type Filtros = {
   nome_grupo?: string;
+  diretoria_executiva?: string;
+  diretoria?: string;
   centro_de_localizacao?: string;
   fase?: string;
   categoria?: string;
@@ -18,7 +20,7 @@ export type Especialidade = {
 
 // Fetches available options for a specific hierarchy level, filtered by previous selections.
 export const getHierarquiaOpcoes = async (
-  campo: keyof Omit<Filtros, 'nome_grupo'> | 'diretoria_executiva' | 'diretoria' | 'unidade',
+  campo: keyof Omit<Filtros, 'nome_grupo'> | 'unidade',
   filtros: Partial<Record<'diretoria_executiva' | 'diretoria' | 'unidade' | 'centro_de_localizacao', string>> = {}
 ): Promise<string[]> => {
   try {

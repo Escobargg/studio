@@ -21,6 +21,8 @@ interface GroupFiltersProps {
 }
 
 type OptionsState = {
+  diretoriasExecutivas: string[];
+  diretorias: string[];
   centrosLocalizacao: string[];
   fases: string[];
   categorias: string[];
@@ -28,6 +30,8 @@ type OptionsState = {
 
 export function GroupFilters({ filters, onFilterChange }: GroupFiltersProps) {
   const [options, setOptions] = useState<OptionsState>({
+    diretoriasExecutivas: [],
+    diretorias: [],
     centrosLocalizacao: [],
     fases: [],
     categorias: [],
@@ -36,14 +40,29 @@ export function GroupFilters({ filters, onFilterChange }: GroupFiltersProps) {
 
   useEffect(() => {
     const fetchInitial = async () => {
-      setLoading(prev => ({ ...prev, centrosLocalizacao: true }));
-      const centros = await getHierarquiaOpcoes("centro_de_localizacao");
-      setOptions(prev => ({ ...prev, centrosLocalizacao: centros }));
-      setLoading(prev => ({ ...prev, centrosLocalizacao: false }));
+      setLoading(prev => ({ ...prev, diretoriasExecutivas: true }));
+      const de = await getHierarquiaOpcoes("diretoria_executiva");
+      setOptions(prev => ({ ...prev, diretoriasExecutivas: de }));
+      setLoading(prev => ({ ...prev, diretoriasExecutivas: false }));
     };
     fetchInitial();
   }, []);
-  
+
+  useEffect(() => {
+    const de = filters.diretoria_executiva;
+    if (de) {
+      const fetchDiretorias = async () => {
+        setLoading(prev => ({ ...prev, diretorias: true }));
+        const diretorias = await getHierarquiaOpcoes('diretoria', { diretoria_executiva: de });
+        setOptions(prev => ({ ...prev, diretorias }));
+        setLoading(prev => ({ ...prev, diretorias: false }));
+      };
+      fetchDiretorias();
+    } else {
+      setOptions(prev => ({ ...prev, diretorias: [], centrosLocalizacao: [], fases: [], categorias: [] }));
+    }
+  }, [filters.diretoria_executiva]);
+
   useEffect(() => {
     const centro = filters.centro_de_localizacao;
     if (centro) {
@@ -69,12 +88,19 @@ export function GroupFilters({ filters, onFilterChange }: GroupFiltersProps) {
   const handleSelectChange = (field: keyof Filtros, value: string) => {
     const newFilters: Filtros = { ...filters, [field]: value };
 
-    if (field === 'centro_de_localizacao' && !value) {
-      // Clear dependent fields if the center is cleared
+    if (field === 'diretoria_executiva') {
+        delete newFilters.diretoria;
+        delete newFilters.centro_de_localizacao;
+        delete newFilters.fase;
+        delete newFilters.categoria;
+    } else if (field === 'diretoria') {
+        delete newFilters.centro_de_localizacao;
+        delete newFilters.fase;
+        delete newFilters.categoria;
+    } else if (field === 'centro_de_localizacao' && !value) {
       delete newFilters.fase;
       delete newFilters.categoria;
     } else if (field === 'centro_de_localizacao') {
-      // Reset subsequent fields when the center changes
       delete newFilters.fase;
       delete newFilters.categoria;
     }
@@ -121,6 +147,17 @@ export function GroupFilters({ filters, onFilterChange }: GroupFiltersProps) {
             onChange={(e) => handleInputChange('nome_grupo', e.target.value)}
             className="flex-1 min-w-[200px] bg-background"
         />
+        {renderSelect(
+          "diretoria_executiva",
+          "Diretoria Executiva",
+          options.diretoriasExecutivas
+        )}
+        {renderSelect(
+          "diretoria",
+          "Diretoria",
+          options.diretorias,
+          !filters.diretoria_executiva
+        )}
         {renderSelect(
           "centro_de_localizacao",
           "Centro de Localização",
