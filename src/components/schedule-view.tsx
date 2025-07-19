@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React from "react";
 import { getMonth, getISOWeek, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -39,9 +39,9 @@ const stopColor = "bg-green-500";
 
 
 export function ScheduleView({ data, year }: ScheduleViewProps) {
-    const [view, setView] = useState<"semanas" | "meses">("semanas");
+    const [view, setView] = React.useState<"semanas" | "meses">("semanas");
 
-    const timeIntervals = useMemo(() => {
+    const timeIntervals = React.useMemo(() => {
         if (view === 'meses') {
             return Array.from({ length: 12 }, (_, i) => ({
                 label: format(new Date(year, i, 1), "MMM", { locale: ptBR }),
@@ -66,7 +66,7 @@ export function ScheduleView({ data, year }: ScheduleViewProps) {
         return intervalValue >= itemStartWeek && intervalValue <= itemEndWeek;
     };
     
-    const processedData = useMemo(() => {
+    const processedData = React.useMemo(() => {
         return data.map(group => ({
             ...group,
             strategies: group.items.filter(item => item.type === 'strategy'),
@@ -107,7 +107,7 @@ export function ScheduleView({ data, year }: ScheduleViewProps) {
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
                             {processedData.map((group) => (
-                                <React.Fragment key={group.groupName}>
+                                <React.Fragment key={`${group.groupName}-${group.location}`}>
                                     <tr className="bg-white">
                                         <td rowSpan={2} className="px-3 py-4 whitespace-nowrap text-sm font-medium text-gray-900 sticky left-0 bg-white z-10 w-64 border-b">
                                             <div className="truncate" title={group.groupName}>
