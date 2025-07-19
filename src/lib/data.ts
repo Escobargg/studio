@@ -170,6 +170,12 @@ export async function getStops(filters: ParadasFiltros): Promise<Stop[]> {
         `)
         .order('data_inicio_planejada', { ascending: true });
 
+    if (filters.diretoria_executiva) {
+        query = query.eq('diretoria_executiva', filters.diretoria_executiva);
+    }
+    if (filters.diretoria) {
+        query = query.eq('diretoria', filters.diretoria);
+    }
     if (filters.centro_de_localizacao) {
         query = query.eq('centro_de_localizacao', filters.centro_de_localizacao);
     }

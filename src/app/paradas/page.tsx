@@ -13,6 +13,8 @@ import { getStops } from "@/lib/data";
 import { type DateRange } from "react-day-picker";
 
 export type ParadasFiltros = {
+  diretoria_executiva?: string;
+  diretoria?: string;
   centro_de_localizacao?: string;
   fase?: string;
   dateRange?: DateRange;
