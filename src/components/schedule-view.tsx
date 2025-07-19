@@ -66,6 +66,32 @@ export function ScheduleView({ data, year }: ScheduleViewProps) {
         return intervalValue >= itemStartWeek && intervalValue <= itemEndWeek;
     };
     
+    const processedData = useMemo(() => {
+        const result: { groupName: string; location: string; type: 'Estratégias' | 'Paradas'; items: ScheduleItem[] }[] = [];
+        data.forEach(group => {
+            const strategies = group.items.filter(item => item.type === 'strategy');
+            const stops = group.items.filter(item => item.type === 'stop');
+
+            if (strategies.length > 0) {
+                result.push({
+                    groupName: group.groupName,
+                    location: group.location,
+                    type: 'Estratégias',
+                    items: strategies
+                });
+            }
+            if (stops.length > 0) {
+                result.push({
+                    groupName: group.groupName,
+                    location: group.location,
+                    type: 'Paradas',
+                    items: stops
+                });
+            }
+        });
+        return result;
+    }, [data]);
+
     return (
         <TooltipProvider>
             <div className="space-y-4">
@@ -87,6 +113,9 @@ export function ScheduleView({ data, year }: ScheduleViewProps) {
                                 <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 z-10 w-64 min-w-64">
                                     Grupo / Ativo
                                 </th>
+                                 <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-64 bg-gray-50 z-10 w-32 min-w-32">
+                                    Tipo
+                                </th>
                                 {timeIntervals.map(interval => (
                                     <th key={interval.value} scope="col" className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-10">
                                         {interval.label}
@@ -95,13 +124,21 @@ export function ScheduleView({ data, year }: ScheduleViewProps) {
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
-                            {data.map((group, index) => (
-                                <tr key={`${group.groupName}-${index}`}>
+                            {processedData.map((group, index) => (
+                                <tr key={`${group.groupName}-${group.type}-${index}`}>
                                     <td className="px-3 py-4 whitespace-nowrap text-sm font-medium text-gray-900 sticky left-0 bg-white z-10 w-64">
                                        <div className="truncate" title={group.groupName}>
                                           <p className="font-semibold">{group.groupName}</p>
                                           <p className="text-xs text-muted-foreground">{group.location}</p>
                                         </div>
+                                    </td>
+                                    <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-500 sticky left-64 bg-white z-10 w-32">
+                                        <span className={cn(
+                                            "px-2 inline-flex text-xs leading-5 font-semibold rounded-full",
+                                            group.type === 'Estratégias' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
+                                        )}>
+                                            {group.type}
+                                        </span>
                                     </td>
                                     {timeIntervals.map(interval => (
                                         <td key={interval.value} className="px-1 py-1 text-center border-l">
