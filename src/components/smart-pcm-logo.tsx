@@ -9,7 +9,6 @@ export function SmartPcmLogo({ className }: { className?: string }) {
       width={150}
       height={40}
       className={className}
-      priority
     />
   );
 }
