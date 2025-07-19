@@ -18,18 +18,15 @@ export type Team = {
   capacidade: number;
 };
 
-// A estrutura que o react-hook-form vai gerenciar. Apenas o essencial.
+// A estrutura que o react-hook-form vai gerenciar.
 export type SelectedTeam = {
   id: string;
-  capacidade: number;
+  especialidade: string;
+  capacidade: string;
+  hh: string;
+  total_hh: string;
 };
 
-// Estrutura interna para exibição, com os campos calculados.
-type DisplayTeam = SelectedTeam & {
-  especialidade: string;
-  hh: number;
-  total_hh: number;
-};
 
 interface TeamSelectorProps {
   value: SelectedTeam[];
@@ -46,7 +43,6 @@ export function TeamSelector({
 }: TeamSelectorProps) {
   const [availableTeams, setAvailableTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(false);
-  const [displayTeams, setDisplayTeams] = useState<DisplayTeam[]>([]);
 
   useEffect(() => {
     async function fetchTeams() {
@@ -55,6 +51,7 @@ export function TeamSelector({
         const teams = await getEquipes({ centro_de_localizacao: centroLocalizacao, fase });
         setAvailableTeams(teams);
         
+        // Valida se as equipes selecionadas ainda estão disponíveis após a mudança de filtro
         const availableTeamIds = new Set(teams.map(t => t.id));
         const validSelectedTeams = selectedTeams.filter(st => availableTeamIds.has(st.id));
         
@@ -74,40 +71,43 @@ export function TeamSelector({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [centroLocalizacao, fase]);
 
-  // Efeito para sincronizar o estado de exibição com o estado do formulário
-  useEffect(() => {
-    const newDisplayTeams = selectedTeams.map(st => {
+  const updateTeamData = (teams: SelectedTeam[]): SelectedTeam[] => {
+    return teams.map(st => {
       const teamDetails = availableTeams.find(at => at.id === st.id);
       const hh = teamDetails?.hh || 0;
-      const capacidade = st.capacidade || 0;
+      const capacidade = parseInt(st.capacidade, 10) || 0;
       const total_hh = capacidade * hh;
       return {
         ...st,
         especialidade: teamDetails?.especialidade || "Desconhecida",
-        hh,
-        total_hh: Math.round(total_hh)
+        hh: String(hh),
+        total_hh: String(Math.round(total_hh))
       };
     });
-    setDisplayTeams(newDisplayTeams);
-  }, [selectedTeams, availableTeams]);
+  };
 
   const handleTeamSelectionChange = useCallback((team: Team, checked: boolean) => {
     let newSelectedTeams: SelectedTeam[];
     if (checked) {
-      newSelectedTeams = [...selectedTeams, { id: team.id, capacidade: 1 }];
+      newSelectedTeams = [...selectedTeams, { 
+        id: team.id, 
+        especialidade: team.especialidade,
+        capacidade: "1", 
+        hh: String(team.hh), 
+        total_hh: String(team.hh) 
+      }];
     } else {
       newSelectedTeams = selectedTeams.filter((t) => t.id !== team.id);
     }
-    onChange(newSelectedTeams);
-  }, [selectedTeams, onChange]);
+    onChange(updateTeamData(newSelectedTeams));
+  }, [selectedTeams, onChange, availableTeams]);
 
   const handleCapacityChange = useCallback((teamId: string, capacityStr: string) => {
-    const capacity = parseInt(capacityStr, 10);
     const newSelectedTeams = selectedTeams.map(team =>
-      team.id === teamId ? { ...team, capacidade: isNaN(capacity) ? 1 : capacity } : team
+      team.id === teamId ? { ...team, capacidade: capacityStr } : team
     );
-    onChange(newSelectedTeams);
-  }, [selectedTeams, onChange]);
+    onChange(updateTeamData(newSelectedTeams));
+  }, [selectedTeams, onChange, availableTeams]);
   
   if (!centroLocalizacao || !fase) {
       return (
@@ -166,11 +166,11 @@ export function TeamSelector({
         </div>
       </div>
       
-      {displayTeams.length > 0 && (
+      {selectedTeams.length > 0 && (
         <div>
           <Label className="text-base font-medium">Detalhes por Equipe</Label>
           <div className="mt-2 space-y-4">
-            {displayTeams.map((displayTeam) => {
+            {selectedTeams.map((displayTeam) => {
               const teamDetails = availableTeams.find(t => t.id === displayTeam.id);
               const maxCapacity = teamDetails?.capacidade || 1;
               
@@ -210,3 +210,5 @@ export function TeamSelector({
     </div>
   );
 }
+
+    
