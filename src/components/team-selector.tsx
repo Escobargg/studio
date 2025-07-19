@@ -1,14 +1,13 @@
 
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { getEquipes } from "@/lib/data";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Separator } from "./ui/separator";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { Users } from "lucide-react";
 
@@ -19,12 +18,17 @@ export type Team = {
   capacidade: number;
 };
 
+// A estrutura que o react-hook-form vai gerenciar. Apenas o essencial.
 export type SelectedTeam = {
   id: string;
-  especialidade: string;
   capacidade: number;
-  hh?: number;
-  total_hh?: number;
+};
+
+// Estrutura interna para exibição, com os campos calculados.
+type DisplayTeam = SelectedTeam & {
+  especialidade: string;
+  hh: number;
+  total_hh: number;
 };
 
 interface TeamSelectorProps {
@@ -42,6 +46,7 @@ export function TeamSelector({
 }: TeamSelectorProps) {
   const [availableTeams, setAvailableTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(false);
+  const [displayTeams, setDisplayTeams] = useState<DisplayTeam[]>([]);
 
   useEffect(() => {
     async function fetchTeams() {
@@ -50,17 +55,16 @@ export function TeamSelector({
         const teams = await getEquipes({ centro_de_localizacao: centroLocalizacao, fase });
         setAvailableTeams(teams);
         
-        // CORREÇÃO: Filtra equipes selecionadas que não estão mais disponíveis e notifica o formulário
         const availableTeamIds = new Set(teams.map(t => t.id));
-        const newSelectedTeams = selectedTeams.filter(st => availableTeamIds.has(st.id));
-        if (newSelectedTeams.length !== selectedTeams.length) {
-          onChange(newSelectedTeams);
+        const validSelectedTeams = selectedTeams.filter(st => availableTeamIds.has(st.id));
+        
+        if (validSelectedTeams.length !== selectedTeams.length) {
+          onChange(validSelectedTeams);
         }
         
         setLoading(false);
       } else {
         setAvailableTeams([]);
-        // CORREÇÃO: Garante que a seleção é limpa no formulário principal se os filtros forem resetados
         if (selectedTeams.length > 0) {
             onChange([]);
         }
@@ -70,34 +74,27 @@ export function TeamSelector({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [centroLocalizacao, fase]);
 
-  const calculatedTeams = useMemo(() => {
-    return selectedTeams.map(team => {
-      const availableTeam = availableTeams.find(at => at.id === team.id);
-      const hh = availableTeam?.hh || 0;
-      const capacidade = team.capacidade || 0;
+  // Efeito para sincronizar o estado de exibição com o estado do formulário
+  useEffect(() => {
+    const newDisplayTeams = selectedTeams.map(st => {
+      const teamDetails = availableTeams.find(at => at.id === st.id);
+      const hh = teamDetails?.hh || 0;
+      const capacidade = st.capacidade || 0;
       const total_hh = capacidade * hh;
-
       return {
-        ...team,
+        ...st,
+        especialidade: teamDetails?.especialidade || "Desconhecida",
         hh,
         total_hh: Math.round(total_hh)
       };
     });
+    setDisplayTeams(newDisplayTeams);
   }, [selectedTeams, availableTeams]);
-
-  useEffect(() => {
-    // Evita loop infinito comparando a fundo os objetos
-    const hasChanged = JSON.stringify(calculatedTeams) !== JSON.stringify(selectedTeams);
-    if(hasChanged) {
-        onChange(calculatedTeams);
-    }
-  }, [calculatedTeams, selectedTeams, onChange]);
-  
 
   const handleTeamSelectionChange = useCallback((team: Team, checked: boolean) => {
     let newSelectedTeams: SelectedTeam[];
     if (checked) {
-      newSelectedTeams = [...selectedTeams, { ...team, capacidade: 1 }];
+      newSelectedTeams = [...selectedTeams, { id: team.id, capacidade: 1 }];
     } else {
       newSelectedTeams = selectedTeams.filter((t) => t.id !== team.id);
     }
@@ -132,13 +129,12 @@ export function TeamSelector({
           <Skeleton className="h-10 w-24" />
           <Skeleton className="h-10 w-24" />
         </div>
-        <Separator />
         <Skeleton className="h-20 w-full" />
       </div>
     );
   }
   
-  if (availableTeams.length === 0) {
+  if (availableTeams.length === 0 && !loading) {
        return (
         <Alert variant="destructive">
             <Users className="h-4 w-4" />
@@ -149,7 +145,6 @@ export function TeamSelector({
         </Alert>
       );
   }
-
 
   return (
     <div className="space-y-6">
@@ -171,24 +166,24 @@ export function TeamSelector({
         </div>
       </div>
       
-      {calculatedTeams.length > 0 && (
+      {displayTeams.length > 0 && (
         <div>
           <Label className="text-base font-medium">Detalhes por Equipe</Label>
           <div className="mt-2 space-y-4">
-            {calculatedTeams.map((selectedTeam) => {
-              const teamDetails = availableTeams.find(t => t.id === selectedTeam.id);
+            {displayTeams.map((displayTeam) => {
+              const teamDetails = availableTeams.find(t => t.id === displayTeam.id);
               const maxCapacity = teamDetails?.capacidade || 1;
               
               return (
-              <div key={selectedTeam.id} className="grid grid-cols-1 md:grid-cols-4 items-center gap-4 p-2 border rounded-md">
-                <Label className="font-semibold">{selectedTeam.especialidade}</Label>
+              <div key={displayTeam.id} className="grid grid-cols-1 md:grid-cols-4 items-center gap-4 p-2 border rounded-md">
+                <Label className="font-semibold">{displayTeam.especialidade}</Label>
                 <div className="space-y-1">
-                    <Label htmlFor={`capacity-${selectedTeam.id}`}>Capacidade</Label>
+                    <Label htmlFor={`capacity-${displayTeam.id}`}>Capacidade</Label>
                     <Select
-                        value={String(selectedTeam.capacidade || 1)}
-                        onValueChange={(val) => handleCapacityChange(selectedTeam.id, val)}
+                        value={String(displayTeam.capacidade || 1)}
+                        onValueChange={(val) => handleCapacityChange(displayTeam.id, val)}
                     >
-                        <SelectTrigger id={`capacity-${selectedTeam.id}`}>
+                        <SelectTrigger id={`capacity-${displayTeam.id}`}>
                             <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -199,12 +194,12 @@ export function TeamSelector({
                     </Select>
                 </div>
                  <div className="space-y-1">
-                    <Label htmlFor={`hh-${selectedTeam.id}`}>HH</Label>
-                    <Input id={`hh-${selectedTeam.id}`} disabled value={selectedTeam.hh || ''} />
+                    <Label htmlFor={`hh-${displayTeam.id}`}>HH</Label>
+                    <Input id={`hh-${displayTeam.id}`} disabled value={displayTeam.hh || ''} />
                 </div>
                  <div className="space-y-1">
-                    <Label htmlFor={`total-hh-${selectedTeam.id}`}>HH/Dia</Label>
-                    <Input id={`total-hh-${selectedTeam.id}`} disabled value={selectedTeam.total_hh || ''} />
+                    <Label htmlFor={`total-hh-${displayTeam.id}`}>HH/Dia</Label>
+                    <Input id={`total-hh-${displayTeam.id}`} disabled value={displayTeam.total_hh || ''} />
                 </div>
               </div>
               );
@@ -215,5 +210,3 @@ export function TeamSelector({
     </div>
   );
 }
- 
-    

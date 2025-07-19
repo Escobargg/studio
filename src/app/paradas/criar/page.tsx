@@ -40,12 +40,11 @@ import { getHierarquiaOpcoes, getAtivosByCentro, getGruposByCentroEFase } from "
 import { supabase } from "@/lib/supabase";
 import { TeamSelector, type SelectedTeam } from "@/components/team-selector";
 
+
+// Schema para validação simplificada das equipes.
 const equipeSchema = z.object({
   id: z.string(),
-  especialidade: z.string(),
   capacidade: z.number(),
-  hh: z.number().optional(),
-  total_hh: z.number().optional(),
 });
 
 
@@ -65,7 +64,7 @@ const stopFormSchema = z.object({
   dataFimRealizado: z.date().optional().nullable(),
   horaFimRealizado: z.string().optional().nullable(),
   descricao: z.string().optional(),
-  equipes: z.array(equipeSchema).optional().default([]), // VALIDAÇÃO CORRIGIDA
+  equipes: z.array(equipeSchema).optional().default([]),
 }).refine(data => {
     if (data.dataInicioPlanejada && data.horaInicioPlanejada && data.dataFimPlanejada && data.horaFimPlanejada) {
       const start = set(data.dataInicioPlanejada, { hours: parseInt(data.horaInicioPlanejada.split(':')[0]), minutes: parseInt(data.horaInicioPlanejada.split(':')[1]) });
@@ -150,7 +149,7 @@ export default function CriarParadaPage() {
     },
   });
 
-  const { watch, control, setValue } = form;
+  const { watch, control, setValue, getValues } = form;
 
   const [duracaoPlanejada, setDuracaoPlanejada] = useState<number | null>(null);
   const [duracaoRealizada, setDuracaoRealizada] = useState<number | null>(null);
@@ -196,6 +195,7 @@ export default function CriarParadaPage() {
         setFases([]);
         setAtivos([]);
         setGruposDeAtivos([]);
+        setValue("equipes", []);
       }
     };
     fetchDataForCentro();
@@ -206,7 +206,7 @@ export default function CriarParadaPage() {
         if (watchedCentro && watchedFase) {
             setLoadingGrupos(true);
             setValue("grupoAtivos", "");
-            // setValue("equipes", []); // Let TeamSelector handle its own state reset
+            setValue("equipes", []);
 
             const gruposData = await getGruposByCentroEFase(watchedCentro, watchedFase);
             
@@ -214,6 +214,7 @@ export default function CriarParadaPage() {
             setLoadingGrupos(false);
         } else {
             setGruposDeAtivos([]);
+            setValue("equipes", []);
         }
     };
     fetchDependentData();
@@ -556,7 +557,7 @@ export default function CriarParadaPage() {
                                   </FormControl>
                                 </PopoverTrigger>
                                 <PopoverContent className="w-auto p-0" align="start">
-                                  <Calendar mode="single" selected={field.value ?? undefined} onSelect={field.onChange} disabled={(date) => form.getValues("dataInicioPlanejada") ? date < form.getValues("dataInicioPlanejada") : false} initialFocus />
+                                  <Calendar mode="single" selected={field.value ?? undefined} onSelect={field.onChange} disabled={(date) => getValues("dataInicioPlanejada") ? date < getValues("dataInicioPlanejada") : false} initialFocus />
                                 </PopoverContent>
                               </Popover>
                               <FormField
@@ -641,7 +642,7 @@ export default function CriarParadaPage() {
                               </FormControl>
                             </PopoverTrigger>
                             <PopoverContent className="w-auto p-0" align="start">
-                              <Calendar mode="single" selected={field.value ?? undefined} onSelect={field.onChange} disabled={(date) => form.getValues("dataInicioRealizado") ? date < form.getValues("dataInicioRealizado") : false} initialFocus />
+                              <Calendar mode="single" selected={field.value ?? undefined} onSelect={field.onChange} disabled={(date) => getValues("dataInicioRealizado") ? date < getValues("dataInicioRealizado") : false} initialFocus />
                             </PopoverContent>
                            </Popover>
                             <FormField
@@ -679,7 +680,7 @@ export default function CriarParadaPage() {
                       name="equipes"
                       render={({ field }) => (
                         <TeamSelector
-                          value={field.value || []}
+                          value={field.value}
                           onChange={field.onChange}
                           centroLocalizacao={watchedCentro}
                           fase={watchedFase}
@@ -731,5 +732,3 @@ export default function CriarParadaPage() {
     </MainLayout>
   );
 }
- 
-    
