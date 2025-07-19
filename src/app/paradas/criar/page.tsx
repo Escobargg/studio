@@ -40,14 +40,12 @@ import { getHierarquiaOpcoes, getAtivosByCentro, getGruposByCentroEFase } from "
 import { supabase } from "@/lib/supabase";
 import { TeamSelector, type SelectedTeam } from "@/components/team-selector";
 
-
-// Schema para validação simplificada das equipes.
 const equipeSchema = z.object({
   id: z.string(),
   especialidade: z.string().optional(),
-  capacidade: z.string().or(z.number()),
-  hh: z.string().or(z.number()),
-  total_hh: z.string().or(z.number()),
+  capacidade: z.union([z.string(), z.number()]),
+  hh: z.union([z.string(), z.number()]),
+  total_hh: z.union([z.string(), z.number()]),
 });
 
 
@@ -110,10 +108,12 @@ const stopFormSchema = z.object({
 
 type StopFormValues = z.infer<typeof stopFormSchema>;
 
-const combineDateTime = (date: Date, time: string): Date => {
+const combineDateTime = (date: Date, time: string): Date | null => {
+  if (!date || !time || !/^\d{2}:\d{2}$/.test(time)) return null;
   const [hours, minutes] = time.split(':').map(Number);
   return set(date, { hours, minutes, seconds: 0, milliseconds: 0 });
 };
+
 
 export default function CriarParadaPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -229,49 +229,55 @@ export default function CriarParadaPage() {
       dataInicioRealizado, horaInicioRealizado, dataFimRealizado, horaFimRealizado
     ] = watchedFields;
 
-    if (dataInicioPlanejada && horaInicioPlanejada && dataFimPlanejada && horaFimPlanejada) {
-      try {
-          const start = combineDateTime(dataInicioPlanejada, horaInicioPlanejada);
-          const end = combineDateTime(dataFimPlanejada, horaFimPlanejada);
-          if (end > start) {
-            setDuracaoPlanejada(differenceInHours(end, start));
-          } else {
-            setDuracaoPlanejada(null);
-          }
-      } catch (e) {
-          setDuracaoPlanejada(null);
-      }
+    const startPlanejado = combineDateTime(dataInicioPlanejada, horaInicioPlanejada);
+    const endPlanejado = combineDateTime(dataFimPlanejada, horaFimPlanejada);
+
+    if (startPlanejado && endPlanejado && endPlanejado > startPlanejado) {
+        setDuracaoPlanejada(differenceInHours(endPlanejado, startPlanejado));
     } else {
         setDuracaoPlanejada(null);
     }
 
-    if (dataInicioRealizado && horaInicioRealizado && dataFimRealizado && horaFimRealizado) {
-        try {
-            if(!dataInicioRealizado || !horaInicioRealizado || !dataFimRealizado || !horaFimRealizado) {
-                 setDuracaoRealizada(null);
-                 return;
-            }
-            const start = combineDateTime(dataInicioRealizado, horaInicioRealizado);
-            const end = combineDateTime(dataFimRealizado, horaFimRealizado);
-            if (end > start) {
-                setDuracaoRealizada(differenceInHours(end, start));
-            } else {
-                setDuracaoRealizada(null);
-            }
-        } catch(e) {
+    if(dataInicioRealizado && dataFimRealizado && horaInicioRealizado && horaFimRealizado) {
+        const startRealizado = combineDateTime(dataInicioRealizado, horaInicioRealizado);
+        const endRealizado = combineDateTime(dataFimRealizado, horaFimRealizado);
+
+        if (startRealizado && endRealizado && endRealizado > startRealizado) {
+            setDuracaoRealizada(differenceInHours(endRealizado, startRealizado));
+        } else {
             setDuracaoRealizada(null);
         }
     } else {
         setDuracaoRealizada(null);
     }
+    
   }, [watchedFields]);
 
   async function onSubmit(data: StopFormValues) {
     setIsSubmitting(true);
     
     try {
-        const dataInicioPlanejadaCompleta = combineDateTime(data.dataInicioPlanejada, data.horaInicioPlanejada);
-        const dataFimPlanejadaCompleta = combineDateTime(data.dataFimPlanejada, data.horaFimPlanejada);
+        const dataInicioPlanejadaCompleta = combineDateTime(data.dataInicioPlanejada, data.horaInicioPlanejada)!;
+        const dataFimPlanejadaCompleta = combineDateTime(data.dataFimPlanejada, data.horaFimPlanejada)!;
+        
+        let duracaoPlanejadaHoras = null;
+        if (dataFimPlanejadaCompleta > dataInicioPlanejadaCompleta) {
+            duracaoPlanejadaHoras = differenceInHours(dataFimPlanejadaCompleta, dataInicioPlanejadaCompleta);
+        }
+        
+        let duracaoRealizadaHoras = null;
+        let dataInicioRealizadoCompleta = null;
+        let dataFimRealizadoCompleta = null;
+
+        if (data.dataInicioRealizado && data.horaInicioRealizado) {
+            dataInicioRealizadoCompleta = combineDateTime(data.dataInicioRealizado, data.horaInicioRealizado);
+        }
+        if (data.dataFimRealizado && data.horaFimRealizado) {
+            dataFimRealizadoCompleta = combineDateTime(data.dataFimRealizado, data.horaFimRealizado);
+        }
+        if (dataInicioRealizadoCompleta && dataFimRealizadoCompleta && dataFimRealizadoCompleta > dataInicioRealizadoCompleta) {
+            duracaoRealizadaHoras = differenceInHours(dataFimRealizadoCompleta, dataInicioRealizadoCompleta);
+        }
         
         const paradaData = {
           nome_parada: data.nomeParada,
@@ -282,14 +288,10 @@ export default function CriarParadaPage() {
           ativo_unico: data.tipoSelecao === 'ativo' ? data.ativo : null,
           data_inicio_planejada: dataInicioPlanejadaCompleta.toISOString(),
           data_fim_planejada: dataFimPlanejadaCompleta.toISOString(),
-          duracao_planejada_horas: duracaoPlanejada,
-          data_inicio_realizado: data.dataInicioRealizado && data.horaInicioRealizado 
-              ? combineDateTime(data.dataInicioRealizado, data.horaInicioRealizado).toISOString() 
-              : null,
-          data_fim_realizado: data.dataFimRealizado && data.horaFimRealizado 
-              ? combineDateTime(data.dataFimRealizado, data.horaFimRealizado).toISOString() 
-              : null,
-          duracao_realizada_horas: duracaoRealizada,
+          duracao_planejada_horas: duracaoPlanejadaHoras,
+          data_inicio_realizado: dataInicioRealizadoCompleta?.toISOString() || null,
+          data_fim_realizado: dataFimRealizadoCompleta?.toISOString() || null,
+          duracao_realizada_horas: duracaoRealizadaHoras,
           descricao: data.descricao,
           status: 'PLANEJADA',
         };
@@ -761,3 +763,5 @@ export default function CriarParadaPage() {
     </MainLayout>
   );
 }
+
+    
