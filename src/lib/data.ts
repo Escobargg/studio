@@ -3,7 +3,7 @@ import { supabase } from './supabase';
 import type { ParadasFiltros } from '@/app/paradas/page';
 import type { Stop } from '@/components/stop-card';
 import type { ScheduleData } from '@/components/schedule-view';
-import { startOfYear, endOfYear, add } from 'date-fns';
+import { startOfYear, endOfYear, add, getMonth, getISOWeek, startOfMonth, endOfMonth, startOfWeek, endOfWeek } from 'date-fns';
 import type { CronogramaFiltros } from '@/components/schedule-filters';
 
 export type Filtros = {
@@ -246,7 +246,7 @@ const getFrequencyInDays = (value: number, unit: string) => {
 export async function getScheduleData(filters: CronogramaFiltros): Promise<ScheduleData[]> {
     const year = parseInt(filters.ano || new Date().getFullYear().toString());
     const yearStart = startOfYear(new Date(year, 0, 1));
-    const yearEnd = endOfYear(new Date(year, 0, 1));
+    const yearEnd = endOfYear(new Date(year, 11, 31));
     
     const scheduleMap = new Map<string, { groupName: string; location: string; items: any[] }>();
 
@@ -296,7 +296,6 @@ export async function getScheduleData(filters: CronogramaFiltros): Promise<Sched
     if (strategiesError) {
         console.error("Error fetching strategies for schedule:", strategiesError);
     } else {
-        // Filter strategies on the client side based on the fetched groups
         strategiesData.forEach(strategy => {
             const groupKey = strategy.grupo_id;
             if (groupKey && filteredGroupIds.has(groupKey)) {
@@ -328,7 +327,6 @@ export async function getScheduleData(filters: CronogramaFiltros): Promise<Sched
         .select('id, nome_parada, data_inicio_planejada, data_fim_planejada, tipo_selecao, grupo_de_ativos, ativo_unico, centro_de_localizacao, fase, status')
         .or(`and(data_inicio_planejada.gte.${yearStart.toISOString()},data_inicio_planejada.lte.${yearEnd.toISOString()}),and(data_fim_planejada.gte.${yearStart.toISOString()},data_fim_planejada.lte.${yearEnd.toISOString()}),and(data_inicio_planejada.lte.${yearStart.toISOString()},data_fim_planejada.gte.${yearEnd.toISOString()})`);
     
-    // Apply the same hierarchy filters to stops
     if (filters.diretoria_executiva) stopsQuery = stopsQuery.eq('diretoria_executiva', filters.diretoria_executiva);
     if (filters.diretoria) stopsQuery = stopsQuery.eq('diretoria', filters.diretoria);
     if (filters.centro_de_localizacao) stopsQuery = stopsQuery.eq('centro_de_localizacao', filters.centro_de_localizacao);
@@ -347,7 +345,6 @@ export async function getScheduleData(filters: CronogramaFiltros): Promise<Sched
             if (stop.tipo_selecao === 'grupo' && stop.grupo_de_ativos) {
                 groupKey = groupNameToIdMap.get(stop.grupo_de_ativos) || null;
             } else if (stop.tipo_selecao === 'ativo' && stop.ativo_unico) {
-                // For single assets, create a unique key and add to map if it matches filters
                 groupName = stop.ativo_unico;
                 groupKey = `ativo-${groupName}-${location}`;
                  if (!scheduleMap.has(groupKey)) {
@@ -368,5 +365,36 @@ export async function getScheduleData(filters: CronogramaFiltros): Promise<Sched
         });
     }
 
-    return Array.from(scheduleMap.values()).sort((a,b) => a.groupName.localeCompare(b.groupName));
+    let finalData = Array.from(scheduleMap.values());
+    
+    // Filter by month or week if provided
+    if (filters.mes) {
+        const monthIndex = parseInt(filters.mes, 10) - 1;
+        const monthStart = startOfMonth(new Date(year, monthIndex));
+        const monthEnd = endOfMonth(new Date(year, monthIndex));
+        
+        finalData = finalData.map(group => ({
+            ...group,
+            items: group.items.filter(item => 
+                item.startDate <= monthEnd && item.endDate >= monthStart
+            )
+        }));
+    } else if (filters.semana) {
+        const weekNumber = parseInt(filters.semana, 10);
+        // This is an approximation, date-fns doesn't have a direct way to get start/end of an ISO week number for a year.
+        // We'll calculate it based on the first day of the year.
+        const firstDayOfYear = new Date(year, 0, 1);
+        const firstDayOfWeek = startOfWeek(firstDayOfYear, { weekStartsOn: 1 });
+        const weekStart = add(firstDayOfWeek, { weeks: weekNumber - 1 });
+        const weekEnd = endOfWeek(weekStart, { weekStartsOn: 1 });
+
+        finalData = finalData.map(group => ({
+            ...group,
+            items: group.items.filter(item => 
+                item.startDate <= weekEnd && item.endDate >= weekStart
+            )
+        }));
+    }
+
+    return finalData.sort((a,b) => a.groupName.localeCompare(b.groupName));
 }

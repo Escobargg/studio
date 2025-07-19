@@ -1,11 +1,11 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { MainLayout } from "@/components/main-layout";
-import { ScheduleView, type ScheduleData } from "@/components/schedule-view";
+import { ScheduleView } from "@/components/schedule-view";
 import { getScheduleData } from "@/lib/data";
-import { Loader2, CalendarX2 } from "lucide-react";
+import { Loader2, CalendarX2, Filter } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CalendarRange } from "lucide-react";
 import { ScheduleFilters, type CronogramaFiltros } from "@/components/schedule-filters";
@@ -14,10 +14,15 @@ export default function CronogramaPage() {
     const [filters, setFilters] = useState<CronogramaFiltros>({
         ano: new Date().getFullYear().toString(),
     });
-    const [data, setData] = useState<ScheduleData[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const [data, setData] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
+    const [hasFiltered, setHasFiltered] = useState(false);
+
+    const year = useMemo(() => parseInt(filters.ano || new Date().getFullYear().toString()), [filters.ano]);
 
     useEffect(() => {
+        if (!hasFiltered) return;
+
         const fetchData = async () => {
             setIsLoading(true);
             const scheduleData = await getScheduleData(filters);
@@ -25,11 +30,14 @@ export default function CronogramaPage() {
             setIsLoading(false);
         };
         fetchData();
-    }, [filters]);
+    }, [filters, hasFiltered]);
 
     const handleFilterChange = useCallback((newFilters: CronogramaFiltros) => {
         setFilters(newFilters);
-    }, []);
+        if (!hasFiltered) {
+            setHasFiltered(true);
+        }
+    }, [hasFiltered]);
 
     return (
         <MainLayout>
@@ -58,8 +66,16 @@ export default function CronogramaPage() {
                                 <h2 className="mt-6 text-2xl font-semibold">Carregando Cronograma...</h2>
                                 <p className="mt-2 text-muted-foreground">Aguarde um momento.</p>
                             </div>
+                        ) : !hasFiltered ? (
+                             <div className="flex flex-col items-center justify-center h-96 text-center">
+                                <Filter className="w-16 h-16 text-muted-foreground" />
+                                <h2 className="mt-6 text-2xl font-semibold">Selecione os Filtros</h2>
+                                <p className="mt-2 text-muted-foreground">
+                                    Utilize os filtros acima para carregar o cronograma.
+                                </p>
+                            </div>
                         ) : data.length > 0 ? (
-                            <ScheduleView data={data} year={parseInt(filters.ano || new Date().getFullYear().toString())} />
+                            <ScheduleView data={data} year={year} filters={filters} />
                         ) : (
                              <div className="flex flex-col items-center justify-center h-96 text-center">
                                 <CalendarX2 className="w-16 h-16 text-muted-foreground" />
