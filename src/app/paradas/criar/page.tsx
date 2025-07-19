@@ -111,14 +111,6 @@ const stopFormSchema = z.object({
 }, {
     message: "Selecione o ativo.",
     path: ["ativo"],
-}).refine(data => {
-    if (data.equipes && data.equipes.length > 0) {
-        return data.equipes.every(e => e.id && e.especialidade && e.capacidade && e.hh && e.hh_dia);
-    }
-    return true;
-}, {
-    message: "Todos os campos da equipe são obrigatórios.",
-    path: ["equipes"],
 });
 
 
@@ -168,7 +160,7 @@ export default function CriarParadaPage() {
     },
   });
 
-  const { watch, control, setValue, getValues } = form;
+  const { watch, control, setValue, getValues, formState: { errors } } = form;
 
   const [duracaoPlanejada, setDuracaoPlanejada] = useState<number | null>(null);
   const [duracaoRealizada, setDuracaoRealizada] = useState<number | null>(null);
