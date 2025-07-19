@@ -193,7 +193,6 @@ export function AssetRegistrationForm({ initialDiretoriasExecutivas, isLoadingIn
         diretoria: data.diretoria,
         centro_de_localizacao: data.centro_de_localizacao,
         fase: data.fase,
-        ativos: data.ativos, // Temporarily keep this for the card view until it's refactored
       })
       .select('id')
       .single();
