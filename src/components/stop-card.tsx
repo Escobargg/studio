@@ -4,11 +4,25 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Calendar, Clock, Edit, Trash2, Users, ClipboardCheck } from "lucide-react";
+import { Calendar, Clock, Edit, Trash2, Users, ClipboardCheck, Loader2 } from "lucide-react";
 import { Separator } from "./ui/separator";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import Link from "next/link";
+import { useState } from "react";
+import toast from "react-hot-toast";
+import { supabase } from "@/lib/supabase";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 type Recurso = {
   equipe: string;
@@ -38,6 +52,7 @@ export type Stop = {
 
 interface StopCardProps {
     stop: Stop;
+    onStopDelete: (stopId: string) => void;
 }
 
 const formatDate = (date: string | undefined | null) => {
@@ -45,13 +60,40 @@ const formatDate = (date: string | undefined | null) => {
     return format(new Date(date), "dd/MM/yyyy HH:mm");
 }
 
-export function StopCard({ stop }: StopCardProps) {
-
+export function StopCard({ stop, onStopDelete }: StopCardProps) {
+  const [isDeleting, setIsDeleting] = useState(false);
   const completion = 0; // Placeholder for now
 
   const equipesStr = stop.recursos.map(r => r.equipe).join(', ');
   const hierarchyStr = [stop.diretoria_executiva, stop.diretoria, stop.centro_de_localizacao, stop.fase].filter(Boolean).join(' - ');
 
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    try {
+        // First delete dependent resources
+        await supabase
+            .from('recursos_parada')
+            .delete()
+            .eq('parada_id', stop.id)
+            .throwOnError();
+
+        // Then delete the main stop record
+        await supabase
+            .from('paradas_de_manutencao')
+            .delete()
+            .eq('id', stop.id)
+            .throwOnError();
+
+        toast.success("Parada excluída com sucesso!");
+        onStopDelete(stop.id);
+
+    } catch (error: any) {
+        toast.error("Falha ao excluir a parada. Tente novamente.");
+        console.error("Error deleting stop:", error.message || error);
+    } finally {
+        setIsDeleting(false);
+    }
+  };
 
   return (
     <Card className="w-full shadow-sm hover:shadow-md transition-shadow duration-300 border-border/60">
@@ -78,10 +120,35 @@ export function StopCard({ stop }: StopCardProps) {
                     <span className="sr-only">Editar Parada</span>
                 </Link>
             </Button>
-            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
-              <Trash2 className="w-4 h-4" />
-              <span className="sr-only">Excluir Parada</span>
-            </Button>
+             <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" disabled={isDeleting}>
+                  {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                  <span className="sr-only">Excluir Parada</span>
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Esta ação não pode ser desfeita. Isso excluirá permanentemente a parada
+                    <strong className="px-1">{stop.nome_parada}</strong>
+                    e todos os seus dados associados.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleDelete}
+                    disabled={isDeleting}
+                    className="bg-destructive hover:bg-destructive/90"
+                  >
+                    {isDeleting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                    {isDeleting ? "Excluindo..." : "Sim, excluir parada"}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         </div>
 

@@ -38,6 +38,12 @@ export default function ParadasPage() {
     setFilters(newFilters);
   }, []);
 
+  const handleStopDelete = (deletedStopId: string) => {
+    setStops(currentStops =>
+      currentStops.filter(s => s.id !== deletedStopId)
+    );
+  };
+
   return (
     <MainLayout>
       <div className="flex-1 p-4 md:p-8 overflow-y-auto bg-muted/20 space-y-6">
@@ -74,7 +80,7 @@ export default function ParadasPage() {
                     <p className="mt-2 text-muted-foreground">Aguarde um momento.</p>
                 </div>
              ) : stops.map((stop) => (
-                <StopCard key={stop.id} stop={stop} />
+                <StopCard key={stop.id} stop={stop} onStopDelete={handleStopDelete} />
              ))}
         </div>
       </div>
