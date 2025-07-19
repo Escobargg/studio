@@ -8,41 +8,32 @@ import { PlusCircle, Settings, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { StopCard, type Stop } from "@/components/stop-card";
 import { StopsFilters } from "@/components/stops-filters";
-import { useState, useTransition, useCallback, useEffect } from "react";
-import { supabase } from "@/lib/supabase";
+import { useState, useCallback, useEffect } from "react";
+import { getStops } from "@/lib/data";
 
-async function getStops(): Promise<Stop[]> {
-    const { data, error } = await supabase
-        .from('paradas_de_manutencao')
-        .select('*')
-        .order('data_inicio_planejada', { ascending: true });
-
-    if (error) {
-        console.error("Error fetching stops:", error);
-        return [];
-    }
-    return data;
-}
+export type ParadasFiltros = {
+  centro_de_localizacao?: string;
+  // Outros filtros podem ser adicionados aqui no futuro
+};
 
 export default function ParadasPage() {
   const [stops, setStops] = useState<Stop[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [filters, setFilters] = useState<ParadasFiltros>({});
 
   useEffect(() => {
     const fetchStops = async () => {
         setIsLoading(true);
-        const data = await getStops();
+        const data = await getStops(filters);
         setStops(data);
         setIsLoading(false);
     };
     fetchStops();
-  }, [])
+  }, [filters]);
 
 
-  const handleFilterChange = useCallback((filters: any) => {
-    // Placeholder for filter logic
-    console.log("Applying filters:", filters);
-    // In a real app, you would fetch data from the server here based on filters
+  const handleFilterChange = useCallback((newFilters: ParadasFiltros) => {
+    setFilters(newFilters);
   }, []);
 
   return (
@@ -88,5 +79,3 @@ export default function ParadasPage() {
     </MainLayout>
   );
 }
-
-    

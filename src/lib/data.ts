@@ -1,5 +1,6 @@
 
 import { supabase } from './supabase';
+import type { ParadasFiltros } from '@/app/paradas/page';
 
 export type Filtros = {
   nome_grupo?: string;
@@ -160,3 +161,23 @@ export const getStopsFilterOptions = async (
     return [];
   }
 };
+
+
+export async function getStops(filters: ParadasFiltros) {
+    let query = supabase
+        .from('paradas_de_manutencao')
+        .select('*')
+        .order('data_inicio_planejada', { ascending: true });
+
+    if (filters.centro_de_localizacao) {
+        query = query.eq('centro_de_localizacao', filters.centro_de_localizacao);
+    }
+    
+    const { data, error } = await query;
+
+    if (error) {
+        console.error("Error fetching stops:", error);
+        return [];
+    }
+    return data;
+}
