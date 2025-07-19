@@ -41,6 +41,9 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
     if (pathname === "/paradas/criar") {
        return "Criar Nova Parada";
     }
+    if (pathname.includes("/paradas") && pathname.includes("/editar")) {
+       return "Editar Parada";
+    }
     return "SmartPCM";
   };
 

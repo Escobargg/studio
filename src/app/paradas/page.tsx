@@ -13,6 +13,8 @@ import { getStops } from "@/lib/data";
 import { type DateRange } from "react-day-picker";
 
 export type ParadasFiltros = {
+  diretoria_executiva?: string;
+  diretoria?: string;
   centro_de_localizacao?: string;
   fase?: string;
   dateRange?: DateRange;
@@ -37,6 +39,12 @@ export default function ParadasPage() {
   const handleFilterChange = useCallback((newFilters: ParadasFiltros) => {
     setFilters(newFilters);
   }, []);
+
+  const handleStopDelete = (deletedStopId: string) => {
+    setStops(currentStops =>
+      currentStops.filter(s => s.id !== deletedStopId)
+    );
+  };
 
   return (
     <MainLayout>
@@ -74,7 +82,7 @@ export default function ParadasPage() {
                     <p className="mt-2 text-muted-foreground">Aguarde um momento.</p>
                 </div>
              ) : stops.map((stop) => (
-                <StopCard key={stop.id} stop={stop} />
+                <StopCard key={stop.id} stop={stop} onStopDelete={handleStopDelete} />
              ))}
         </div>
       </div>

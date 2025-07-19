@@ -35,12 +35,13 @@ import { cn } from "@/lib/utils";
 import { MainLayout } from "@/components/main-layout";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
-import { useRouter } from "next/navigation";
-import { getHierarquiaOpcoes, getAtivosByCentro, getGruposByCentroEFase, getEspecialidades, type Especialidade } from "@/lib/data";
+import { useRouter, useParams } from "next/navigation";
+import { getEspecialidades, type Especialidade } from "@/lib/data";
 import { supabase } from "@/lib/supabase";
 import { Progress } from "@/components/ui/progress";
 
 const equipeSchema = z.object({
+  id: z.string().optional(), // For existing records
   especialidade: z.string().min(1, "Especialidade é obrigatória."),
   capacidade: z.coerce.number().min(1, "Deve ser > 0.").default(1),
   hh: z.coerce.number().min(0, "HH deve ser preenchido."),
@@ -52,17 +53,20 @@ const horaRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
 const stopFormSchema = z.object({
   nomeParada: z.string().min(1, "O nome da parada é obrigatório."),
-  diretoria_executiva: z.string({ required_error: "Selecione a diretoria executiva." }).min(1, "Selecione a diretoria executiva."),
-  diretoria: z.string({ required_error: "Selecione a diretoria." }).min(1, "Selecione a diretoria."),
-  centroLocalizacao: z.string({ required_error: "Selecione o centro de localização." }).min(1, "Selecione o centro de localização."),
-  fase: z.string({ required_error: "Selecione a fase." }).min(1, "Selecione a fase."),
-  tipoSelecao: z.enum(["grupo", "ativo"], { required_error: "Selecione o tipo."}),
+  // Hierarquia - não editável, mas precisa estar no schema para validação
+  diretoria_executiva: z.string(),
+  diretoria: z.string(),
+  centroLocalizacao: z.string(),
+  fase: z.string(),
+  tipoSelecao: z.enum(["grupo", "ativo"]),
   grupoAtivos: z.string().optional(),
   ativo: z.string().optional(),
+  // Planejamento
   dataInicioPlanejada: z.date({ required_error: "A data de início planejada é obrigatória." }),
   horaInicioPlanejada: z.string({ required_error: "A hora de início é obrigatória." }).regex(horaRegex, "Formato de hora inválido."),
   dataFimPlanejada: z.date({ required_error: "A data de fim planejada é obrigatória." }),
   horaFimPlanejada: z.string({ required_error: "A hora de fim é obrigatória." }).regex(horaRegex, "Formato de hora inválido."),
+  // Realizado
   dataInicioRealizado: z.date().optional().nullable(),
   horaInicioRealizado: z.string().optional().nullable()
     .refine((val) => val === null || val === undefined || val === "" || horaRegex.test(val), {
@@ -73,6 +77,7 @@ const stopFormSchema = z.object({
     .refine((val) => val === null || val === undefined || val === "" || horaRegex.test(val), {
         message: "Formato de hora inválido.",
     }),
+  // Outros
   descricao: z.string().optional(),
   equipes: z.array(equipeSchema).optional(),
 }).refine(data => {
@@ -96,22 +101,6 @@ const stopFormSchema = z.object({
 }, {
     message: "A data/hora final realizada deve ser posterior à data/hora inicial.",
     path: ["dataFimRealizado"],
-}).refine(data => {
-    if (data.tipoSelecao === "grupo") {
-        return !!data.grupoAtivos;
-    }
-    return true;
-}, {
-    message: "Selecione o grupo de ativos.",
-    path: ["grupoAtivos"],
-}).refine(data => {
-    if (data.tipoSelecao === "ativo") {
-        return !!data.ativo;
-    }
-    return true;
-}, {
-    message: "Selecione o ativo.",
-    path: ["ativo"],
 });
 
 
@@ -122,6 +111,18 @@ const combineDateTime = (date: Date | null | undefined, time: string | null | un
   const [hours, minutes] = time.split(':').map(Number);
   return set(date, { hours, minutes, seconds: 0, milliseconds: 0 });
 };
+
+const splitDateTime = (dateTime: string | null | undefined): { date: Date | null, time: string | null } => {
+    if (!dateTime) return { date: null, time: null };
+    try {
+        const d = new Date(dateTime);
+        const date = d;
+        const time = format(d, 'HH:mm');
+        return { date, time };
+    } catch (e) {
+        return { date: null, time: null };
+    }
+}
 
 const calculateCompletion = (start: Date | null | undefined, end: Date | null | undefined): number => {
     if (!start || !end) return 0;
@@ -142,55 +143,25 @@ const calculateCompletion = (start: Date | null | undefined, end: Date | null | 
 };
 
 
-export default function CriarParadaPage() {
+export default function EditarParadaPage() {
+  const params = useParams();
+  const stopId = Array.isArray(params.id) ? params.id[0] : params.id;
+  
+  const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
 
-  const [diretoriasExecutivas, setDiretoriasExecutivas] = useState<string[]>([]);
-  const [diretorias, setDiretorias] = useState<string[]>([]);
-  const [centrosLocalizacao, setCentrosLocalizacao] = useState<string[]>([]);
-  const [fases, setFases] = useState<string[]>([]);
-  const [ativos, setAtivos] = useState<string[]>([]);
-  const [gruposDeAtivos, setGruposDeAtivos] = useState<string[]>([]);
   const [especialidades, setEspecialidades] = useState<Especialidade[]>([]);
-
-
-  const [loadingDiretoriasExecutivas, setLoadingDiretoriasExecutivas] = useState(true);
-  const [loadingDiretorias, setLoadingDiretorias] = useState(false);
-  const [loadingCentros, setLoadingCentros] = useState(false);
-  const [loadingFases, setLoadingFases] = useState(false);
-  const [loadingAtivos, setLoadingAtivos] = useState(false);
-  const [loadingGrupos, setLoadingGrupos] = useState(false);
   const [loadingEspecialidades, setLoadingEspecialidades] = useState(false);
   
   const form = useForm<StopFormValues>({
     resolver: zodResolver(stopFormSchema),
-    defaultValues: {
-      nomeParada: "",
-      diretoria_executiva: "",
-      diretoria: "",
-      centroLocalizacao: "",
-      fase: "",
-      tipoSelecao: "grupo",
-      grupoAtivos: "",
-      ativo: "",
-      horaInicioPlanejada: "",
-      horaFimPlanejada: "",
-      dataInicioPlanejada: undefined,
-      dataFimPlanejada: undefined,
-      dataInicioRealizado: null,
-      horaInicioRealizado: "",
-      dataFimRealizado: null,
-      horaFimRealizado: "",
-      descricao: "",
-      equipes: [],
-    },
   });
 
-  const { watch, control, setValue, getValues, trigger } = form;
+  const { watch, control, setValue, getValues, trigger, reset } = form;
 
-  const { fields, append, remove } = useFieldArray({
+  const { fields, append, remove, update } = useFieldArray({
     control,
     name: "equipes",
   });
@@ -205,21 +176,21 @@ export default function CriarParadaPage() {
       "dataInicioRealizado", "horaInicioRealizado", "dataFimRealizado", "horaFimRealizado"
   ]);
 
-  const watchedDiretoriaExecutiva = watch("diretoria_executiva");
-  const watchedDiretoria = watch("diretoria");
+  const watchedEquipes = watch("equipes");
   const watchedCentro = watch("centroLocalizacao");
   const watchedFase = watch("fase");
-  const watchedTipoSelecao = watch("tipoSelecao");
-  const watchedEquipes = watch("equipes");
 
   const handleEspecialidadeChange = (index: number, espNome: string) => {
     const especialidadeData = especialidades.find(e => e.especialidade === espNome);
     if (especialidadeData) {
-        setValue(`equipes.${index}.hh`, especialidadeData.hh);
-        const newCapacity = 1;
-        setValue(`equipes.${index}.capacidade`, newCapacity);
-        setValue(`equipes.${index}.hh_dia`, newCapacity * especialidadeData.hh);
-        trigger(`equipes.${index}.capacidade`);
+        update(index, {
+            ...getValues(`equipes.${index}`),
+            especialidade: espNome,
+            hh: especialidadeData.hh,
+            capacidade: 1, // Reset capacidade to 1
+            hh_dia: 1 * especialidadeData.hh
+        });
+        trigger(`equipes.${index}`);
     }
   };
 
@@ -242,105 +213,69 @@ export default function CriarParadaPage() {
     (esp) => !watchedEquipes?.some((equipe) => equipe.especialidade === esp.especialidade)
   );
 
-
   useEffect(() => {
-    async function fetchInitialData() {
-      setLoadingDiretoriasExecutivas(true);
-      const data = await getHierarquiaOpcoes("diretoria_executiva");
-      setDiretoriasExecutivas(data);
-      setLoadingDiretoriasExecutivas(false);
-    }
-    fetchInitialData();
-  }, []);
+    async function fetchStopData() {
+        if (!stopId) return;
 
-  useEffect(() => {
-    async function fetchDiretorias() {
-      if (watchedDiretoriaExecutiva) {
-        setLoadingDiretorias(true);
-        setValue("diretoria", "");
-        setValue("centroLocalizacao", "");
-        setValue("fase", "");
-        setDiretorias([]);
-        setCentrosLocalizacao([]);
-        setFases([]);
-        const data = await getHierarquiaOpcoes("diretoria", { diretoria_executiva: watchedDiretoriaExecutiva });
-        setDiretorias(data);
-        setLoadingDiretorias(false);
-      }
-    }
-    fetchDiretorias();
-  }, [watchedDiretoriaExecutiva, setValue]);
-
-  useEffect(() => {
-    async function fetchCentros() {
-      if (watchedDiretoria) {
-        setLoadingCentros(true);
-        setValue("centroLocalizacao", "");
-        setValue("fase", "");
-        setCentrosLocalizacao([]);
-        setFases([]);
-        const data = await getHierarquiaOpcoes("centro_de_localizacao", { diretoria: watchedDiretoria });
-        setCentrosLocalizacao(data);
-        setLoadingCentros(false);
-      }
-    }
-    fetchCentros();
-  }, [watchedDiretoria, setValue]);
-
-  useEffect(() => {
-    const fetchDataForCentro = async () => {
-      if (watchedCentro) {
-        setLoadingFases(true);
-        setLoadingAtivos(true);
-        setValue("fase", ""); 
-        setValue("grupoAtivos", "");
-        setValue("ativo", "");
-        setFases([]);
-        setAtivos([]);
-
-        const [fasesData, ativosData] = await Promise.all([
-          getHierarquiaOpcoes("fase", { centro_de_localizacao: watchedCentro }),
-          getAtivosByCentro(watchedCentro)
-        ]);
-
-        setFases(fasesData);
-        setAtivos(ativosData);
-        setLoadingFases(false);
-        setLoadingAtivos(false);
-      } else {
-        setFases([]);
-        setAtivos([]);
-        setGruposDeAtivos([]);
-        setEspecialidades([]);
-      }
-    };
-    fetchDataForCentro();
-  }, [watchedCentro, setValue]);
-
-  useEffect(() => {
-    const fetchDependentData = async () => {
-        if (watchedCentro && watchedFase) {
-            setLoadingGrupos(true);
-            setLoadingEspecialidades(true);
-            setValue("grupoAtivos", "");
-            setValue("equipes", []); // Reset teams when context changes
-
-            const [gruposData, especialidadesData] = await Promise.all([
-                getGruposByCentroEFase(watchedCentro, watchedFase),
-                getEspecialidades(watchedCentro, watchedFase)
-            ]);
-            
-            setGruposDeAtivos(gruposData);
-            setEspecialidades(especialidadesData);
-            setLoadingGrupos(false);
-            setLoadingEspecialidades(false);
-        } else {
-            setGruposDeAtivos([]);
-            setEspecialidades([]);
+        setLoading(true);
+        const { data: stopData, error } = await supabase
+            .from('paradas_de_manutencao')
+            .select('*, recursos_parada(*)')
+            .eq('id', stopId)
+            .single();
+        
+        if (error || !stopData) {
+            console.error("Error fetching stop data:", error);
+            toast({ title: "Erro", description: "Parada não encontrada.", variant: "destructive" });
+            router.push("/paradas");
+            return;
         }
-    };
-    fetchDependentData();
-  }, [watchedCentro, watchedFase, setValue]);
+        
+        const { date: dataInicioPlanejada, time: horaInicioPlanejada } = splitDateTime(stopData.data_inicio_planejada);
+        const { date: dataFimPlanejada, time: horaFimPlanejada } = splitDateTime(stopData.data_fim_planejada);
+        const { date: dataInicioRealizado, time: horaInicioRealizado } = splitDateTime(stopData.data_inicio_realizado);
+        const { date: dataFimRealizado, time: horaFimRealizado } = splitDateTime(stopData.data_fim_realizado);
+
+        reset({
+            nomeParada: stopData.nome_parada,
+            diretoria_executiva: stopData.diretoria_executiva,
+            diretoria: stopData.diretoria,
+            centroLocalizacao: stopData.centro_de_localizacao,
+            fase: stopData.fase,
+            tipoSelecao: stopData.tipo_selecao,
+            grupoAtivos: stopData.grupo_de_ativos || "",
+            ativo: stopData.ativo_unico || "",
+            dataInicioPlanejada,
+            horaInicioPlanejada,
+            dataFimPlanejada,
+            horaFimPlanejada,
+            dataInicioRealizado,
+            horaInicioRealizado,
+            dataFimRealizado,
+            horaFimRealizado,
+            descricao: stopData.descricao || "",
+            equipes: stopData.recursos_parada.map(r => ({
+                id: r.id,
+                especialidade: r.equipe,
+                capacidade: r.capacidade,
+                hh: r.hh,
+                hh_dia: r.hh_dia,
+            })),
+        });
+
+        // Fetch specialities after setting the context
+        if (stopData.centro_de_localizacao && stopData.fase) {
+            setLoadingEspecialidades(true);
+            const especialidadesData = await getEspecialidades(stopData.centro_de_localizacao, stopData.fase);
+            setEspecialidades(especialidadesData);
+            setLoadingEspecialidades(false);
+        }
+
+        setLoading(false);
+    }
+    fetchStopData();
+  }, [stopId, reset, toast, router]);
+
 
   useEffect(() => {
     const [
@@ -380,7 +315,7 @@ export default function CriarParadaPage() {
         if (!dataInicioPlanejadaCompleta || !dataFimPlanejadaCompleta) {
             throw new Error("Datas de planejamento inválidas.");
         }
-
+        
         const duracaoPlanejadaHoras = differenceInHours(dataFimPlanejadaCompleta, dataInicioPlanejadaCompleta);
         
         const dataInicioRealizadoCompleta = combineDateTime(data.dataInicioRealizado, data.horaInicioRealizado);
@@ -393,35 +328,35 @@ export default function CriarParadaPage() {
         
         const paradaData = {
           nome_parada: data.nomeParada,
-          diretoria_executiva: data.diretoria_executiva,
-          diretoria: data.diretoria,
-          centro_de_localizacao: data.centroLocalizacao,
-          fase: data.fase,
-          tipo_selecao: data.tipoSelecao,
-          grupo_de_ativos: data.tipoSelecao === 'grupo' ? data.grupoAtivos : null,
-          ativo_unico: data.tipoSelecao === 'ativo' ? data.ativo : null,
           data_inicio_planejada: dataInicioPlanejadaCompleta.toISOString(),
           data_fim_planejada: dataFimPlanejadaCompleta.toISOString(),
           duracao_planejada_horas: duracaoPlanejadaHoras,
           data_inicio_realizado: dataInicioRealizadoCompleta?.toISOString() || null,
           data_fim_realizado: dataFimRealizadoCompleta?.toISOString() || null,
           duracao_realizada_horas: duracaoRealizadaHoras,
-          status: 'PLANEJADA',
+          descricao: data.descricao,
         };
 
-        const { data: paradaResult, error: paradaError } = await supabase
+        const { error: paradaError } = await supabase
             .from('paradas_de_manutencao')
-            .insert(paradaData)
-            .select('id')
-            .single();
+            .update(paradaData)
+            .eq('id', stopId);
         
         if (paradaError) throw paradaError;
         
-        const paradaId = paradaResult.id;
+        // Handle resources (equipes)
+        // For simplicity, we delete all existing resources and re-insert them.
+        // A more complex implementation could diff the arrays.
+        const { error: deleteError } = await supabase
+            .from('recursos_parada')
+            .delete()
+            .eq('parada_id', stopId);
+        
+        if(deleteError) throw deleteError;
 
         if (data.equipes && data.equipes.length > 0) {
             const recursosData = data.equipes.map(equipe => ({
-                parada_id: paradaId,
+                parada_id: stopId,
                 equipe: equipe.especialidade,
                 capacidade: equipe.capacidade,
                 hh: equipe.hh,
@@ -436,21 +371,31 @@ export default function CriarParadaPage() {
         }
 
         toast({
-            title: "Parada Criada!",
-            description: "A nova parada de manutenção e seus recursos foram salvos com sucesso.",
+            title: "Parada Atualizada!",
+            description: "A parada de manutenção foi atualizada com sucesso.",
         });
         router.push(`/paradas`);
 
     } catch(error: any) {
-        console.error("Error inserting data:", error);
+        console.error("Error updating data:", error);
         toast({
-            title: "Erro ao criar parada",
+            title: "Erro ao atualizar parada",
             description: "Ocorreu um erro ao salvar a parada. Verifique os dados e tente novamente. Detalhes: " + error.message,
             variant: "destructive",
         });
     } finally {
         setIsSubmitting(false);
     }
+  }
+
+  if (loading) {
+    return (
+      <MainLayout>
+        <div className="flex flex-1 items-center justify-center">
+          <Loader2 className="h-16 w-16 animate-spin text-primary" />
+        </div>
+      </MainLayout>
+    );
   }
 
   return (
@@ -467,9 +412,9 @@ export default function CriarParadaPage() {
                   </Link>
                 </Button>
                 <div>
-                  <h1 className="text-2xl font-bold">Criar Nova Parada de Manutenção</h1>
+                  <h1 className="text-2xl font-bold">Editar Parada de Manutenção</h1>
                   <p className="text-muted-foreground">
-                    Preencha as informações da parada de manutenção
+                    Modifique as informações da parada de manutenção
                   </p>
                 </div>
               </div>
@@ -509,18 +454,7 @@ export default function CriarParadaPage() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Diretoria Executiva</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value} disabled={loadingDiretoriasExecutivas}>
-                            <FormControl>
-                                <SelectTrigger>
-                                    {loadingDiretoriasExecutivas ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <SelectValue placeholder="Selecionar Diretoria Executiva" />}
-                                </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {diretoriasExecutivas.map(de => (
-                                <SelectItem key={de} value={de}>{de}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <FormControl><Input {...field} disabled /></FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -531,18 +465,7 @@ export default function CriarParadaPage() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Diretoria</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value} disabled={!watchedDiretoriaExecutiva || loadingDiretorias}>
-                            <FormControl>
-                                <SelectTrigger>
-                                    {loadingDiretorias ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <SelectValue placeholder="Selecionar Diretoria" />}
-                                </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {diretorias.map(d => (
-                                <SelectItem key={d} value={d}>{d}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <FormControl><Input {...field} disabled /></FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -556,18 +479,7 @@ export default function CriarParadaPage() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Centro de Localização</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value} disabled={!watchedDiretoria || loadingCentros}>
-                            <FormControl>
-                                <SelectTrigger>
-                                    {loadingCentros ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <SelectValue placeholder="Selecionar Centro" />}
-                                </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {centrosLocalizacao.map(centro => (
-                                <SelectItem key={centro} value={centro}>{centro}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <FormControl><Input {...field} disabled /></FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -578,18 +490,7 @@ export default function CriarParadaPage() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Fase</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value} disabled={!watchedCentro || loadingFases}>
-                            <FormControl>
-                              <SelectTrigger>
-                                {loadingFases ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <SelectValue placeholder="Selecionar Fase" />}
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {fases.map(fase => (
-                                <SelectItem key={fase} value={fase}>{fase}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <FormControl><Input {...field} disabled /></FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -604,16 +505,9 @@ export default function CriarParadaPage() {
                           <FormLabel>Criar parada para:</FormLabel>
                           <FormControl>
                             <RadioGroup
-                              onValueChange={(value) => {
-                                field.onChange(value);
-                                if (value === 'ativo') {
-                                    setValue('grupoAtivos', '');
-                                } else if (value === 'grupo') {
-                                    setValue('ativo', '');
-                                }
-                              }}
-                              defaultValue={field.value}
+                              value={field.value}
                               className="flex space-x-4"
+                              disabled
                             >
                               <FormItem className="flex items-center space-x-2 space-y-0">
                                 <FormControl>
@@ -634,50 +528,28 @@ export default function CriarParadaPage() {
                       )}
                     />
 
-                    {watchedTipoSelecao === "grupo" && (
+                    {watch("tipoSelecao") === "grupo" && (
                         <FormField
                             control={control}
                             name="grupoAtivos"
                             render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Grupo de Ativos</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value} disabled={!watchedCentro || !watchedFase || loadingGrupos}>
-                                    <FormControl>
-                                        <SelectTrigger>
-                                            {loadingGrupos ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <SelectValue placeholder="Selecionar Grupo de Ativos" />}
-                                        </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                        {gruposDeAtivos.map(grupo => (
-                                            <SelectItem key={grupo} value={grupo}>{grupo}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                                <FormControl><Input {...field} disabled /></FormControl>
                                 <FormMessage />
                             </FormItem>
                             )}
                         />
                     )}
 
-                    {watchedTipoSelecao === "ativo" && (
+                    {watch("tipoSelecao") === "ativo" && (
                          <FormField
                             control={control}
                             name="ativo"
                             render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Ativo Único</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value} disabled={!watchedCentro || loadingAtivos}>
-                                <FormControl>
-                                  <SelectTrigger>
-                                    {loadingAtivos ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <SelectValue placeholder="Selecionar Ativo" />}
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                    {ativos.map(ativo => (
-                                        <SelectItem key={ativo} value={ativo}>{ativo}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                                </Select>
+                                <FormControl><Input {...field} disabled /></FormControl>
                                 <FormMessage />
                             </FormItem>
                             )}
@@ -1019,7 +891,7 @@ export default function CriarParadaPage() {
                 </Button>
                 <Button type="submit" disabled={isSubmitting}>
                   {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  {isSubmitting ? "Criando..." : "Criar Parada"}
+                  {isSubmitting ? "Salvando..." : "Salvar Alterações"}
                 </Button>
               </div>
             </form>

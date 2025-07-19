@@ -1,6 +1,7 @@
 
 import { supabase } from './supabase';
 import type { ParadasFiltros } from '@/app/paradas/page';
+import type { Stop } from '@/components/stop-card';
 
 export type Filtros = {
   nome_grupo?: string;
@@ -157,12 +158,24 @@ export const getStopsFilterOptions = async (
 };
 
 
-export async function getStops(filters: ParadasFiltros) {
+export async function getStops(filters: ParadasFiltros): Promise<Stop[]> {
     let query = supabase
         .from('paradas_de_manutencao')
-        .select('*')
+        .select(`
+            *,
+            recursos_parada (
+                equipe,
+                hh_dia
+            )
+        `)
         .order('data_inicio_planejada', { ascending: true });
 
+    if (filters.diretoria_executiva) {
+        query = query.eq('diretoria_executiva', filters.diretoria_executiva);
+    }
+    if (filters.diretoria) {
+        query = query.eq('diretoria', filters.diretoria);
+    }
     if (filters.centro_de_localizacao) {
         query = query.eq('centro_de_localizacao', filters.centro_de_localizacao);
     }
@@ -172,8 +185,6 @@ export async function getStops(filters: ParadasFiltros) {
      if (filters.dateRange?.from && filters.dateRange?.to) {
         const from = filters.dateRange.from.toISOString();
         const to = filters.dateRange.to.toISOString();
-
-        // Find stops where the planned start OR planned end falls within the date range
         query = query.or(
             `and(data_inicio_planejada.gte.${from},data_inicio_planejada.lte.${to}),and(data_fim_planejada.gte.${from},data_fim_planejada.lte.${to})`
         );
@@ -185,5 +196,23 @@ export async function getStops(filters: ParadasFiltros) {
         console.error("Error fetching stops:", error);
         return [];
     }
-    return data;
+
+    return data.map(stop => {
+        const recursos = stop.recursos_parada || [];
+        const duracao = stop.duracao_planejada_horas ?? 0;
+        
+        // Cada HH/Dia é para um turno de 8 horas, então para ter o HH total, 
+        // multiplicamos o HH/Dia pelo número de dias (duração em horas / 24)
+        const total_hh = recursos.reduce((acc, recurso) => {
+            const dias = duracao / 24;
+            return acc + (recurso.hh_dia * dias);
+        }, 0);
+
+        return {
+            ...stop,
+            recursos: recursos,
+            num_equipes: recursos.length,
+            total_hh: Math.round(total_hh),
+        } as Stop;
+    });
 }
