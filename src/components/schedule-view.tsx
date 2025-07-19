@@ -1,6 +1,6 @@
 
 import React from "react";
-import { getMonth, getISOWeek, format, getDaysInMonth, getDate } from "date-fns";
+import { getMonth, getISOWeek, format, getDaysInMonth, getDate, startOfISOWeek, setISOWeek, addDays, getDay, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -41,53 +41,74 @@ const stopColor = "bg-green-500";
 export function ScheduleView({ data, year, filters }: ScheduleViewProps) {
     const { mes: selectedMonth, semana: selectedWeek } = filters;
     
-    // Default view is weeks. If a month is selected, this is ignored.
+    // Default view is weeks. If a month or week is selected, this is ignored.
     const [view, setView] = React.useState<"semanas" | "meses">("semanas");
 
     // Determine the current view mode based on filters.
-    const currentViewMode = selectedMonth ? 'dias' : view;
+    const currentViewMode = selectedMonth ? 'dias_mes' : selectedWeek ? 'dias_semana' : view;
     
     const timeIntervals = React.useMemo(() => {
+        // Daily view for a selected month
         if (selectedMonth) {
             const monthIndex = parseInt(selectedMonth, 10) - 1;
             const daysInMonth = getDaysInMonth(new Date(year, monthIndex));
             return Array.from({ length: daysInMonth }, (_, i) => ({
                 label: (i + 1).toString(),
-                value: i + 1
+                value: i + 1,
+                date: new Date(year, monthIndex, i + 1),
             }));
+        }
+        // Daily view for a selected week
+        if (selectedWeek) {
+            const weekIndex = parseInt(selectedWeek, 10);
+            // Use a date guaranteed to be in the first week of the year to avoid issues.
+            const dateForWeek = setISOWeek(new Date(year, 0, 4), weekIndex);
+            const startDay = startOfISOWeek(dateForWeek);
+            return Array.from({ length: 7 }, (_, i) => {
+                const day = addDays(startDay, i);
+                return {
+                    label: format(day, "d/EEE", { locale: ptBR }),
+                    value: getDate(day),
+                    date: day,
+                }
+            });
         }
         if (view === 'meses') {
             return Array.from({ length: 12 }, (_, i) => ({
                 label: format(new Date(year, i, 1), "MMM", { locale: ptBR }).toUpperCase(),
-                value: i + 1
+                value: i + 1,
+                date: new Date(year, i, 1),
             }));
         }
         // Default to weeks
-        return Array.from({ length: 52 }, (_, i) => ({ label: `S${i + 1}`, value: i + 1 }));
-    }, [view, year, selectedMonth]);
+        return Array.from({ length: 52 }, (_, i) => ({ 
+            label: `S${i + 1}`, 
+            value: i + 1,
+            // Date is not needed for weekly view but keeps the object shape consistent
+            date: new Date(year, 0, 1) 
+        }));
+    }, [view, year, selectedMonth, selectedWeek]);
 
 
-    const getPosition = (item: ScheduleItem, intervalValue: number): boolean => {
-        if (selectedMonth) { // Daily view
-            const monthIndex = parseInt(selectedMonth, 10) - 1;
-            if (getMonth(item.startDate) > monthIndex || getMonth(item.endDate) < monthIndex) {
-                 return false;
-            }
-            const itemStartDay = getMonth(item.startDate) === monthIndex ? getDate(item.startDate) : 1;
-            const itemEndDay = getMonth(item.endDate) === monthIndex ? getDate(item.endDate) : getDaysInMonth(new Date(year, monthIndex));
-            return intervalValue >= itemStartDay && intervalValue <= itemEndDay;
+    const getPosition = (item: ScheduleItem, interval: (typeof timeIntervals)[0]): boolean => {
+         if (currentViewMode === 'dias_mes' || currentViewMode === 'dias_semana') {
+            const intervalDate = interval.date;
+            // Check if intervalDate is between item's start and end date (inclusive)
+            return isSameDay(item.startDate, intervalDate) || 
+                   isSameDay(item.endDate, intervalDate) ||
+                   (item.startDate < intervalDate && item.endDate > intervalDate);
         }
 
         if (view === 'meses') { // Monthly view
             const itemStartMonth = getMonth(item.startDate) + 1;
             const itemEndMonth = getMonth(item.endDate) + 1;
-            return intervalValue >= itemStartMonth && intervalValue <= itemEndMonth;
+            return interval.value >= itemStartMonth && interval.value <= itemEndMonth;
         }
 
         // Weekly view
         const itemStartWeek = getISOWeek(item.startDate);
         const itemEndWeek = getISOWeek(item.endDate);
-        return intervalValue >= itemStartWeek && intervalValue <= itemEndWeek;
+        return interval.value >= itemStartWeek && interval.value <= itemEndWeek;
     };
     
     const processedData = React.useMemo(() => {
@@ -102,7 +123,7 @@ export function ScheduleView({ data, year, filters }: ScheduleViewProps) {
         <TooltipProvider>
             <div className="space-y-4">
                 <div className="flex justify-end">
-                    {!selectedMonth && (
+                    {currentViewMode !== 'dias_mes' && currentViewMode !== 'dias_semana' && (
                          <Select value={view} onValueChange={(v) => setView(v as "semanas" | "meses")}>
                             <SelectTrigger className="w-[180px]">
                                 <SelectValue placeholder="Visualizar por" />
@@ -125,7 +146,7 @@ export function ScheduleView({ data, year, filters }: ScheduleViewProps) {
                                     Tipo
                                 </th>
                                 {timeIntervals.map(interval => (
-                                    <th key={interval.value} scope="col" className={cn(
+                                    <th key={interval.label} scope="col" className={cn(
                                         "px-1 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-10",
                                         (currentViewMode === 'meses' && selectedMonth === interval.value.toString()) && "bg-blue-100",
                                         (currentViewMode === 'semanas' && selectedWeek === interval.value.toString()) && "bg-blue-100"
@@ -149,14 +170,14 @@ export function ScheduleView({ data, year, filters }: ScheduleViewProps) {
                                             Estratégias
                                         </td>
                                         {timeIntervals.map(interval => (
-                                            <td key={interval.value} className={cn(
+                                            <td key={interval.label} className={cn(
                                                 "px-1 py-1 text-center border-l border-b w-10",
                                                 (currentViewMode === 'meses' && selectedMonth === interval.value.toString()) && "bg-blue-50",
                                                 (currentViewMode === 'semanas' && selectedWeek === interval.value.toString()) && "bg-blue-50"
                                             )}>
                                                 <div className="h-full w-full flex flex-wrap items-center justify-center gap-1">
                                                     {group.strategies.map(item =>
-                                                        getPosition(item, interval.value) && (
+                                                        getPosition(item, interval) && (
                                                             <Tooltip key={item.id}>
                                                                 <TooltipTrigger>
                                                                     <div
@@ -184,14 +205,14 @@ export function ScheduleView({ data, year, filters }: ScheduleViewProps) {
                                             Paradas
                                         </td>
                                         {timeIntervals.map(interval => (
-                                            <td key={interval.value} className={cn(
+                                            <td key={interval.label} className={cn(
                                                 "px-1 py-1 text-center border-l border-b w-10",
                                                  (currentViewMode === 'meses' && selectedMonth === interval.value.toString()) && "bg-blue-50",
                                                  (currentViewMode === 'semanas' && selectedWeek === interval.value.toString()) && "bg-blue-50"
                                             )}>
                                                 <div className="h-full w-full flex flex-wrap items-center justify-center gap-1">
                                                     {group.stops.map(item =>
-                                                        getPosition(item, interval.value) && (
+                                                        getPosition(item, interval) && (
                                                             <Tooltip key={item.id}>
                                                                 <TooltipTrigger>
                                                                     <div

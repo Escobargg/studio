@@ -3,7 +3,7 @@ import { supabase } from './supabase';
 import type { ParadasFiltros } from '@/app/paradas/page';
 import type { Stop } from '@/components/stop-card';
 import type { ScheduleData } from '@/components/schedule-view';
-import { startOfYear, endOfYear, add, getMonth, getISOWeek, startOfMonth, endOfMonth, startOfWeek, endOfWeek } from 'date-fns';
+import { startOfYear, endOfYear, add, getMonth, getISOWeek, startOfMonth, endOfMonth, startOfWeek, endOfWeek, setISOWeek, startOfISOWeek } from 'date-fns';
 import type { CronogramaFiltros } from '@/components/schedule-filters';
 
 export type Filtros = {
@@ -245,8 +245,24 @@ const getFrequencyInDays = (value: number, unit: string) => {
 
 export async function getScheduleData(filters: CronogramaFiltros): Promise<ScheduleData[]> {
     const year = parseInt(filters.ano || new Date().getFullYear().toString());
-    const yearStart = startOfYear(new Date(year, 0, 1));
-    const yearEnd = endOfYear(new Date(year, 11, 31));
+    
+    // Determine the date range for the query based on filters
+    let queryStart, queryEnd;
+
+    if (filters.mes) {
+        const monthIndex = parseInt(filters.mes, 10) - 1;
+        queryStart = startOfMonth(new Date(year, monthIndex));
+        queryEnd = endOfMonth(new Date(year, monthIndex));
+    } else if (filters.semana) {
+        const weekIndex = parseInt(filters.semana, 10);
+        // A date guaranteed to be in week 1 to avoid year boundary issues
+        const dateForWeek = setISOWeek(new Date(year, 0, 4), weekIndex); 
+        queryStart = startOfISOWeek(dateForWeek);
+        queryEnd = endOfISOWeek(queryStart);
+    } else {
+        queryStart = startOfYear(new Date(year, 0, 1));
+        queryEnd = endOfYear(new Date(year, 11, 31));
+    }
     
     const scheduleMap = new Map<string, { groupName: string; location: string; items: any[] }>();
 
@@ -287,9 +303,10 @@ export async function getScheduleData(filters: CronogramaFiltros): Promise<Sched
     let strategiesQuery = supabase
         .from('estrategias')
         .select('id, nome, prioridade, frequencia_valor, frequencia_unidade, duracao_valor, duracao_unidade, data_inicio, data_fim, grupo_id')
+        .in('grupo_id', Array.from(filteredGroupIds))
         .eq('ativa', true)
-        .lte('data_inicio', yearEnd.toISOString())
-        .or(`data_fim.is.null,data_fim.gte.${yearStart.toISOString()}`);
+        .lte('data_inicio', queryEnd.toISOString())
+        .or(`data_fim.is.null,data_fim.gte.${queryStart.toISOString()}`);
     
     const { data: strategiesData, error: strategiesError } = await strategiesQuery;
     
@@ -298,24 +315,32 @@ export async function getScheduleData(filters: CronogramaFiltros): Promise<Sched
     } else {
         strategiesData.forEach(strategy => {
             const groupKey = strategy.grupo_id;
-            if (groupKey && filteredGroupIds.has(groupKey)) {
+            if (groupKey && scheduleMap.has(groupKey)) {
                 let currentDate = new Date(strategy.data_inicio);
-                const strategyEndDate = strategy.data_fim ? new Date(strategy.data_fim) : yearEnd;
+                const strategyEndDate = strategy.data_fim ? new Date(strategy.data_fim) : queryEnd;
                 const intervalDays = getFrequencyInDays(strategy.frequencia_valor, strategy.frequencia_unidade);
                 const duration = { [strategy.duracao_unidade.toLowerCase()]: strategy.duracao_valor };
 
-                while (currentDate <= strategyEndDate && currentDate <= yearEnd) {
-                    if (currentDate >= yearStart) {
+                while (currentDate <= strategyEndDate && currentDate <= queryEnd) {
+                    const eventEndDate = add(currentDate, duration);
+                    // Check if event overlaps with the query range
+                    if (currentDate <= queryEnd && eventEndDate >= queryStart) {
                         scheduleMap.get(groupKey)?.items.push({
                             id: `${strategy.id}-${currentDate.toISOString()}`,
                             name: strategy.nome,
                             startDate: currentDate,
-                            endDate: add(currentDate, duration),
+                            endDate: eventEndDate,
                             type: 'strategy',
                             priority: strategy.prioridade,
                         });
                     }
-                    currentDate = add(currentDate, { days: intervalDays });
+                     // Move to the next date only if interval is positive
+                    if (intervalDays > 0) {
+                        currentDate = add(currentDate, { days: intervalDays });
+                    } else {
+                        // Break to avoid infinite loop
+                        break;
+                    }
                 }
             }
         });
@@ -325,7 +350,7 @@ export async function getScheduleData(filters: CronogramaFiltros): Promise<Sched
     let stopsQuery = supabase
         .from('paradas_de_manutencao')
         .select('id, nome_parada, data_inicio_planejada, data_fim_planejada, tipo_selecao, grupo_de_ativos, ativo_unico, centro_de_localizacao, fase, status')
-        .or(`and(data_inicio_planejada.gte.${yearStart.toISOString()},data_inicio_planejada.lte.${yearEnd.toISOString()}),and(data_fim_planejada.gte.${yearStart.toISOString()},data_fim_planejada.lte.${yearEnd.toISOString()}),and(data_inicio_planejada.lte.${yearStart.toISOString()},data_fim_planejada.gte.${yearEnd.toISOString()})`);
+        .or(`and(data_inicio_planejada.gte.${queryStart.toISOString()},data_inicio_planejada.lte.${queryEnd.toISOString()}),and(data_fim_planejada.gte.${queryStart.toISOString()},data_fim_planejada.lte.${queryEnd.toISOString()}),and(data_inicio_planejada.lte.${queryStart.toISOString()},data_fim_planejada.gte.${queryEnd.toISOString()})`);
     
     if (filters.diretoria_executiva) stopsQuery = stopsQuery.eq('diretoria_executiva', filters.diretoria_executiva);
     if (filters.diretoria) stopsQuery = stopsQuery.eq('diretoria', filters.diretoria);
@@ -367,34 +392,5 @@ export async function getScheduleData(filters: CronogramaFiltros): Promise<Sched
 
     let finalData = Array.from(scheduleMap.values());
     
-    // Filter by month or week if provided
-    if (filters.mes) {
-        const monthIndex = parseInt(filters.mes, 10) - 1;
-        const monthStart = startOfMonth(new Date(year, monthIndex));
-        const monthEnd = endOfMonth(new Date(year, monthIndex));
-        
-        finalData = finalData.map(group => ({
-            ...group,
-            items: group.items.filter(item => 
-                item.startDate <= monthEnd && item.endDate >= monthStart
-            )
-        }));
-    } else if (filters.semana) {
-        const weekNumber = parseInt(filters.semana, 10);
-        // This is an approximation, date-fns doesn't have a direct way to get start/end of an ISO week number for a year.
-        // We'll calculate it based on the first day of the year.
-        const firstDayOfYear = new Date(year, 0, 1);
-        const firstDayOfWeek = startOfWeek(firstDayOfYear, { weekStartsOn: 1 });
-        const weekStart = add(firstDayOfWeek, { weeks: weekNumber - 1 });
-        const weekEnd = endOfWeek(weekStart, { weekStartsOn: 1 });
-
-        finalData = finalData.map(group => ({
-            ...group,
-            items: group.items.filter(item => 
-                item.startDate <= weekEnd && item.endDate >= weekStart
-            )
-        }));
-    }
-
     return finalData.sort((a,b) => a.groupName.localeCompare(b.groupName));
 }
