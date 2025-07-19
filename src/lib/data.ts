@@ -283,7 +283,7 @@ export async function getScheduleData(filters: CronogramaFiltros): Promise<Sched
         .select(`
             id, nome, prioridade, frequencia_valor, frequencia_unidade,
             duracao_valor, duracao_unidade, data_inicio, data_fim,
-            grupos_de_ativos ( id, nome_grupo )
+            grupos_de_ativos:grupo_id ( id, nome_grupo, fase )
         `)
         .eq('ativa', true)
         .lte('data_inicio', yearEnd.toISOString())
@@ -294,7 +294,7 @@ export async function getScheduleData(filters: CronogramaFiltros): Promise<Sched
         strategiesQuery = strategiesQuery.in('grupo_id', filteredGroupIds);
     } else {
         // No groups match filter, so no strategies will be found
-        return [];
+        return Array.from(scheduleMap.values()).sort((a,b) => a.groupName.localeCompare(b.groupName));
     }
 
     const { data: strategiesData, error: strategiesError } = await strategiesQuery;
