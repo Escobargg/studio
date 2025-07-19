@@ -41,12 +41,13 @@ import { supabase } from "@/lib/supabase";
 import { TeamSelector, type SelectedTeam } from "@/components/team-selector";
 
 const equipeSchema = z.object({
-  id: z.string(),
-  especialidade: z.string(),
-  capacidade: z.number(),
-  hh: z.number(),
-  hh_dia: z.number(),
+  id: z.string().optional(),
+  especialidade: z.string().optional(),
+  capacidade: z.number().optional(),
+  hh: z.number().optional(),
+  hh_dia: z.number().optional(),
 });
+
 
 const horaRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
@@ -110,6 +111,14 @@ const stopFormSchema = z.object({
 }, {
     message: "Selecione o ativo.",
     path: ["ativo"],
+}).refine(data => {
+    if (data.equipes && data.equipes.length > 0) {
+        return data.equipes.every(e => e.id && e.especialidade && e.capacidade && e.hh && e.hh_dia);
+    }
+    return true;
+}, {
+    message: "Todos os campos da equipe são obrigatórios.",
+    path: ["equipes"],
 });
 
 
@@ -719,7 +728,7 @@ export default function CriarParadaPage() {
                       name="equipes"
                       render={({ field }) => (
                         <TeamSelector
-                          value={field.value}
+                          value={field.value as SelectedTeam[]}
                           onChange={field.onChange}
                           centroLocalizacao={watchedCentro}
                           fase={watchedFase}
