@@ -5,10 +5,13 @@ import { useState, useEffect, useCallback } from "react";
 import { AssetGroupCard } from "@/components/asset-group-card";
 import { MainLayout } from "@/components/main-layout";
 import { supabase } from "@/lib/supabase";
-import { Building, Loader2 } from "lucide-react";
+import { Building, Loader2, PlusCircle, LayoutGrid } from "lucide-react";
 import type { Filtros } from "@/lib/data";
 import { GroupFilters } from "@/components/group-filters";
 import type { Grupo } from "@/components/asset-group-card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 async function getGruposDeAtivos(filtros: Filtros) {
   let query = supabase
@@ -74,12 +77,33 @@ export default function GruposPage() {
 
   return (
     <MainLayout>
-      <div className="flex flex-col h-full">
-        <div className="p-4 md:p-6 bg-card border-b">
-           <GroupFilters filters={filtros} onFilterChange={handleFilterChange} />
-        </div>
-        <div className="flex-1 p-4 md:p-8 overflow-y-auto">
-          <div className="max-w-7xl mx-auto">
+      <div className="flex-1 p-4 md:p-8 overflow-y-auto bg-muted/20 space-y-6">
+        <Card>
+           <CardHeader className="flex flex-row items-start justify-between">
+                <div className="flex items-center gap-3">
+                    <div className="p-2 bg-primary/10 rounded-md">
+                         <LayoutGrid className="w-6 h-6 text-primary" />
+                    </div>
+                    <div>
+                        <CardTitle className="text-2xl">Grupos de Ativos</CardTitle>
+                        <CardDescription>
+                            Visualize e gerencie os grupos de ativos cadastrados.
+                        </CardDescription>
+                    </div>
+                </div>
+                <Button asChild>
+                  <Link href="/grupos/novo">
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Novo Grupo
+                  </Link>
+                </Button>
+            </CardHeader>
+            <CardContent>
+                <GroupFilters filters={filtros} onFilterChange={handleFilterChange} />
+            </CardContent>
+        </Card>
+
+        <div className="space-y-4">
             {isLoading ? (
                <div className="flex flex-col items-center justify-center h-full text-center py-20">
                     <Loader2 className="w-16 h-16 text-primary animate-spin" />
@@ -87,28 +111,27 @@ export default function GruposPage() {
                     <p className="mt-2 text-muted-foreground">Aguarde um momento.</p>
                 </div>
             ) : grupos.length > 0 ? (
-              <div className="flex flex-col gap-4">
-                {grupos.map((grupo) => (
-                  <AssetGroupCard 
-                    key={grupo.id} 
-                    grupo={grupo} 
-                    onGroupUpdate={handleGroupUpdate}
-                    onGroupDelete={handleGroupDelete}
-                  />
-                ))}
-              </div>
+                <div className="flex flex-col gap-4">
+                    {grupos.map((grupo) => (
+                    <AssetGroupCard 
+                        key={grupo.id} 
+                        grupo={grupo} 
+                        onGroupUpdate={handleGroupUpdate}
+                        onGroupDelete={handleGroupDelete}
+                    />
+                    ))}
+                </div>
             ) : (
-              <div className="flex flex-col items-center justify-center h-full text-center py-20">
-                <Building className="w-16 h-16 text-muted-foreground" />
-                <h2 className="mt-6 text-2xl font-semibold">
-                  Nenhum Grupo de Ativos Encontrado
-                </h2>
-                <p className="mt-2 text-muted-foreground">
-                  Ajuste os filtros ou crie um novo grupo para vê-lo listado aqui.
-                </p>
-              </div>
+                <div className="flex flex-col items-center justify-center text-center py-20">
+                    <Building className="w-16 h-16 text-muted-foreground" />
+                    <h2 className="mt-6 text-2xl font-semibold">
+                    Nenhum Grupo de Ativos Encontrado
+                    </h2>
+                    <p className="mt-2 text-muted-foreground">
+                    Ajuste os filtros ou crie um novo grupo para vê-lo listado aqui.
+                    </p>
+                </div>
             )}
-          </div>
         </div>
       </div>
     </MainLayout>
