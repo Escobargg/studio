@@ -2,10 +2,10 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import { useForm, useFieldArray } from "react-hook-form";
 import * as z from "zod";
 import { useState, useEffect } from "react";
-import { ArrowLeft, CalendarIcon, Loader2 } from "lucide-react";
+import { ArrowLeft, CalendarIcon, Loader2, PlusCircle, Trash2 } from "lucide-react";
 import { format, differenceInHours, set } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -36,16 +36,14 @@ import { MainLayout } from "@/components/main-layout";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { getHierarquiaOpcoes, getAtivosByCentro, getGruposByCentroEFase } from "@/lib/data";
+import { getHierarquiaOpcoes, getAtivosByCentro, getGruposByCentroEFase, getEspecialidades, type Especialidade } from "@/lib/data";
 import { supabase } from "@/lib/supabase";
-import { TeamSelector, type SelectedTeam } from "@/components/team-selector";
 
 const equipeSchema = z.object({
-  id: z.string().optional(),
-  especialidade: z.string().optional(),
-  capacidade: z.number().optional(),
-  hh: z.number().optional(),
-  hh_dia: z.number().optional(),
+  especialidade: z.string().min(1, "Especialidade é obrigatória."),
+  capacidade: z.coerce.number().min(1, "Deve ser > 0."),
+  hh: z.coerce.number().min(0, "HH deve ser preenchido."),
+  hh_dia: z.coerce.number().min(0, "HH/Dia deve ser preenchido."),
 });
 
 
@@ -73,7 +71,7 @@ const stopFormSchema = z.object({
         message: "Formato de hora inválido.",
     }),
   descricao: z.string().optional(),
-  equipes: z.array(equipeSchema).optional().default([]),
+  equipes: z.array(equipeSchema).optional(),
 }).refine(data => {
     if (data.dataInicioPlanejada && data.horaInicioPlanejada && data.dataFimPlanejada && data.horaFimPlanejada) {
       const start = set(data.dataInicioPlanejada, { hours: parseInt(data.horaInicioPlanejada.split(':')[0]), minutes: parseInt(data.horaInicioPlanejada.split(':')[1]) });
@@ -132,11 +130,14 @@ export default function CriarParadaPage() {
   const [fases, setFases] = useState<string[]>([]);
   const [ativos, setAtivos] = useState<string[]>([]);
   const [gruposDeAtivos, setGruposDeAtivos] = useState<string[]>([]);
+  const [especialidades, setEspecialidades] = useState<Especialidade[]>([]);
+
 
   const [loadingCentros, setLoadingCentros] = useState(true);
   const [loadingFases, setLoadingFases] = useState(false);
   const [loadingAtivos, setLoadingAtivos] = useState(false);
   const [loadingGrupos, setLoadingGrupos] = useState(false);
+  const [loadingEspecialidades, setLoadingEspecialidades] = useState(false);
   
   const form = useForm<StopFormValues>({
     resolver: zodResolver(stopFormSchema),
@@ -160,7 +161,12 @@ export default function CriarParadaPage() {
     },
   });
 
-  const { watch, control, setValue, getValues, formState: { errors } } = form;
+  const { watch, control, setValue, getValues, trigger } = form;
+
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: "equipes",
+  });
 
   const [duracaoPlanejada, setDuracaoPlanejada] = useState<number | null>(null);
   const [duracaoRealizada, setDuracaoRealizada] = useState<number | null>(null);
@@ -172,6 +178,39 @@ export default function CriarParadaPage() {
   const watchedCentro = watch("centroLocalizacao");
   const watchedFase = watch("fase");
   const watchedTipoSelecao = watch("tipoSelecao");
+  const watchedEquipes = watch("equipes");
+
+  const handleEspecialidadeChange = (index: number, espNome: string) => {
+    const especialidadeData = especialidades.find(e => e.especialidade === espNome);
+    if (especialidadeData) {
+        setValue(`equipes.${index}.hh`, especialidadeData.hh);
+        // Reset capacity and hh_dia when specialty changes
+        setValue(`equipes.${index}.capacidade`, 0);
+        setValue(`equipes.${index}.hh_dia`, 0);
+        // Trigger validation for the capacity field
+        trigger(`equipes.${index}.capacidade`);
+    }
+  };
+
+  const handleCapacidadeChange = (index: number, capacidadeStr: string) => {
+      const capacidade = parseInt(capacidadeStr, 10);
+      const hh = getValues(`equipes.${index}.hh`) || 0;
+      if (!isNaN(capacidade)) {
+          setValue(`equipes.${index}.hh_dia`, capacidade * hh);
+      }
+  };
+
+  const getCapacidadeOptions = (especialidadeNome: string | undefined): number[] => {
+      if (!especialidadeNome) return [];
+      const especialidade = especialidades.find(e => e.especialidade === especialidadeNome);
+      if (!especialidade || !especialidade.capacidade) return [];
+      return Array.from({ length: especialidade.capacidade }, (_, i) => i + 1);
+  };
+  
+  const availableEspecialidades = especialidades.filter(
+    (esp) => !watchedEquipes?.some((equipe) => equipe.especialidade === esp.especialidade)
+  );
+
 
   useEffect(() => {
     async function fetchCentros() {
@@ -191,7 +230,6 @@ export default function CriarParadaPage() {
         setValue("fase", ""); 
         setValue("grupoAtivos", "");
         setValue("ativo", "");
-        setValue("equipes", []);
 
         const [fasesData, ativosData] = await Promise.all([
           getHierarquiaOpcoes("fase", { centro_de_localizacao: watchedCentro }),
@@ -206,7 +244,7 @@ export default function CriarParadaPage() {
         setFases([]);
         setAtivos([]);
         setGruposDeAtivos([]);
-        setValue("equipes", []);
+        setEspecialidades([]);
       }
     };
     fetchDataForCentro();
@@ -216,16 +254,22 @@ export default function CriarParadaPage() {
     const fetchDependentData = async () => {
         if (watchedCentro && watchedFase) {
             setLoadingGrupos(true);
+            setLoadingEspecialidades(true);
             setValue("grupoAtivos", "");
-            setValue("equipes", []);
+            setValue("equipes", []); // Reset teams when context changes
 
-            const gruposData = await getGruposByCentroEFase(watchedCentro, watchedFase);
+            const [gruposData, especialidadesData] = await Promise.all([
+                getGruposByCentroEFase(watchedCentro, watchedFase),
+                getEspecialidades(watchedCentro, watchedFase)
+            ]);
             
             setGruposDeAtivos(gruposData);
+            setEspecialidades(especialidadesData);
             setLoadingGrupos(false);
+            setLoadingEspecialidades(false);
         } else {
             setGruposDeAtivos([]);
-            setValue("equipes", []);
+            setEspecialidades([]);
         }
     };
     fetchDependentData();
@@ -712,21 +756,119 @@ export default function CriarParadaPage() {
                <Card>
                 <CardHeader>
                     <CardTitle>Recursos (Opcional)</CardTitle>
-                    <CardDescription>Selecione as equipes e defina a capacidade para esta parada.</CardDescription>
+                    <CardDescription>Adicione as equipes necessárias para esta parada. As especialidades são carregadas com base no centro e fase selecionados.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <FormField
-                      control={control}
-                      name="equipes"
-                      render={({ field }) => (
-                        <TeamSelector
-                          value={field.value as SelectedTeam[]}
-                          onChange={field.onChange}
-                          centroLocalizacao={watchedCentro}
-                          fase={watchedFase}
-                        />
-                      )}
-                    />
+                    <div className="space-y-4">
+                        {fields.map((field, index) => {
+                             const selectedEspecialidade = watchedEquipes && watchedEquipes[index]?.especialidade;
+                             const capacidadeOptions = getCapacidadeOptions(selectedEspecialidade);
+
+                             return (
+                                <div key={field.id} className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end p-4 border rounded-lg relative">
+                                    <FormField
+                                        control={control}
+                                        name={`equipes.${index}.especialidade`}
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Especialidade</FormLabel>
+                                                <Select
+                                                    onValueChange={(value) => {
+                                                        field.onChange(value);
+                                                        handleEspecialidadeChange(index, value);
+                                                    }}
+                                                    value={field.value}
+                                                    disabled={loadingEspecialidades || !watchedCentro || !watchedFase}
+                                                >
+                                                    <FormControl>
+                                                        <SelectTrigger>
+                                                            {loadingEspecialidades ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <SelectValue placeholder="Selecione" />}
+                                                        </SelectTrigger>
+                                                    </FormControl>
+                                                    <SelectContent>
+                                                        {selectedEspecialidade && (
+                                                            <SelectItem key={selectedEspecialidade} value={selectedEspecialidade}>
+                                                                {selectedEspecialidade}
+                                                            </SelectItem>
+                                                        )}
+                                                        {availableEspecialidades.map(esp => (
+                                                            <SelectItem key={esp.especialidade} value={esp.especialidade}>{esp.especialidade}</SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={control}
+                                        name={`equipes.${index}.capacidade`}
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Capacidade</FormLabel>
+                                                 <Select
+                                                    onValueChange={(value) => {
+                                                        field.onChange(value);
+                                                        handleCapacidadeChange(index, value);
+                                                    }}
+                                                    value={field.value?.toString() ?? ""}
+                                                    disabled={!selectedEspecialidade}
+                                                >
+                                                    <FormControl><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger></FormControl>
+                                                    <SelectContent>
+                                                        {capacidadeOptions.map(cap => (
+                                                            <SelectItem key={cap} value={cap.toString()}>{cap}</SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={control}
+                                        name={`equipes.${index}.hh`}
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>HH</FormLabel>
+                                                <FormControl><Input type="number" {...field} readOnly disabled className="bg-muted/50" /></FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={control}
+                                        name={`equipes.${index}.hh_dia`}
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>HH/Dia</FormLabel>
+                                                <FormControl><Input type="number" {...field} readOnly disabled className="bg-muted/50"/></FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}>
+                                        <Trash2 className="h-4 w-4 text-destructive" />
+                                        <span className="sr-only">Remover Equipe</span>
+                                    </Button>
+                                </div>
+                             );
+                        })}
+                         <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="mt-2"
+                            onClick={() => append({ especialidade: "", capacidade: 0, hh: 0, hh_dia: 0 })}
+                            disabled={!watchedCentro || !watchedFase || loadingEspecialidades || availableEspecialidades.length === 0}
+                        >
+                            <PlusCircle className="mr-2 h-4 w-4" />
+                            Adicionar Equipe
+                        </Button>
+                        {availableEspecialidades.length === 0 && watchedCentro && watchedFase && !loadingEspecialidades && (
+                            <p className="text-sm text-muted-foreground mt-2">Todas as especialidades disponíveis já foram adicionadas.</p>
+                        )}
+                    </div>
                 </CardContent>
               </Card>
 

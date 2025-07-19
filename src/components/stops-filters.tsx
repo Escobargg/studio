@@ -3,7 +3,6 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -11,117 +10,167 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { X } from "lucide-react";
+import { Loader2, X, Calendar as CalendarIcon } from "lucide-react";
+import type { ParadasFiltros } from "@/app/paradas/page";
+import { getHierarquiaOpcoes } from "@/lib/data";
+import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
+import { Calendar } from "./ui/calendar";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { type DateRange } from "react-day-picker";
+
 
 interface StopsFiltersProps {
-  onFilterChange: (filters: any) => void;
+  onFilterChange: (filters: ParadasFiltros) => void;
 }
 
 export function StopsFilters({ onFilterChange }: StopsFiltersProps) {
-  const [filters, setFilters] = useState({
-    search: "",
-    center: "",
-    phase: "",
-    year: "",
-    month: "",
-    week: "",
-  });
+  const [filters, setFilters] = useState<ParadasFiltros>({});
+  const [centroOptions, setCentroOptions] = useState<string[]>([]);
+  const [faseOptions, setFaseOptions] = useState<string[]>([]);
+  
+  const [loadingCentros, setLoadingCentros] = useState(true);
+  const [loadingFases, setLoadingFases] = useState(false);
 
-  // Mock options - in a real app, these would come from an API
-  const centerOptions = ["Todos os centros", "2001 - Mina Carajás", "3050 - Usina Vitória", "6002 - Mariana"];
-  const phaseOptions = ["Todas as fases", "MINA", "USINA"];
-  const yearOptions = ["2025", "2024", "2023"];
-  const monthOptions = ["Todos os meses", "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
-  const weekOptions = ["Todas as semanas", "Semana 1", "Semana 2", "Semana 3", "Semana 4"];
-
+  // Fetch initial options for centros
   useEffect(() => {
-    const handler = setTimeout(() => {
-      onFilterChange(filters);
-    }, 500); // Debounce
-    return () => clearTimeout(handler);
+    const fetchOptions = async () => {
+        setLoadingCentros(true);
+        const centros = await getHierarquiaOpcoes("centro_de_localizacao");
+        setCentroOptions(centros);
+        setLoadingCentros(false);
+    };
+    fetchOptions();
+  }, []);
+
+  // Fetch fases when centro changes
+  useEffect(() => {
+    const fetchFases = async () => {
+      if (filters.centro_de_localizacao) {
+        setLoadingFases(true);
+        const fases = await getHierarquiaOpcoes("fase", { centro_de_localizacao: filters.centro_de_localizacao });
+        setFaseOptions(fases);
+        setLoadingFases(false);
+      } else {
+        setFaseOptions([]); // Clear fases if no centro is selected
+      }
+    };
+    fetchFases();
+  }, [filters.centro_de_localizacao]);
+
+
+  // Propagate changes up
+  useEffect(() => {
+    onFilterChange(filters);
   }, [filters, onFilterChange]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFilters(prev => ({ ...prev, [name]: value }));
-  };
 
-  const handleSelectChange = (name: string, value: string) => {
-    // If the "All" option is selected, reset the filter value to an empty string.
-    if (value.startsWith("Todos")) {
-      setFilters(prev => ({ ...prev, [name]: "" }));
-    } else {
-      setFilters(prev => ({ ...prev, [name]: value }));
-    }
-  };
-  
-  const clearFilters = () => {
-    setFilters({
-        search: "",
-        center: "",
-        phase: "",
-        year: "",
-        month: "",
-        week: "",
+  const handleSelectChange = (name: keyof Omit<ParadasFiltros, 'dateRange'>, value: string) => {
+    const newValue = value === "todos" ? undefined : value;
+    
+    setFilters(prev => {
+        const newFilters: ParadasFiltros = { ...prev, [name]: newValue };
+        // If centro is changed, reset fase
+        if (name === 'centro_de_localizacao') {
+            delete newFilters.fase;
+        }
+        return newFilters;
     });
   };
 
+  const handleDateChange = (range: DateRange | undefined) => {
+     setFilters(prev => ({ ...prev, dateRange: range }));
+  }
+  
+  const clearFilters = () => {
+    setFilters({});
+  };
+
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 items-end">
-      <div className="space-y-2">
-        <label className="text-sm font-medium">Pesquisar</label>
-        <Input
-          name="search"
-          placeholder="Nome da parada..."
-          value={filters.search}
-          onChange={handleInputChange}
-        />
-      </div>
-      <div className="space-y-2">
+    <div className="flex flex-wrap gap-4 items-end">
+      <div className="flex-1 min-w-[200px] space-y-2">
         <label className="text-sm font-medium">Centro de Localização</label>
-        <Select name="center" value={filters.center || "Todos os centros"} onValueChange={(v) => handleSelectChange("center", v)}>
-          <SelectTrigger><SelectValue placeholder="Todos os centros" /></SelectTrigger>
+        <Select 
+            name="centro_de_localizacao" 
+            value={filters.centro_de_localizacao || "todos"} 
+            onValueChange={(v) => handleSelectChange("centro_de_localizacao", v)}
+            disabled={loadingCentros}
+        >
+          <SelectTrigger>
+            {loadingCentros ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <SelectValue placeholder="Todos os centros" />}
+          </SelectTrigger>
           <SelectContent>
-            {centerOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+            <SelectItem value="todos">Todos os centros</SelectItem>
+            {centroOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
           </SelectContent>
         </Select>
       </div>
-      <div className="space-y-2">
+      
+      <div className="flex-1 min-w-[200px] space-y-2">
         <label className="text-sm font-medium">Fase</label>
-        <Select name="phase" value={filters.phase || "Todas as fases"} onValueChange={(v) => handleSelectChange("phase", v)}>
-          <SelectTrigger><SelectValue placeholder="Todas as fases" /></SelectTrigger>
+        <Select 
+            name="fase" 
+            value={filters.fase || "todos"} 
+            onValueChange={(v) => handleSelectChange("fase", v)}
+            disabled={!filters.centro_de_localizacao || loadingFases}
+        >
+          <SelectTrigger>
+            {loadingFases ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <SelectValue placeholder="Todas as fases" />}
+          </SelectTrigger>
           <SelectContent>
-            {phaseOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+            <SelectItem value="todos">Todas as fases</SelectItem>
+            {faseOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
           </SelectContent>
         </Select>
       </div>
-      <div className="space-y-2">
-        <label className="text-sm font-medium">Ano</label>
-        <Select name="year" value={filters.year} onValueChange={(v) => handleSelectChange("year", v)}>
-          <SelectTrigger><SelectValue placeholder="Selecione o ano" /></SelectTrigger>
-          <SelectContent>
-            {yearOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
-          </SelectContent>
-        </Select>
+      
+      <div className="flex-1 min-w-[280px] space-y-2">
+        <label className="text-sm font-medium">Período</label>
+         <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                id="date"
+                variant={"outline"}
+                className={cn(
+                  "w-full justify-start text-left font-normal",
+                  !filters.dateRange && "text-muted-foreground"
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {filters.dateRange?.from ? (
+                  filters.dateRange.to ? (
+                    <>
+                      {format(filters.dateRange.from, "LLL dd, y", { locale: ptBR })} -{" "}
+                      {format(filters.dateRange.to, "LLL dd, y", { locale: ptBR })}
+                    </>
+                  ) : (
+                    format(filters.dateRange.from, "LLL dd, y", { locale: ptBR })
+                  )
+                ) : (
+                  <span>Selecione um período</span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                initialFocus
+                mode="range"
+                defaultMonth={filters.dateRange?.from}
+                selected={filters.dateRange}
+                onSelect={handleDateChange}
+                numberOfMonths={2}
+                locale={ptBR}
+              />
+            </PopoverContent>
+          </Popover>
       </div>
-       <div className="space-y-2">
-        <label className="text-sm font-medium">Mês</label>
-        <Select name="month" value={filters.month || "Todos os meses"} onValueChange={(v) => handleSelectChange("month", v)}>
-          <SelectTrigger><SelectValue placeholder="Todos os meses" /></SelectTrigger>
-          <SelectContent>
-            {monthOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
-          </SelectContent>
-        </Select>
-      </div>
-       <div className="space-y-2">
-        <label className="text-sm font-medium">Semana</label>
-        <Select name="week" value={filters.week || "Todas as semanas"} onValueChange={(v) => handleSelectChange("week", v)}>
-          <SelectTrigger><SelectValue placeholder="Todas as semanas" /></SelectTrigger>
-          <SelectContent>
-            {weekOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
-          </SelectContent>
-        </Select>
-      </div>
+
+
+       <Button onClick={clearFilters} variant="ghost" className="h-10">
+            <X className="mr-2 h-4 w-4" />
+            Limpar Filtros
+        </Button>
     </div>
   );
 }

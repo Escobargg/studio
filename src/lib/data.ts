@@ -1,5 +1,6 @@
 
 import { supabase } from './supabase';
+import type { ParadasFiltros } from '@/app/paradas/page';
 
 export type Filtros = {
   nome_grupo?: string;
@@ -7,6 +8,12 @@ export type Filtros = {
   fase?: string;
   categoria?: string;
 };
+
+export type Especialidade = {
+  especialidade: string;
+  hh: number;
+  capacidade: number;
+}
 
 // Fetches available options for a specific hierarchy level, filtered by previous selections.
 export const getHierarquiaOpcoes = async (
@@ -95,6 +102,37 @@ export const getGruposByCentroEFase = async (centro: string, fase: string): Prom
     }
 }
 
+// Fetches specialities based on a location center and phase
+export const getEspecialidades = async (centro: string, fase: string): Promise<Especialidade[]> => {
+    if (!centro || !fase) {
+        return [];
+    }
+    try {
+        const { data, error } = await supabase
+            .from('equipes')
+            .select('especialidade, hh, capacidade')
+            .eq('centro_de_localizacao', centro)
+            .eq('fase', fase)
+            .throwOnError();
+
+        if (error) {
+            console.error('Error fetching specialities:', error);
+            return [];
+        }
+        
+        return data.map(item => ({
+            especialidade: item.especialidade,
+            hh: item.hh,
+            capacidade: item.capacidade
+        })).sort((a, b) => a.especialidade.localeCompare(b.especialidade));
+
+    } catch(error) {
+        console.error('Exception when fetching specialities:', error);
+        return [];
+    }
+}
+
+
 // Fetches hierarchy options for StopsFilters
 export const getStopsFilterOptions = async (
   campo: 'centro_de_localizacao' | 'fase' | 'ano'
@@ -102,11 +140,6 @@ export const getStopsFilterOptions = async (
   try {
     let query;
     if (campo === 'ano') {
-      // Special handling for year if it's derived from a date column, e.g., 'data_inicio'
-      // This is a placeholder; you'll need to adapt it to your actual schema.
-      // For now, let's assume it's a direct column or use a placeholder.
-      // If 'ano' is a column in 'paradas', you would query that.
-      // This is a simplified example.
       const { data, error } = await supabase.from('paradas_de_manutencao').select('data_inicio_planejada');
       if (error) throw error;
       const years = new Set(data.map(p => new Date(p.data_inicio_planejada).getFullYear().toString()));
@@ -123,34 +156,34 @@ export const getStopsFilterOptions = async (
   }
 };
 
-type TeamFilters = {
-  centro_de_localizacao?: string;
-  fase?: string;
-}
 
-// Fetches available teams (especialidades) from Supabase, with optional filters
-export const getEquipes = async (filters: TeamFilters = {}): Promise<{ id: string; especialidade: string; hh: number; capacidade: number; }[]> => {
-  try {
+export async function getStops(filters: ParadasFiltros) {
     let query = supabase
-      .from('equipes')
-      .select('id, especialidade, hh, capacidade');
+        .from('paradas_de_manutencao')
+        .select('*')
+        .order('data_inicio_planejada', { ascending: true });
 
     if (filters.centro_de_localizacao) {
-      query = query.eq('centro_de_localizacao', filters.centro_de_localizacao);
+        query = query.eq('centro_de_localizacao', filters.centro_de_localizacao);
     }
     if (filters.fase) {
-      query = query.eq('fase', filters.fase);
+        query = query.eq('fase', filters.fase);
     }
+     if (filters.dateRange?.from && filters.dateRange?.to) {
+        const from = filters.dateRange.from.toISOString();
+        const to = filters.dateRange.to.toISOString();
 
-    const { data, error } = await query.throwOnError();
-    
-    if (error) {
-      console.error('Error fetching equipes data:', error);
-      return [];
+        // Find stops where the planned start OR planned end falls within the date range
+        query = query.or(
+            `and(data_inicio_planejada.gte.${from},data_inicio_planejada.lte.${to}),and(data_fim_planejada.gte.${from},data_fim_planejada.lte.${to})`
+        );
     }
-    return data || [];
-  } catch(error) {
-    console.error('Exception when fetching equipes:', error);
-    return [];
-  }
-};
+    
+    const { data, error } = await query;
+
+    if (error) {
+        console.error("Error fetching stops:", error);
+        return [];
+    }
+    return data;
+}
