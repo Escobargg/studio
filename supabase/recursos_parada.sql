@@ -1,30 +1,51 @@
--- Tabela para armazenar os recursos alocados para cada parada de manutenção.
--- Cada linha representa uma equipe específica com sua capacidade e horas para uma parada.
+-- Drop a tabela existente se ela já existir para garantir uma recriação limpa.
+DROP TABLE IF EXISTS public.recursos_parada;
 
-CREATE TABLE IF NOT EXISTS public.recursos_parada (
+-- Cria a tabela "recursos_parada" para armazenar as equipes alocadas para cada parada.
+CREATE TABLE public.recursos_parada (
     id uuid NOT NULL DEFAULT gen_random_uuid(),
-    created_at timestamp with time zone NOT NULL DEFAULT now(),
     parada_id uuid NOT NULL,
-    equipe text NULL,
-    capacidade numeric NULL,
-    hh numeric NULL,
-    hh_dia numeric NULL,
+    equipe text NOT NULL,
+    capacidade integer NOT NULL,
+    hh numeric NOT NULL,
+    hh_dia numeric NOT NULL,
+    created_at timestamp with time zone NOT NULL DEFAULT now(),
     CONSTRAINT recursos_parada_pkey PRIMARY KEY (id),
-    CONSTRAINT recursos_parada_parada_id_fkey FOREIGN KEY (parada_id) REFERENCES public.paradas_de_manutencao(id) ON DELETE CASCADE
+    CONSTRAINT recursos_parada_parada_id_fkey FOREIGN KEY (parada_id) REFERENCES paradas_de_manutencao(id) ON DELETE CASCADE
 );
 
--- Habilitar Row Level Security
+-- Habilita a Segurança em Nível de Linha (RLS) para a tabela.
 ALTER TABLE public.recursos_parada ENABLE ROW LEVEL SECURITY;
 
--- Explicar a tabela e suas colunas
-COMMENT ON TABLE public.recursos_parada IS 'Armazena os recursos (equipes) alocados para cada parada de manutenção.';
-COMMENT ON COLUMN public.recursos_parada.parada_id IS 'Vincula o recurso à parada de manutenção específica.';
-COMMENT ON COLUMN public.recursos_parada.equipe IS 'A especialidade da equipe alocada (ex: MECANICA, ELETRICA).';
-COMMENT ON COLUMN public.recursos_parada.capacidade IS 'O número de equipes daquela especialidade alocadas para a parada.';
-COMMENT ON COLUMN public.recursos_parada.hh IS 'O valor de "Homem-Hora" para uma única equipe da especialidade.';
-COMMENT ON COLUMN public.recursos_parada.hh_dia IS 'O total de horas-homem por dia (capacidade * hh).';
-
--- Garantir que a tabela pertence ao usuário postgres e que os usuários autenticados possam acessá-la via políticas
-GRANT ALL ON TABLE public.recursos_parada TO postgres;
+-- Concede todas as permissões na tabela para o role 'anon' e 'authenticated'.
+-- As políticas de RLS abaixo controlarão o acesso real.
+GRANT ALL ON TABLE public.recursos_parada TO anon;
+GRANT ALL ON TABLE public.recursos_parada TO authenticated;
 GRANT ALL ON TABLE public.recursos_parada TO service_role;
--- As políticas de RLS definirão o acesso para anon e authenticated.
+
+-- Políticas de Segurança (RLS)
+
+-- 1. Política de Inserção: Permite que usuários autenticados insiram recursos.
+CREATE POLICY "Allow authenticated users to insert resources"
+ON public.recursos_parada
+FOR INSERT TO authenticated
+WITH CHECK (true);
+
+-- 2. Política de Seleção: Permite que usuários autenticados leiam os recursos.
+CREATE POLICY "Allow authenticated users to select resources"
+ON public.recursos_parada
+FOR SELECT TO authenticated
+USING (true);
+
+-- 3. Política de Atualização: Permite que usuários autenticados atualizem os recursos.
+CREATE POLICY "Allow authenticated users to update resources"
+ON public.recursos_parada
+FOR UPDATE TO authenticated
+USING (true)
+WITH CHECK (true);
+
+-- 4. Política de Exclusão: Permite que usuários autenticados excluam os recursos.
+CREATE POLICY "Allow authenticated users to delete resources"
+ON public.recursos_parada
+FOR DELETE TO authenticated
+USING (true);
