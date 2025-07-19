@@ -150,7 +150,7 @@ export default function CriarParadaPage() {
     },
   });
 
-  const { watch, control, setValue, formState: { errors } } = form;
+  const { watch, control, setValue } = form;
 
   const [duracaoPlanejada, setDuracaoPlanejada] = useState<number | null>(null);
   const [duracaoRealizada, setDuracaoRealizada] = useState<number | null>(null);
@@ -181,6 +181,7 @@ export default function CriarParadaPage() {
         setValue("fase", ""); 
         setValue("grupoAtivos", "");
         setValue("ativo", "");
+        setValue("equipes", []);
 
         const [fasesData, ativosData] = await Promise.all([
           getHierarquiaOpcoes("fase", { centro_de_localizacao: watchedCentro }),
@@ -205,6 +206,7 @@ export default function CriarParadaPage() {
         if (watchedCentro && watchedFase) {
             setLoadingGrupos(true);
             setValue("grupoAtivos", "");
+            setValue("equipes", []);
 
             const gruposData = await getGruposByCentroEFase(watchedCentro, watchedFase);
             
@@ -665,10 +667,11 @@ export default function CriarParadaPage() {
                           value={field.value || []}
                           onChange={field.onChange}
                           duracaoHoras={duracaoPlanejada ?? 0}
+                          centroLocalizacao={watchedCentro}
+                          fase={watchedFase}
                         />
                       )}
                     />
-                     <FormMessage>{errors.equipes?.message}</FormMessage>
                 </CardContent>
               </Card>
 
@@ -714,5 +717,3 @@ export default function CriarParadaPage() {
     </MainLayout>
   );
 }
-
-    
