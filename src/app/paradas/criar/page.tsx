@@ -44,10 +44,9 @@ import { TeamSelector, type SelectedTeam } from "@/components/team-selector";
 // Schema para validação simplificada das equipes.
 const equipeSchema = z.object({
   id: z.string(),
-  especialidade: z.string().optional(),
-  capacidade: z.string().or(z.number()).optional(),
-  hh: z.string().or(z.number()).optional(),
-  total_hh: z.string().or(z.number()).optional(),
+  capacidade: z.string().or(z.number()),
+  hh: z.string().or(z.number()),
+  total_hh: z.string().or(z.number()),
 });
 
 
@@ -735,5 +734,3 @@ export default function CriarParadaPage() {
     </MainLayout>
   );
 }
-
-    

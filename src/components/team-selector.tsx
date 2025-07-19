@@ -21,10 +21,10 @@ export type Team = {
 // A estrutura que o react-hook-form vai gerenciar.
 export type SelectedTeam = {
   id: string;
-  especialidade: string;
-  capacidade: string;
-  hh: string;
-  total_hh: string;
+  especialidade?: string;
+  capacidade: string | number;
+  hh: string | number;
+  total_hh: string | number;
 };
 
 
@@ -62,6 +62,7 @@ export function TeamSelector({
         setLoading(false);
       } else {
         setAvailableTeams([]);
+        // Limpa a seleção se os filtros forem limpos
         if (selectedTeams.length > 0) {
             onChange([]);
         }
@@ -75,8 +76,9 @@ export function TeamSelector({
     return teams.map(st => {
       const teamDetails = availableTeams.find(at => at.id === st.id);
       const hh = teamDetails?.hh || 0;
-      const capacidade = parseInt(st.capacidade, 10) || 0;
+      const capacidade = parseInt(String(st.capacidade), 10) || 0;
       const total_hh = capacidade * hh;
+      
       return {
         ...st,
         especialidade: teamDetails?.especialidade || "Desconhecida",
@@ -91,7 +93,6 @@ export function TeamSelector({
     if (checked) {
       newSelectedTeams = [...selectedTeams, { 
         id: team.id, 
-        especialidade: team.especialidade,
         capacidade: "1", 
         hh: String(team.hh), 
         total_hh: String(team.hh) 
@@ -170,7 +171,7 @@ export function TeamSelector({
         <div>
           <Label className="text-base font-medium">Detalhes por Equipe</Label>
           <div className="mt-2 space-y-4">
-            {selectedTeams.map((displayTeam) => {
+            {updateTeamData(selectedTeams).map((displayTeam) => {
               const teamDetails = availableTeams.find(t => t.id === displayTeam.id);
               const maxCapacity = teamDetails?.capacidade || 1;
               
@@ -210,5 +211,3 @@ export function TeamSelector({
     </div>
   );
 }
-
-    
