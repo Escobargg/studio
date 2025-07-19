@@ -21,9 +21,7 @@ const mockStops: StopCardProps[] = [
     plannedDate: "09/01/2025 - 17/01/2025",
     actualDate: "09/01/2025 - 17/01/2025",
     durationHours: 192,
-    teamsCount: 1,
-    totalManHours: 192,
-    description: "Manutenção programada do grupo Britadores Carajás - Equipes: Equipe Mecânica A",
+    description: "Manutenção programada do grupo Britadores Carajás",
     completion: 0,
   },
   {
@@ -35,9 +33,7 @@ const mockStops: StopCardProps[] = [
     plannedDate: "04/01/2025 - 12/01/2025",
     actualDate: "04/01/2025 - 12/01/2025",
     durationHours: 192,
-    teamsCount: 3,
-    totalManHours: 576,
-    description: "Manutenção programada do grupo Fornos Alto Forno Vitória - Equipes: Equipe Mecânica A, Equipe Elétrica B, Equipe Instrumentação C",
+    description: "Manutenção programada do grupo Fornos Alto Forno Vitória",
     completion: 0,
   },
   {
@@ -49,9 +45,7 @@ const mockStops: StopCardProps[] = [
     plannedDate: "27/01/2025 - 29/01/2025",
     actualDate: "27/01/2025 - 29/01/2025",
     durationHours: 48,
-    teamsCount: 3,
-    totalManHours: 144,
-    description: "Manutenção programada do grupo Equipamentos Mariana Usina - Equipes: Equipe Mecânica A, Equipe Elétrica B, Equipe Instrumentação C",
+    description: "Manutenção programada do grupo Equipamentos Mariana Usina",
     completion: 0,
   },
 ];

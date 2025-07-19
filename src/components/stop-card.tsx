@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Calendar, Clock, Users, CheckCircle, Edit, Trash2 } from "lucide-react";
+import { Calendar, Clock, Edit, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { Separator } from "./ui/separator";
 
@@ -18,8 +18,6 @@ export type StopCardProps = {
   plannedDate: string;
   actualDate: string;
   durationHours: number;
-  teamsCount: number;
-  totalManHours: number;
   description: string;
   completion: number;
 };
@@ -33,8 +31,6 @@ export function StopCard({
   plannedDate,
   actualDate,
   durationHours,
-  teamsCount,
-  totalManHours,
   description,
   completion,
 }: StopCardProps) {
@@ -88,14 +84,6 @@ export function StopCard({
                 <Clock className="w-4 h-4" />
                 <span>{durationHours}h</span>
             </div>
-            <div className="flex items-center gap-2">
-                <Users className="w-4 h-4" />
-                <span>{teamsCount} {teamsCount > 1 ? 'equipes' : 'equipe'}</span>
-            </div>
-            <div className="flex items-center gap-2">
-                <CheckCircle className="w-4 h-4" />
-                <span>{totalManHours} HH total</span>
-            </div>
         </div>
 
         {/* Description */}
@@ -106,4 +94,3 @@ export function StopCard({
     </Card>
   );
 }
-

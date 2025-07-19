@@ -94,37 +94,6 @@ export const getGruposByCentroEFase = async (centro: string, fase: string): Prom
     }
 }
 
-// Fetches teams based on a location center and phase
-export type Equipe = {
-    id: string;
-    especialidade: string;
-    capacidade: number;
-    hh: number;
-};
-export const getEquipes = async (centro: string, fase: string): Promise<Equipe[]> => {
-    if (!centro || !fase) {
-        return [];
-    }
-    try {
-        const { data, error } = await supabase
-            .from('equipes')
-            .select('id, especialidade, capacidade, hh')
-            .eq('centro_de_localizacao', centro)
-            .eq('fase', fase)
-            .throwOnError();
-
-        if (error) {
-            console.error('Error fetching teams:', error);
-            return [];
-        }
-
-        return data.sort((a, b) => a.especialidade.localeCompare(b.especialidade));
-    } catch(error) {
-        console.error('Exception when fetching teams:', error);
-        return [];
-    }
-}
-
 // Fetches hierarchy options for StopsFilters
 export const getStopsFilterOptions = async (
   campo: 'centro_de_localizacao' | 'fase' | 'ano'

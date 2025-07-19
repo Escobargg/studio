@@ -36,15 +36,9 @@ import { MainLayout } from "@/components/main-layout";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { getHierarquiaOpcoes, getAtivosByCentro, getGruposByCentroEFase, getEquipes, Equipe } from "@/lib/data";
-import { TeamSelector } from "@/components/team-selector";
+import { getHierarquiaOpcoes, getAtivosByCentro, getGruposByCentroEFase } from "@/lib/data";
 import { supabase } from "@/lib/supabase";
 
-const equipeSchema = z.object({
-  id: z.string(),
-  especialidade: z.string(),
-  capacidade: z.number(),
-});
 
 const stopFormSchema = z.object({
   nomeParada: z.string().min(1, "O nome da parada é obrigatório."),
@@ -61,7 +55,6 @@ const stopFormSchema = z.object({
   horaInicioRealizado: z.string().optional().nullable(),
   dataFimRealizado: z.date().optional().nullable(),
   horaFimRealizado: z.string().optional().nullable(),
-  equipes: z.array(equipeSchema).optional(),
   descricao: z.string().optional(),
 }).refine(data => {
     if (data.dataInicioPlanejada && data.horaInicioPlanejada && data.dataFimPlanejada && data.horaFimPlanejada) {
@@ -119,13 +112,11 @@ export default function CriarParadaPage() {
   const [fases, setFases] = useState<string[]>([]);
   const [ativos, setAtivos] = useState<string[]>([]);
   const [gruposDeAtivos, setGruposDeAtivos] = useState<string[]>([]);
-  const [availableTeams, setAvailableTeams] = useState<Equipe[]>([]);
 
   const [loadingCentros, setLoadingCentros] = useState(true);
   const [loadingFases, setLoadingFases] = useState(false);
   const [loadingAtivos, setLoadingAtivos] = useState(false);
   const [loadingGrupos, setLoadingGrupos] = useState(false);
-  const [loadingEquipes, setLoadingEquipes] = useState(false);
   
   const form = useForm<StopFormValues>({
     resolver: zodResolver(stopFormSchema),
@@ -144,7 +135,6 @@ export default function CriarParadaPage() {
       horaInicioRealizado: "",
       dataFimRealizado: null,
       horaFimRealizado: "",
-      equipes: [],
       descricao: "",
     },
   });
@@ -180,8 +170,6 @@ export default function CriarParadaPage() {
         setValue("fase", ""); 
         setValue("grupoAtivos", "");
         setValue("ativo", "");
-        setValue("equipes", []);
-        setAvailableTeams([]);
 
         const [fasesData, ativosData] = await Promise.all([
           getHierarquiaOpcoes("fase", { centro_de_localizacao: watchedCentro }),
@@ -196,8 +184,6 @@ export default function CriarParadaPage() {
         setFases([]);
         setAtivos([]);
         setGruposDeAtivos([]);
-        setAvailableTeams([]);
-        setValue("equipes", []);
       }
     };
     fetchDataForCentro();
@@ -207,23 +193,14 @@ export default function CriarParadaPage() {
     const fetchDependentData = async () => {
         if (watchedCentro && watchedFase) {
             setLoadingGrupos(true);
-            setLoadingEquipes(true);
             setValue("grupoAtivos", "");
-            setValue("equipes", []);
 
-            const [gruposData, equipesData] = await Promise.all([
-                getGruposByCentroEFase(watchedCentro, watchedFase),
-                getEquipes(watchedCentro, watchedFase)
-            ]);
+            const gruposData = await getGruposByCentroEFase(watchedCentro, watchedFase);
             
             setGruposDeAtivos(gruposData);
-            setAvailableTeams(equipesData);
             setLoadingGrupos(false);
-            setLoadingEquipes(false);
         } else {
             setGruposDeAtivos([]);
-            setAvailableTeams([]);
-            setValue("equipes", []);
         }
     };
     fetchDependentData();
@@ -265,19 +242,7 @@ export default function CriarParadaPage() {
     
     const dataInicioPlanejadaCompleta = combineDateTime(data.dataInicioPlanejada, data.horaInicioPlanejada);
     const dataFimPlanejadaCompleta = combineDateTime(data.dataFimPlanejada, data.horaFimPlanejada);
-
-    const equipesParaInserir = data.equipes?.map(e => {
-        const teamData = availableTeams.find(t => t.id === e.id);
-        const hh = teamData?.hh ?? 0;
-        return { 
-            id: e.id, 
-            especialidade: e.especialidade,
-            capacidade: e.capacidade,
-            hh: hh,
-            total_hh: e.capacidade * hh
-        };
-    });
-
+    
     const dataToInsert = {
       nome_parada: data.nomeParada,
       centro_de_localizacao: data.centroLocalizacao,
@@ -295,7 +260,6 @@ export default function CriarParadaPage() {
           ? combineDateTime(data.dataFimRealizado, data.horaFimRealizado).toISOString() 
           : null,
       duracao_realizada_horas: duracaoRealizada,
-      equipes_selecionadas: equipesParaInserir, 
       descricao: data.descricao,
       status: 'PLANEJADA',
     };
@@ -672,33 +636,6 @@ export default function CriarParadaPage() {
                             <Input type="number" disabled value={duracaoRealizada ?? ""} placeholder="Calculado automaticamente" />
                         </FormControl>
                     </FormItem>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                    <CardTitle>Recursos (Opcional)</CardTitle>
-                    <CardDescription>Selecione as equipes e defina a capacidade para esta parada.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <FormField
-                        control={control}
-                        name="equipes"
-                        render={({ field }) => (
-                           <FormItem>
-                             <FormLabel>Equipes e Capacidade</FormLabel>
-                             <FormControl>
-                                <TeamSelector
-                                    availableTeams={availableTeams}
-                                    isLoading={loadingEquipes}
-                                    selectedTeams={field.value || []}
-                                    onChange={field.onChange}
-                                />
-                             </FormControl>
-                             <FormMessage />
-                           </FormItem>
-                        )}
-                    />
                 </CardContent>
               </Card>
 
