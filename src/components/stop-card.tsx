@@ -32,6 +32,7 @@ type Recurso = {
 
 export type Stop = {
   id: string;
+  id_parada: number;
   nome_parada: string;
   diretoria_executiva: string;
   diretoria: string;
@@ -126,7 +127,7 @@ export function StopCard({ stop, onStopDelete }: StopCardProps) {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
           <div className="flex-1">
-            <h3 className="text-xl font-bold">{stop.nome_parada}</h3>
+            <h3 className="text-xl font-bold">{stop.id_parada} - {stop.nome_parada}</h3>
             <p className="text-sm text-muted-foreground mt-1">{hierarchyStr}</p>
             <p className="text-sm text-muted-foreground mt-1">
                 {stop.tipo_selecao === 'grupo' ? `Grupo: ${stop.grupo_de_ativos}` : `Ativo: ${stop.ativo_unico}`}
@@ -151,7 +152,7 @@ export function StopCard({ stop, onStopDelete }: StopCardProps) {
                   <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
                   <AlertDialogDescription>
                     Esta ação não pode ser desfeita. Isso excluirá permanentemente a parada
-                    <strong className="px-1">{stop.nome_parada}</strong>
+                    <strong className="px-1">#{stop.id_parada} - {stop.nome_parada}</strong>
                     e todos os seus dados associados.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
