@@ -11,10 +11,11 @@ import {
   SidebarMenuItem,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { LayoutGrid, MountainIcon, PlusCircle, Hand } from "lucide-react";
+import { LayoutGrid, Hand } from "lucide-react";
 import { Building2 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { SmartPcmLogo } from "./smart-pcm-logo";
 
 export function MainLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -52,8 +53,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
       <Sidebar>
         <SidebarHeader className="p-2">
           <div className="flex items-center gap-2 p-2">
-            <MountainIcon className="w-6 h-6 text-primary" />
-            <span className="text-lg font-semibold">SmartPCM</span>
+            <SmartPcmLogo className="w-36" />
           </div>
         </SidebarHeader>
         <SidebarContent className="p-2">
@@ -61,7 +61,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
             <SidebarMenuItem>
               <SidebarMenuButton
                 asChild
-                isActive={pathname === "/grupos"}
+                isActive={pathname.startsWith("/grupos")}
                 tooltip="Exibir Grupos"
               >
                 <Link href="/grupos">
