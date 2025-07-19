@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { getWeek, getMonth, getWeeksInMonth, getDaysInMonth, addWeeks, startOfWeek, endOfWeek, format, getISOWeek, startOfMonth, lastDayOfMonth } from "date-fns";
+import { getMonth, getISOWeek, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -66,22 +66,6 @@ export function ScheduleView({ data, year }: ScheduleViewProps) {
         return intervalValue >= itemStartWeek && intervalValue <= itemEndWeek;
     };
     
-    const processedData = useMemo(() => {
-        const result: { groupName: string; location: string; type: 'strategy' | 'stop'; items: ScheduleItem[] }[] = [];
-        data.forEach(group => {
-            const strategies = group.items.filter(item => item.type === 'strategy');
-            const stops = group.items.filter(item => item.type === 'stop');
-
-            if (strategies.length > 0) {
-                result.push({ groupName: group.groupName, location: group.location, type: 'strategy', items: strategies });
-            }
-            if (stops.length > 0) {
-                result.push({ groupName: group.groupName, location: group.location, type: 'stop', items: stops });
-            }
-        });
-        return result;
-    }, [data]);
-
     return (
         <TooltipProvider>
             <div className="space-y-4">
@@ -103,9 +87,6 @@ export function ScheduleView({ data, year }: ScheduleViewProps) {
                                 <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 z-10 w-64 min-w-64">
                                     Grupo / Ativo
                                 </th>
-                                <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32 min-w-32">
-                                    Tipo
-                                </th>
                                 {timeIntervals.map(interval => (
                                     <th key={interval.value} scope="col" className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-10">
                                         {interval.label}
@@ -114,27 +95,24 @@ export function ScheduleView({ data, year }: ScheduleViewProps) {
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
-                            {processedData.map((row, index) => (
-                                <tr key={index}>
-                                    <td className="px-3 py-3 whitespace-nowrap text-sm font-medium text-gray-900 sticky left-0 bg-white z-10 w-64">
-                                       <div className="truncate" title={row.groupName}>
-                                          <p className="font-semibold">{row.groupName}</p>
-                                          <p className="text-xs text-muted-foreground">{row.location}</p>
+                            {data.map((group, index) => (
+                                <tr key={`${group.groupName}-${index}`}>
+                                    <td className="px-3 py-4 whitespace-nowrap text-sm font-medium text-gray-900 sticky left-0 bg-white z-10 w-64">
+                                       <div className="truncate" title={group.groupName}>
+                                          <p className="font-semibold">{group.groupName}</p>
+                                          <p className="text-xs text-muted-foreground">{group.location}</p>
                                         </div>
-                                    </td>
-                                    <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-500 w-32">
-                                        {row.type === 'strategy' ? 'Estratégias' : 'Paradas Criadas'}
                                     </td>
                                     {timeIntervals.map(interval => (
                                         <td key={interval.value} className="px-1 py-1 text-center border-l">
-                                            <div className="h-8 w-full flex items-center justify-center">
-                                                {row.items.map(item =>
+                                            <div className="h-full w-full flex flex-wrap items-center justify-center gap-1">
+                                                {group.items.map(item =>
                                                     getPosition(item, interval.value) && (
                                                         <Tooltip key={item.id}>
                                                             <TooltipTrigger>
                                                                 <div
                                                                     className={cn(
-                                                                        "h-4 w-4 rounded-sm mx-auto",
+                                                                        "h-4 w-4 rounded-sm",
                                                                         item.type === 'strategy' ? priorityColors[item.priority || 'BAIXA'] : stopColor
                                                                     )}
                                                                 />
@@ -143,8 +121,8 @@ export function ScheduleView({ data, year }: ScheduleViewProps) {
                                                                 <p className="font-bold">{item.name}</p>
                                                                 <p>Início: {format(item.startDate, "dd/MM/yyyy")}</p>
                                                                 <p>Fim: {format(item.endDate, "dd/MM/yyyy")}</p>
-                                                                {item.priority && <p>Prioridade: {item.priority}</p>}
-                                                                {item.status && <p>Status: {item.status}</p>}
+                                                                {item.type === 'strategy' && item.priority && <p>Prioridade: {item.priority}</p>}
+                                                                {item.type === 'stop' && item.status && <p>Status: {item.status}</p>}
                                                             </TooltipContent>
                                                         </Tooltip>
                                                     )
@@ -161,4 +139,3 @@ export function ScheduleView({ data, year }: ScheduleViewProps) {
         </TooltipProvider>
     );
 }
-
