@@ -58,6 +58,8 @@ export function StopCard({ stop }: StopCardProps) {
           <div className="flex-1">
             <div className="flex items-center gap-2 flex-wrap mb-1">
               <h3 className="text-xl font-bold">{stop.nome_parada}</h3>
+              <Badge variant="outline">{stop.diretoria_executiva}</Badge>
+              <Badge variant="outline">{stop.diretoria}</Badge>
               <Badge variant="secondary">{stop.centro_de_localizacao}</Badge>
               <Badge>{stop.fase}</Badge>
             </div>
