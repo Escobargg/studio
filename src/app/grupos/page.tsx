@@ -13,10 +13,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
-async function getGruposDeAtivos(filtros: Filtros) {
+async function getGruposDeAtivos(filtros: Filtros): Promise<Grupo[]> {
   let query = supabase
     .from("grupos_de_ativos")
-    .select("*")
+    .select(`
+      *,
+      estrategias(count),
+      grupo_ativos_relacao(count)
+    `)
     .order("created_at", { ascending: false });
 
 
@@ -37,7 +41,12 @@ async function getGruposDeAtivos(filtros: Filtros) {
     return [];
   }
   
-  return data;
+  return data.map(item => ({
+      ...item,
+      estrategias_count: (item.estrategias as unknown as [{ count: number }])[0]?.count || 0,
+      ativos: [], // Mantido para tipagem, mas o count é usado
+      ativos_count: (item.grupo_ativos_relacao as unknown as [{ count: number }])[0]?.count || 0,
+  }));
 }
 
 
@@ -50,7 +59,7 @@ export default function GruposPage() {
     const fetchGrupos = async () => {
       setIsLoading(true);
       const data = await getGruposDeAtivos(filtros);
-      setGrupos(data as Grupo[]);
+      setGrupos(data);
       setIsLoading(false);
     };
 

@@ -28,13 +28,12 @@ export type Grupo = {
     id: string;
     nome_grupo: string;
     tipo_grupo: string;
-    unidade: string;
     centro_de_localizacao: string;
-    categoria: string;
     fase: string;
-    ativos: string[];
+    ativos: string[]; // This is now populated from a separate call in the dialog
+    ativos_count?: number;
     estrategias_count?: number;
-    created_at?: string; // Manter os outros campos
+    created_at?: string; 
 };
 
 interface AssetGroupCardProps {
@@ -51,18 +50,32 @@ export function AssetGroupCard({ grupo, onGroupUpdate, onGroupDelete }: AssetGro
     const handleUpdate = async (updatedAssets: string[]) => {
         setIsUpdating(true);
         try {
-            const { data, error } = await supabase
-                .from('grupos_de_ativos')
-                .update({ ativos: updatedAssets })
-                .eq('id', grupo.id)
-                .select()
-                .single();
+            // 1. Delete all existing relations for this group
+            const { error: deleteError } = await supabase
+                .from('grupo_ativos_relacao')
+                .delete()
+                .eq('grupo_id', grupo.id);
+            
+            if (deleteError) throw deleteError;
 
-            if (error) throw error;
+            // 2. Insert the new relations if there are any
+            if (updatedAssets.length > 0) {
+                const newRelations = updatedAssets.map(ativo => ({
+                    grupo_id: grupo.id,
+                    ativo: ativo,
+                }));
+
+                const { error: insertError } = await supabase
+                    .from('grupo_ativos_relacao')
+                    .insert(newRelations);
+
+                if (insertError) throw insertError;
+            }
             
             const updatedGroup: Grupo = {
                 ...grupo,
                 ativos: updatedAssets,
+                ativos_count: updatedAssets.length,
             };
             
             toast.success("Grupo atualizado com sucesso!");
@@ -134,7 +147,7 @@ export function AssetGroupCard({ grupo, onGroupUpdate, onGroupDelete }: AssetGro
                             <ListChecks className="w-4 h-4 flex-shrink-0" />
                             <div className="flex flex-col">
                                 <span className="text-xs">Ativos</span>
-                                <span className="font-medium text-foreground">{(grupo.ativos || []).length}</span>
+                                <span className="font-medium text-foreground">{grupo.ativos_count ?? 0}</span>
                             </div>
                         </div>
                          <div className="flex items-center gap-2 text-muted-foreground">
