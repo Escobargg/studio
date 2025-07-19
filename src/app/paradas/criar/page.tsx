@@ -41,7 +41,7 @@ import { supabase } from "@/lib/supabase";
 
 const equipeSchema = z.object({
   especialidade: z.string().min(1, "Especialidade é obrigatória."),
-  capacidade: z.coerce.number().min(1, "Deve ser > 0."),
+  capacidade: z.coerce.number().min(1, "Deve ser > 0.").default(1),
   hh: z.coerce.number().min(0, "HH deve ser preenchido."),
   hh_dia: z.coerce.number().min(0, "HH/Dia deve ser preenchido."),
 });
@@ -195,10 +195,9 @@ export default function CriarParadaPage() {
     const especialidadeData = especialidades.find(e => e.especialidade === espNome);
     if (especialidadeData) {
         setValue(`equipes.${index}.hh`, especialidadeData.hh);
-        // Reset capacity and hh_dia when specialty changes
-        setValue(`equipes.${index}.capacidade`, 0);
-        setValue(`equipes.${index}.hh_dia`, 0);
-        // Trigger validation for the capacity field
+        const newCapacity = 1;
+        setValue(`equipes.${index}.capacidade`, newCapacity);
+        setValue(`equipes.${index}.hh_dia`, newCapacity * especialidadeData.hh);
         trigger(`equipes.${index}.capacidade`);
     }
   };
@@ -952,7 +951,7 @@ export default function CriarParadaPage() {
                             variant="outline"
                             size="sm"
                             className="mt-2"
-                            onClick={() => append({ especialidade: "", capacidade: 0, hh: 0, hh_dia: 0 })}
+                            onClick={() => append({ especialidade: "", capacidade: 1, hh: 0, hh_dia: 0 })}
                             disabled={!watchedCentro || !watchedFase || loadingEspecialidades || availableEspecialidades.length === 0}
                         >
                             <PlusCircle className="mr-2 h-4 w-4" />
@@ -1007,5 +1006,3 @@ export default function CriarParadaPage() {
     </MainLayout>
   );
 }
-
-    
