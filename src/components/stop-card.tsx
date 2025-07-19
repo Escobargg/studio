@@ -9,7 +9,7 @@ import { Separator } from "./ui/separator";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import { supabase } from "@/lib/supabase";
 import {
@@ -23,6 +23,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Progress } from "./ui/progress";
 
 type Recurso = {
   equipe: string;
@@ -60,9 +61,33 @@ const formatDate = (date: string | undefined | null) => {
     return format(new Date(date), "dd/MM/yyyy HH:mm");
 }
 
+const calculateCompletion = (start: string, end: string): number => {
+    const now = new Date();
+    const startDate = new Date(start);
+    const endDate = new Date(end);
+
+    if (now < startDate) return 0;
+    if (now > endDate) return 100;
+
+    const totalDuration = endDate.getTime() - startDate.getTime();
+    if (totalDuration <= 0) return 100;
+
+    const elapsedDuration = now.getTime() - startDate.getTime();
+    const percentage = Math.min(100, Math.max(0, (elapsedDuration / totalDuration) * 100));
+    
+    return Math.round(percentage);
+};
+
+
 export function StopCard({ stop, onStopDelete }: StopCardProps) {
   const [isDeleting, setIsDeleting] = useState(false);
-  const completion = 0; // Placeholder for now
+  const [completion, setCompletion] = useState(0);
+
+  useEffect(() => {
+    // Calculate completion on the client-side to avoid hydration mismatch
+    setCompletion(calculateCompletion(stop.data_inicio_planejada, stop.data_fim_planejada));
+  }, [stop.data_inicio_planejada, stop.data_fim_planejada]);
+
 
   const equipesStr = stop.recursos.map(r => r.equipe).join(', ');
   const hierarchyStr = [stop.diretoria_executiva, stop.diretoria, stop.centro_de_localizacao, stop.fase].filter(Boolean).join(' - ');
@@ -107,13 +132,7 @@ export function StopCard({ stop, onStopDelete }: StopCardProps) {
                 {stop.tipo_selecao === 'grupo' ? `Grupo: ${stop.grupo_de_ativos}` : `Ativo: ${stop.ativo_unico}`}
             </p>
           </div>
-          <div className="flex items-center gap-4 flex-shrink-0">
-             <div className="text-right">
-                <div className="flex items-center justify-end gap-2">
-                    <span className="text-red-500 font-bold">{completion}%</span>
-                </div>
-                <p className="text-xs text-muted-foreground">Conclusão</p>
-            </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
             <Button variant="ghost" size="icon" asChild>
                 <Link href={`/paradas/${stop.id}/editar`}>
                     <Edit className="w-4 h-4" />
@@ -178,6 +197,15 @@ export function StopCard({ stop, onStopDelete }: StopCardProps) {
                 <ClipboardCheck className="w-4 h-4" />
                 <span>{stop.total_hh} HH total</span>
             </div>
+        </div>
+        
+        {/* Completion Bar */}
+        <div className="pt-2">
+            <div className="flex justify-between items-center mb-1">
+                <span className="text-xs font-medium text-muted-foreground">Progresso</span>
+                <span className="text-xs font-semibold text-primary">{completion}%</span>
+            </div>
+            <Progress value={completion} className="h-2"/>
         </div>
 
         {/* Description */}
