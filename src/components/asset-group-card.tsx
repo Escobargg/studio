@@ -151,7 +151,7 @@ export function AssetGroupCard({ grupo, onGroupUpdate, onGroupDelete }: AssetGro
                             <ListChecks className="w-4 h-4 flex-shrink-0" />
                             <div className="flex flex-col">
                                 <span className="text-xs">Ativos</span>
-                                <span className="font-medium text-foreground">{grupo.ativos.length}</span>
+                                <span className="font-medium text-foreground">{(grupo.ativos || []).length}</span>
                             </div>
                         </div>
                          <div className="flex items-center gap-2 text-muted-foreground">

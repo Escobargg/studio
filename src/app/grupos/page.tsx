@@ -16,11 +16,9 @@ import Link from "next/link";
 async function getGruposDeAtivos(filtros: Filtros) {
   let query = supabase
     .from("grupos_de_ativos")
-    .select("*, estrategias_count:estrategias(count)")
+    .select("*")
     .order("created_at", { ascending: false });
 
-  // Add a filter to count only active strategies
-  query = query.eq('estrategias.ativa', true);
 
   Object.entries(filtros).forEach(([key, value]) => {
     if (value && key !== 'nome_grupo') {
@@ -35,40 +33,11 @@ async function getGruposDeAtivos(filtros: Filtros) {
   const { data, error } = await query;
 
   if (error) {
-    if (error.code === 'PGRST204') { 
-        let fallbackQuery = supabase
-            .from("grupos_de_ativos")
-            .select("*, estrategias_count:estrategias(count)")
-            .order("created_at", { ascending: false });
-
-        Object.entries(filtros).forEach(([key, value]) => {
-            if (value && key !== 'nome_grupo') {
-                fallbackQuery = fallbackQuery.eq(key, value);
-            }
-        });
-        if (filtros.nome_grupo) {
-            fallbackQuery = fallbackQuery.ilike('nome_grupo', `%${filtros.nome_grupo}%`);
-        }
-        
-        const { data: fallbackData, error: fallbackError } = await fallbackQuery;
-        if(fallbackError) {
-             console.error("Erro ao buscar grupos de ativos (fallback):", fallbackError);
-             return [];
-        }
-        // No fallback, we must assume a count of 0 for non-active strategies.
-        return fallbackData.map(grupo => ({
-            ...grupo,
-            estrategias_count: 0,
-        }));
-    }
     console.error("Erro ao buscar grupos de ativos:", error);
     return [];
   }
   
-  return data.map(grupo => ({
-    ...grupo,
-    estrategias_count: grupo.estrategias_count[0]?.count ?? 0,
-  }));
+  return data;
 }
 
 
