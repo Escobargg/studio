@@ -8,6 +8,7 @@ import { Calendar, Clock, Edit, Trash2, Users, ClipboardCheck } from "lucide-rea
 import { Separator } from "./ui/separator";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import Link from "next/link";
 
 type Recurso = {
   equipe: string;
@@ -41,7 +42,7 @@ interface StopCardProps {
 
 const formatDate = (date: string | undefined | null) => {
     if (!date) return "N/A";
-    return format(new Date(date), "dd/MM/yyyy", { locale: ptBR });
+    return format(new Date(date), "dd/MM/yyyy HH:mm");
 }
 
 export function StopCard({ stop }: StopCardProps) {
@@ -71,9 +72,11 @@ export function StopCard({ stop }: StopCardProps) {
                 </div>
                 <p className="text-xs text-muted-foreground">Conclusão</p>
             </div>
-            <Button variant="ghost" size="icon">
-              <Edit className="w-4 h-4" />
-              <span className="sr-only">Editar Parada</span>
+            <Button variant="ghost" size="icon" asChild>
+                <Link href={`/paradas/${stop.id}/editar`}>
+                    <Edit className="w-4 h-4" />
+                    <span className="sr-only">Editar Parada</span>
+                </Link>
             </Button>
             <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
               <Trash2 className="w-4 h-4" />
