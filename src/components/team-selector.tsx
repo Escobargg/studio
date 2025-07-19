@@ -30,7 +30,6 @@ export type SelectedTeam = {
 interface TeamSelectorProps {
   value: SelectedTeam[];
   onChange: (value: SelectedTeam[]) => void;
-  duracaoHoras: number;
   centroLocalizacao: string;
   fase: string;
 }
@@ -38,7 +37,6 @@ interface TeamSelectorProps {
 export function TeamSelector({ 
   value: selectedTeams = [], 
   onChange, 
-  duracaoHoras,
   centroLocalizacao,
   fase
 }: TeamSelectorProps) {
@@ -74,8 +72,7 @@ export function TeamSelector({
       const availableTeam = availableTeams.find(at => at.id === team.id);
       const hh = availableTeam?.hh || 0;
       const capacidade = team.capacidade || 0;
-      // Ajuste no cálculo para considerar HH/Dia
-      const total_hh = capacidade * hh * (duracaoHoras > 0 ? (duracaoHoras / 24) : 0);
+      const total_hh = capacidade * hh;
 
       return {
         ...team,
@@ -83,7 +80,7 @@ export function TeamSelector({
         total_hh: Math.round(total_hh)
       };
     });
-  }, [selectedTeams, availableTeams, duracaoHoras]);
+  }, [selectedTeams, availableTeams]);
 
   useEffect(() => {
     const hasChanged = JSON.stringify(calculatedTeams) !== JSON.stringify(selectedTeams);
@@ -104,8 +101,9 @@ export function TeamSelector({
   }, [selectedTeams, onChange]);
 
   const handleCapacityChange = useCallback((teamId: string, capacityStr: string) => {
+    const capacity = parseInt(capacityStr, 10);
     const newSelectedTeams = selectedTeams.map(team =>
-      team.id === teamId ? { ...team, capacidade: parseInt(capacityStr, 10) } : team
+      team.id === teamId ? { ...team, capacidade: capacity } : team
     );
     onChange(newSelectedTeams);
   }, [selectedTeams, onChange]);
@@ -201,7 +199,7 @@ export function TeamSelector({
                     <Input id={`hh-${selectedTeam.id}`} disabled value={selectedTeam.hh || ''} />
                 </div>
                  <div className="space-y-1">
-                    <Label htmlFor={`total-hh-${selectedTeam.id}`}>HH/Parada</Label>
+                    <Label htmlFor={`total-hh-${selectedTeam.id}`}>HH/Dia</Label>
                     <Input id={`total-hh-${selectedTeam.id}`} disabled value={selectedTeam.total_hh || ''} />
                 </div>
               </div>
