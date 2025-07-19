@@ -201,7 +201,8 @@ export function AssetRegistrationForm({ initialDiretoriasExecutivas, isLoadingIn
   async function onSubmit(data: AssetFormValues) {
     setIsSubmitting(true);
     
-    const { error } = await supabase
+    // 1. Inserir o grupo na tabela principal e obter o ID
+    const { data: grupoData, error: grupoError } = await supabase
       .from('grupos_de_ativos')
       .insert({ 
         nome_grupo: data.nomeGrupo,
@@ -212,26 +213,54 @@ export function AssetRegistrationForm({ initialDiretoriasExecutivas, isLoadingIn
         centro_de_localizacao: data.centro_de_localizacao,
         fase: data.fase,
         categoria: data.categoria,
-        ativos: data.ativos,
-      });
+        // O campo 'ativos' (array) não é mais inserido aqui
+      })
+      .select('id')
+      .single();
 
-    setIsSubmitting(false);
-
-    if (error) {
-      console.error("Error inserting data:", error);
+    if (grupoError || !grupoData) {
+      console.error("Error inserting group:", grupoError);
       toast({
         title: "Erro ao registrar!",
-        description: `Ocorreu um erro ao salvar o grupo: ${error.message}`,
+        description: `Ocorreu um erro ao salvar o grupo: ${grupoError?.message}`,
         variant: "destructive",
       });
-    } else {
-      toast({
-        title: "Sucesso!",
-        description: "O grupo de ativos foi registrado com sucesso.",
-        variant: "default",
-      });
-      router.push("/grupos");
+      setIsSubmitting(false);
+      return;
     }
+
+    const grupoId = grupoData.id;
+
+    // 2. Preparar e inserir os ativos na nova tabela relacional
+    const ativosParaInserir = data.ativos.map(ativo => ({
+      grupo_id: grupoId,
+      ativo: ativo,
+    }));
+
+    const { error: ativosError } = await supabase
+      .from('grupo_ativos_relacao')
+      .insert(ativosParaInserir);
+
+    if (ativosError) {
+      console.error("Error inserting assets:", ativosError);
+      // Idealmente, aqui você poderia deletar o grupo criado no passo 1 para consistência
+      toast({
+        title: "Erro ao registrar ativos!",
+        description: `O grupo foi criado, mas houve um erro ao salvar os ativos: ${ativosError.message}`,
+        variant: "destructive",
+      });
+      setIsSubmitting(false);
+      return;
+    }
+
+    // Sucesso
+    setIsSubmitting(false);
+    toast({
+      title: "Sucesso!",
+      description: "O grupo de ativos e seus ativos foram registrados com sucesso.",
+      variant: "default",
+    });
+    router.push("/grupos");
   }
 
   const renderSelect = (name: keyof AssetFormValues, label: string, placeholder: string, items: string[], disabled: boolean, loading: boolean) => (
