@@ -1,6 +1,6 @@
 
 import React from "react";
-import { getMonth, getISOWeek, format, getDaysInMonth, getDate, startOfISOWeek, setISOWeek, addDays, getDay, isSameDay } from "date-fns";
+import { getMonth, getISOWeek, format, getDaysInMonth, getDate, startOfISOWeek, setISOWeek, addDays, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -147,7 +147,7 @@ export function ScheduleView({ data, year, filters }: ScheduleViewProps) {
                                 </th>
                                 {timeIntervals.map(interval => (
                                     <th key={interval.label} scope="col" className={cn(
-                                        "px-1 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-10",
+                                        "p-1 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-10",
                                         (currentViewMode === 'meses' && selectedMonth === interval.value.toString()) && "bg-blue-100",
                                         (currentViewMode === 'semanas' && selectedWeek === interval.value.toString()) && "bg-blue-100"
                                     )}>
@@ -171,18 +171,18 @@ export function ScheduleView({ data, year, filters }: ScheduleViewProps) {
                                         </td>
                                         {timeIntervals.map(interval => (
                                             <td key={interval.label} className={cn(
-                                                "px-1 py-1 text-center border-l border-b w-10",
+                                                "p-0 text-center border-l border-b w-10 h-10", // No padding, fixed height
                                                 (currentViewMode === 'meses' && selectedMonth === interval.value.toString()) && "bg-blue-50",
                                                 (currentViewMode === 'semanas' && selectedWeek === interval.value.toString()) && "bg-blue-50"
                                             )}>
-                                                <div className="h-full w-full flex flex-wrap items-center justify-center gap-1">
+                                                <div className="h-full w-full flex flex-col items-center justify-start gap-px py-1">
                                                     {group.strategies.map(item =>
                                                         getPosition(item, interval) && (
                                                             <Tooltip key={item.id}>
-                                                                <TooltipTrigger>
+                                                                <TooltipTrigger className="w-full">
                                                                     <div
                                                                         className={cn(
-                                                                            "h-3 w-3 rounded-sm",
+                                                                            "h-2 w-full rounded-sm",
                                                                             priorityColors[item.priority || 'BAIXA']
                                                                         )}
                                                                     />
@@ -206,18 +206,18 @@ export function ScheduleView({ data, year, filters }: ScheduleViewProps) {
                                         </td>
                                         {timeIntervals.map(interval => (
                                             <td key={interval.label} className={cn(
-                                                "px-1 py-1 text-center border-l border-b w-10",
+                                                "p-0 text-center border-l border-b w-10 h-10", // No padding, fixed height
                                                  (currentViewMode === 'meses' && selectedMonth === interval.value.toString()) && "bg-blue-50",
                                                  (currentViewMode === 'semanas' && selectedWeek === interval.value.toString()) && "bg-blue-50"
                                             )}>
-                                                <div className="h-full w-full flex flex-wrap items-center justify-center gap-1">
+                                                <div className="h-full w-full flex flex-col items-center justify-start gap-px py-1">
                                                     {group.stops.map(item =>
                                                         getPosition(item, interval) && (
                                                             <Tooltip key={item.id}>
-                                                                <TooltipTrigger>
+                                                                <TooltipTrigger className="w-full">
                                                                     <div
                                                                         className={cn(
-                                                                            "h-3 w-3 rounded-sm",
+                                                                            "h-2 w-full rounded-sm",
                                                                             stopColor
                                                                         )}
                                                                     />
