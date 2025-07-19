@@ -51,10 +51,8 @@ const formSchema = z.object({
   }),
   diretoria_executiva: z.string({ required_error: "Selecione a diretoria executiva." }),
   diretoria: z.string({ required_error: "Selecione a diretoria." }),
-  unidade: z.string({ required_error: "Selecione a unidade." }),
   centro_de_localizacao: z.string({ required_error: "Selecione o centro de localização." }),
   fase: z.string({ required_error: "Selecione a fase." }),
-  categoria: z.string({ required_error: "Selecione a categoria." }),
   ativos: z.array(z.string()).min(1, { message: "Selecione pelo menos um ativo." }),
 });
 
@@ -68,10 +66,8 @@ interface AssetRegistrationFormProps {
 type OptionsState = {
   diretoriasExecutivas: string[];
   diretorias: string[];
-  unidades: string[];
   centrosLocalizacao: string[];
   fases: string[];
-  categorias: string[];
   ativos: string[];
 };
 
@@ -81,18 +77,14 @@ export function AssetRegistrationForm({ initialDiretoriasExecutivas, isLoadingIn
   const [options, setOptions] = useState<OptionsState>({
     diretoriasExecutivas: initialDiretoriasExecutivas || [],
     diretorias: [],
-    unidades: [],
     centrosLocalizacao: [],
     fases: [],
-    categorias: [],
     ativos: [],
   });
   const [isLoading, setIsLoading] = useState({
     diretorias: false,
-    unidades: false,
     centrosLocalizacao: false,
     fases: false,
-    categorias: false,
     ativos: false,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -120,17 +112,14 @@ export function AssetRegistrationForm({ initialDiretoriasExecutivas, isLoadingIn
         resetFields.forEach(field => form.setValue(field, "" as any, { shouldValidate: true }));
         const emptyOptions: Partial<OptionsState> = {};
         if (resetFields.includes("diretoria")) emptyOptions.diretorias = [];
-        if (resetFields.includes("unidade")) emptyOptions.unidades = [];
         if (resetFields.includes("centro_de_localizacao")) emptyOptions.centrosLocalizacao = [];
         if (resetFields.includes("fase")) emptyOptions.fases = [];
-        if (resetFields.includes("categoria")) emptyOptions.categorias = [];
         if (resetFields.includes("ativos")) emptyOptions.ativos = [];
         setOptions(prev => ({ ...prev, ...emptyOptions }));
 
         const currentFilters = {
           diretoria_executiva: form.getValues("diretoria_executiva"),
           diretoria: form.getValues("diretoria"),
-          unidade: form.getValues("unidade"),
           centro_de_localizacao: form.getValues("centro_de_localizacao"),
         };
 
@@ -163,35 +152,28 @@ export function AssetRegistrationForm({ initialDiretoriasExecutivas, isLoadingIn
         };
 
         if (name === "diretoria_executiva") {
-            resetAndFetch("diretoria_executiva", "diretorias", ["diretoria", "unidade", "centro_de_localizacao", "fase", "categoria", "ativos"]);
+            resetAndFetch("diretoria_executiva", "diretorias", ["diretoria", "centro_de_localizacao", "fase", "ativos"]);
         } else if (name === "diretoria") {
-            resetAndFetch("diretoria", "unidades", ["unidade", "centro_de_localizacao", "fase", "categoria", "ativos"]);
-        } else if (name === "unidade") {
-            resetAndFetch("unidade", "centrosLocalizacao", ["centro_de_localizacao", "fase", "categoria", "ativos"]);
+            resetAndFetch("diretoria", "centrosLocalizacao", ["centro_de_localizacao", "fase", "ativos"]);
         } else if (name === "centro_de_localizacao") {
             const centro = value.centro_de_localizacao;
             form.setValue("fase", "", { shouldValidate: true });
-            form.setValue("categoria", "", { shouldValidate: true });
             form.setValue("ativos", [], { shouldValidate: true });
             
             if (centro) {
-                setIsLoading(prev => ({ ...prev, fases: true, categorias: true, ativos: true }));
+                setIsLoading(prev => ({ ...prev, fases: true, ativos: true }));
 
                 startTransition(() => {
                     getHierarquiaOpcoes("fase", { centro_de_localizacao: centro }).then(newOptions => {
                         setOptions(prev => ({ ...prev, fases: newOptions }));
                     }).finally(() => setIsLoading(prev => ({ ...prev, fases: false })));
 
-                    getHierarquiaOpcoes("categoria", { centro_de_localizacao: centro }).then(newOptions => {
-                        setOptions(prev => ({ ...prev, categorias: newOptions }));
-                    }).finally(() => setIsLoading(prev => ({ ...prev, categorias: false })));
-
                     getAtivosByCentro(centro).then(newAssets => {
                         setOptions(prev => ({ ...prev, ativos: newAssets }));
                     }).finally(() => setIsLoading(prev => ({...prev, ativos: false})));
                 });
             } else {
-                 setOptions(prev => ({...prev, ativos: [], categorias: [], fases: []}));
+                 setOptions(prev => ({...prev, ativos: [], fases: []}));
             }
         }
     });
@@ -209,11 +191,9 @@ export function AssetRegistrationForm({ initialDiretoriasExecutivas, isLoadingIn
         tipo_grupo: data.tipoGrupo,
         diretoria_executiva: data.diretoria_executiva,
         diretoria: data.diretoria,
-        unidade: data.unidade,
         centro_de_localizacao: data.centro_de_localizacao,
         fase: data.fase,
-        categoria: data.categoria,
-        // O campo 'ativos' (array) não é mais inserido aqui
+        ativos: data.ativos, // Temporarily keep this for the card view until it's refactored
       })
       .select('id')
       .single();
@@ -338,10 +318,8 @@ export function AssetRegistrationForm({ initialDiretoriasExecutivas, isLoadingIn
                 <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {renderSelect("diretoria_executiva", "Diretoria Executiva", "Selecione", options.diretoriasExecutivas, isLoadingInitial, isLoadingInitial)}
                     {renderSelect("diretoria", "Diretoria", "Selecione", options.diretorias, !watch("diretoria_executiva"), isLoading.diretorias)}
-                    {renderSelect("unidade", "Unidade", "Selecione", options.unidades, !watch("diretoria"), isLoading.unidades)}
-                    {renderSelect("centro_de_localizacao", "Centro de Localização", "Selecione", options.centrosLocalizacao, !watch("unidade"), isLoading.centrosLocalizacao)}
+                    {renderSelect("centro_de_localizacao", "Centro de Localização", "Selecione", options.centrosLocalizacao, !watch("diretoria"), isLoading.centrosLocalizacao)}
                     {renderSelect("fase", "Fase", "Selecione", options.fases, !watch("centro_de_localizacao"), isLoading.fases)}
-                    {renderSelect("categoria", "Categoria", "Selecione", options.categorias, !watch("centro_de_localizacao"), isLoading.categorias)}
                 </CardContent>
             </Card>
 

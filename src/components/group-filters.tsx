@@ -25,7 +25,6 @@ type OptionsState = {
   diretorias: string[];
   centrosLocalizacao: string[];
   fases: string[];
-  categorias: string[];
 };
 
 export function GroupFilters({ filters, onFilterChange }: GroupFiltersProps) {
@@ -34,7 +33,6 @@ export function GroupFilters({ filters, onFilterChange }: GroupFiltersProps) {
     diretorias: [],
     centrosLocalizacao: [],
     fases: [],
-    categorias: [],
   });
   const [loading, setLoading] = useState<Record<string, boolean>>({});
 
@@ -59,7 +57,7 @@ export function GroupFilters({ filters, onFilterChange }: GroupFiltersProps) {
       };
       fetchDiretorias();
     } else {
-      setOptions(prev => ({ ...prev, diretorias: [], centrosLocalizacao: [], fases: [], categorias: [] }));
+      setOptions(prev => ({ ...prev, diretorias: [], centrosLocalizacao: [], fases: [] }));
     }
   }, [filters.diretoria_executiva]);
 
@@ -74,7 +72,7 @@ export function GroupFilters({ filters, onFilterChange }: GroupFiltersProps) {
       };
       fetchCentros();
     } else {
-       setOptions(prev => ({ ...prev, centrosLocalizacao: [], fases: [], categorias: [] }));
+       setOptions(prev => ({ ...prev, centrosLocalizacao: [], fases: [] }));
     }
   }, [filters.diretoria]);
 
@@ -83,17 +81,14 @@ export function GroupFilters({ filters, onFilterChange }: GroupFiltersProps) {
     const centro = filters.centro_de_localizacao;
     if (centro) {
         const fetchDependentOptions = async () => {
-            setLoading(prev => ({ ...prev, fases: true, categorias: true }));
-            const [fasesData, categoriasData] = await Promise.all([
-               getHierarquiaOpcoes('fase', {centro_de_localizacao: centro}),
-               getHierarquiaOpcoes('categoria', {centro_de_localizacao: centro})
-            ]);
-            setOptions(prev => ({...prev, fases: fasesData, categorias: categoriasData}));
-            setLoading(prev => ({ ...prev, fases: false, categorias: false }));
+            setLoading(prev => ({ ...prev, fases: true }));
+            const fasesData = await getHierarquiaOpcoes('fase', {centro_de_localizacao: centro});
+            setOptions(prev => ({...prev, fases: fasesData}));
+            setLoading(prev => ({ ...prev, fases: false }));
         };
         fetchDependentOptions();
     } else {
-        setOptions(prev => ({...prev, fases: [], categorias: []}));
+        setOptions(prev => ({...prev, fases: []}));
     }
   }, [filters.centro_de_localizacao]);
 
@@ -108,17 +103,11 @@ export function GroupFilters({ filters, onFilterChange }: GroupFiltersProps) {
         delete newFilters.diretoria;
         delete newFilters.centro_de_localizacao;
         delete newFilters.fase;
-        delete newFilters.categoria;
     } else if (field === 'diretoria') {
         delete newFilters.centro_de_localizacao;
         delete newFilters.fase;
-        delete newFilters.categoria;
-    } else if (field === 'centro_de_localizacao' && !value) {
-      delete newFilters.fase;
-      delete newFilters.categoria;
     } else if (field === 'centro_de_localizacao') {
       delete newFilters.fase;
-      delete newFilters.categoria;
     }
     
     onFilterChange(newFilters);
@@ -184,12 +173,6 @@ export function GroupFilters({ filters, onFilterChange }: GroupFiltersProps) {
             "fase",
             "Fase",
             options.fases,
-            !filters.centro_de_localizacao
-        )}
-        {renderSelect(
-            "categoria",
-            "Categoria",
-            options.categorias,
             !filters.centro_de_localizacao
         )}
         <Button onClick={clearFilters} variant="ghost" className="h-10">

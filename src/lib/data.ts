@@ -20,34 +20,10 @@ export type Especialidade = {
 
 // Fetches available options for a specific hierarchy level, filtered by previous selections.
 export const getHierarquiaOpcoes = async (
-  campo: keyof Omit<Filtros, 'nome_grupo'> | 'unidade',
-  filtros: Partial<Record<'diretoria_executiva' | 'diretoria' | 'unidade' | 'centro_de_localizacao', string>> = {}
+  campo: keyof Omit<Filtros, 'nome_grupo' | 'categoria'>,
+  filtros: Partial<Record<'diretoria_executiva' | 'diretoria' | 'centro_de_localizacao', string>> = {}
 ): Promise<string[]> => {
   try {
-    // We need to build the query dynamically.
-    // The RPC function will execute a SQL query on the server.
-    let queryText = `SELECT DISTINCT "${campo}" FROM hierarquia`;
-    const whereClauses: string[] = [];
-    
-    for (const [key, value] of Object.entries(filtros)) {
-      if (value) {
-        // We will pass values as parameters to prevent SQL injection.
-        whereClauses.push(`"${key}" = '${value.replace(/'/g, "''")}'`);
-      }
-    }
-    
-    if (whereClauses.length > 0) {
-      queryText += ` WHERE ${whereClauses.join(' AND ')}`;
-    }
-    
-    // Ensure correct ordering for Brazilian Portuguese characters
-    queryText += ` ORDER BY "${campo}" COLLATE "pt-BR-x-icu"`;
-    
-    // Supabase RPC doesn't have a direct way to execute arbitrary queries like this,
-    // so we'll revert to the standard select and handle sorting client-side,
-    // as the primary issue is likely data integrity, not sorting.
-    // The previous `localeCompare` fix should handle sorting correctly if data is correct.
-    
     let query = supabase.from('hierarquia').select(campo as string);
 
     for (const [key, value] of Object.entries(filtros)) {

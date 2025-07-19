@@ -55,17 +55,23 @@ export function AssetGroupCard({ grupo, onGroupUpdate, onGroupDelete }: AssetGro
                 .from('grupos_de_ativos')
                 .update({ ativos: updatedAssets })
                 .eq('id', grupo.id)
-                .select('*, estrategias_count:estrategias(count)') // Re-fetch count after update
-                .eq('estrategias.ativa', true)
+                .select()
                 .single();
 
             if (error) throw error;
             
-            // Constrói o objeto atualizado localmente para evitar outra chamada ao banco
+            const { data: strategiesData, error: strategiesError } = await supabase
+              .from('estrategias')
+              .select('id', { count: 'exact' })
+              .eq('grupo_id', grupo.id)
+              .eq('ativa', true);
+
+            if (strategiesError) throw strategiesError;
+
             const updatedGroup: Grupo = {
                 ...grupo,
                 ativos: updatedAssets,
-                estrategias_count: data.estrategias_count[0]?.count ?? 0,
+                estrategias_count: strategiesData?.length ?? 0,
             };
             
             toast.success("Grupo atualizado com sucesso!");
@@ -119,13 +125,6 @@ export function AssetGroupCard({ grupo, onGroupUpdate, onGroupDelete }: AssetGro
 
                     {/* Details Section */}
                     <div className="grid grid-cols-2 sm:grid-cols-3 sm:flex sm:flex-row gap-4 md:gap-6 text-sm w-full md:w-auto">
-                        <div className="flex items-center gap-2 text-muted-foreground" title={grupo.unidade}>
-                            <Building className="w-4 h-4 flex-shrink-0" />
-                            <div className="flex flex-col">
-                                <span className="text-xs">Unidade</span>
-                                <span className="font-medium text-foreground truncate">{grupo.unidade}</span>
-                            </div>
-                        </div>
                         <div className="flex items-center gap-2 text-muted-foreground" title={grupo.centro_de_localizacao}>
                             <MapPin className="w-4 h-4 flex-shrink-0" />
                             <div className="flex flex-col">
@@ -138,13 +137,6 @@ export function AssetGroupCard({ grupo, onGroupUpdate, onGroupDelete }: AssetGro
                              <div className="flex flex-col">
                                 <span className="text-xs">Fase</span>
                                 <span className="font-medium text-foreground truncate">{grupo.fase}</span>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-2 text-muted-foreground" title={grupo.categoria}>
-                            <Tag className="w-4 h-4 flex-shrink-0" />
-                            <div className="flex flex-col">
-                                <span className="text-xs">Categoria</span>
-                                <span className="font-medium text-foreground truncate">{grupo.categoria}</span>
                             </div>
                         </div>
                         <div className="flex items-center gap-2 text-muted-foreground">
